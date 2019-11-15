@@ -5,7 +5,7 @@ __author__ = 'wittawat'
 from abc import ABCMeta, abstractmethod
 import numpy as np
 import scipy.stats as stats
-import abcdp.util as util
+import util as util
 
 
 class FeatureMap(object):
