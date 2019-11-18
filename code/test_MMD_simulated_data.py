@@ -118,7 +118,7 @@ def main():
     # K = k.eval(data_samps, data_samps)
     #
     # random Fourier features
-    n_features = 10
+    n_features = 50
 
     # fmap = feature.RFFKGauss(sigma2=sigma2, n_features=num_features)
     #
@@ -129,13 +129,14 @@ def main():
     hidden_dim_1 = 10
     hidden_dim_2 = 5
     output_dim = 2
-    model = Generative_Model(input_dim=input_dim, hidden_dim_1=hidden_dim_1, hidden_dim_2=hidden_dim_2, output_dim=output_dim)
+    input_dim_z = 1
+    model = Generative_Model(input_dim=input_dim_z, hidden_dim_1=hidden_dim_1, hidden_dim_2=hidden_dim_2, output_dim=output_dim)
 
-    # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
+    # optimizer = optim.SGD(model.parameters(), lr=0.001)
     mini_batch_size = 100
-    how_many_epochs = 200
+    how_many_epochs = 1000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -152,7 +153,7 @@ def main():
             # print(i)
             # get the inputs
             inputs = data_samps[i*mini_batch_size:(i+1)*mini_batch_size,:]
-            inputs_to_model = torch.randn((mini_batch_size, input_dim))
+            inputs_to_model = torch.randn((mini_batch_size, input_dim_z))
             # print(inputs.shape)
             # print(labels)
 
