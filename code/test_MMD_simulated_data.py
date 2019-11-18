@@ -38,7 +38,9 @@ def Gaussian_RF(sigma2, n_features, X):
     return mean_emb
 
 def distance_RF(mean_emb1, mean_emb2):
-    distance_RF_eval = torch.dist(mean_emb1, mean_emb2, p=2)**2
+    mean_emb1_avg = torch.mean(mean_emb1,0)
+    mean_emb2_avg = torch.mean(mean_emb2,0)
+    distance_RF_eval = torch.dist(mean_emb1_avg, mean_emb2_avg, p=2)**2
     return distance_RF_eval
 
 def RFF_Gauss(sigma2, n_features, X):
@@ -49,7 +51,7 @@ def RFF_Gauss(sigma2, n_features, X):
     draws = n_features // 2
 
     sigma2 = torch.Tensor([sigma2])
-    W = torch.randn(draws, d) / torch.sqrt(sigma2 * 2.0 ** 0.5)
+    W = torch.randn(draws, d) / torch.sqrt(sigma2)
     # n x draws
     # XWT = X.dot(W.T)
     XWT = torch.mm(X, torch.t(W))
@@ -58,7 +60,7 @@ def RFF_Gauss(sigma2, n_features, X):
 
     # n_features = torch.Tensor([n_features])
     # Z = torch.hstack((Z1, Z2)) * torch.sqrt(1.0 / n_features)
-    Z = torch.cat((Z1, Z2),1) * torch.sqrt(1.0/torch.Tensor([n_features]))
+    Z = torch.cat((Z1, Z2),1) * torch.sqrt(2.0/torch.Tensor([n_features]))
     return Z
 
 
@@ -108,17 +110,18 @@ def main():
     # data_samps = np.random.randn(n, d) * 4.0 + np.random.rand(n, d) * 2
 
     # test how to use RFF for computing the kernel matrix
-    med = util.meddistance(data_samps)
-    sigma2 = med**2
-
-    print('Median heuristic distance (squared): {}'.format(sigma2))
+    # med = util.meddistance(data_samps)
+    # sigma2 = med**2
+    #
+    # print('Median heuristic distance (squared): {}'.format(sigma2))
+    sigma2 = 1
 
     # # Gaussian kernel
     # k = kernel.KGauss(sigma2=sigma2)
     # K = k.eval(data_samps, data_samps)
     #
     # random Fourier features
-    n_features = 50
+    n_features = 20
 
     # fmap = feature.RFFKGauss(sigma2=sigma2, n_features=num_features)
     #
@@ -136,7 +139,7 @@ def main():
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
     mini_batch_size = 100
-    how_many_epochs = 1000
+    how_many_epochs = 200
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
