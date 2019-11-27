@@ -78,7 +78,7 @@ class RFFKGauss(FeatureMap):
             n, d = X.shape
 
             draws = self.n_features//2
-            W = np.random.randn(draws, d)/np.sqrt(self.sigma2*2.0**0.5)
+            W = np.random.randn(draws, d)/np.sqrt(self.sigma2)
             # n x draws
             XWT = X.dot(W.T)
             Z1 = np.cos(XWT)

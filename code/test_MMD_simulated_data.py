@@ -7,10 +7,10 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torch.nn.parameter import Parameter
-import feature as feature
-import util as util
-import kernel as kernel
+# from torch.nn.parameter import Parameter
+# import feature as feature
+# import util as util
+# import kernel as kernel
 
 # generate data from 2D Gaussian for sanity check
 def generate_data(mean_param, cov_param, n):
