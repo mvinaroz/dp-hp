@@ -7,8 +7,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from torch.nn.parameter import Parameter
 # from torch.nn.parameter import Parameter
-# import feature as feature
+# from feature import mmd2_biased
 # import util as util
 # import kernel as kernel
 
@@ -64,24 +65,67 @@ def RFF_Gauss(sigma2, n_features, X):
     return Z
 
 
-class Generative_Model(nn.Module):
+# class Generative_Model(nn.Module):
+#
+#     def __init__(self, input_dim, hidden_dim_1, hidden_dim_2, output_dim):
+#     # def __init__(self, input_dim, hidden_dim):
+#         super(Generative_Model, self).__init__()
+#
+#         self.fc1 = nn.Linear(input_dim, hidden_dim_1)
+#         self.fc2 = nn.Linear(hidden_dim_1, hidden_dim_2)
+#         self.fc3 = nn.Linear(hidden_dim_2, output_dim)
+#
+#     def forward(self, x):
+#
+#         x = F.relu(self.fc1(x))
+#         x = F.relu(self.fc2(x))
+#         output = self.fc3(x)
+#
+#         return output
 
-    def __init__(self, input_dim, hidden_dim_1, hidden_dim_2, output_dim):
+
+class Generative_Model(nn.Module):
+    #I'm going to define my own Model here following how I generated this dataset
+
+    def __init__(self, input_dim, how_many_Gaussians, mini_batch_size):
     # def __init__(self, input_dim, hidden_dim):
         super(Generative_Model, self).__init__()
 
-        self.fc1 = nn.Linear(input_dim, hidden_dim_1)
-        self.fc2 = nn.Linear(hidden_dim_1, hidden_dim_2)
-        self.fc3 = nn.Linear(hidden_dim_2, output_dim)
+        # number of parameters = how_many_Gaussians*(input_dim + 1)
+
+        number_of_parameters = how_many_Gaussians * (input_dim + 1)
+        self.parameter = Parameter(2*torch.randn(number_of_parameters),requires_grad=True) # this parameter lies
+        self.n = mini_batch_size
+        self.input_dim = input_dim
+        self.how_many_Gaussians = how_many_Gaussians
 
     def forward(self, x):
 
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        output = self.fc3(x)
+        n = self.n
+        dim_Gaussians = self.input_dim
+        how_many_Gaussians = self.how_many_Gaussians
 
-        return output
+        # mean_param = torch.zeros((dim_Gaussians, how_many_Gaussians))
 
+        parameters = self.parameter
+        mean_param = torch.reshape(parameters[0:how_many_Gaussians*dim_Gaussians], (dim_Gaussians, how_many_Gaussians))
+        var_Gaussian = F.softplus(parameters[how_many_Gaussians*dim_Gaussians:how_many_Gaussians * (dim_Gaussians + 1)])
+
+        data_samps = torch.zeros((n, dim_Gaussians))
+        how_many_samps = np.int(n / how_many_Gaussians)
+
+        for i in np.arange(0, how_many_Gaussians):
+            # print(i)
+            mean = mean_param[:,i].repeat(how_many_samps,1)
+            new_samps = mean + torch.sqrt(var_Gaussian[i])*x[(i * how_many_samps):((i + 1) * how_many_samps), :]
+            data_samps[(i * how_many_samps):((i + 1) * how_many_samps), :] = new_samps
+            # print((i * how_many_samps))
+            # print(((i + 1) * how_many_samps))
+
+        idx = torch.randperm(n)
+        shuffled_x = data_samps[idx, :]
+
+        return shuffled_x
 
 def main():
 
@@ -91,19 +135,19 @@ def main():
     mean_param = np.zeros((input_dim, num_Gaussians))
     cov_param = np.zeros((input_dim, input_dim, num_Gaussians))
 
-    mean_param[:, 0] = [6, 2]
-    mean_param[:, 1] = [-1, 2]
-    mean_param[:, 2] = [4, -3]
+    mean_param[:, 0] = [0.9, 0.8]
+    mean_param[:, 1] = [-0.2, 0.1]
+    mean_param[:, 2] = [-0.8, -0.7]
 
-    cov_param[:, :, 0] = 0.5 * np.eye(input_dim)
-    cov_param[:, :, 1] = 1 * np.eye(input_dim)
-    cov_param[:, :, 2] = 0.2 * np.eye(input_dim)
+    cov_param[:, :, 0] = 0.01 * np.eye(input_dim)
+    cov_param[:, :, 1] = 0.02 * np.eye(input_dim)
+    cov_param[:, :, 2] = 0.04 * np.eye(input_dim)
 
     data_samps = generate_data(mean_param, cov_param, n)
 
-    # print(data_samps)
-    # plt.plot(data_samps[:,0], data_samps[:,1], 'o')
-    # plt.show()
+    print(data_samps)
+    plt.plot(data_samps[:,0], data_samps[:,1], 'o')
+    plt.show()
 
     # n = 100
     # d = 3
@@ -112,7 +156,7 @@ def main():
     # test how to use RFF for computing the kernel matrix
     # med = util.meddistance(data_samps)
     # sigma2 = med**2
-    #
+
     # print('Median heuristic distance (squared): {}'.format(sigma2))
     sigma2 = 1
 
@@ -129,17 +173,17 @@ def main():
     # Kapprox = Phi.dot(Phi.T)
 
     """ training a Generator via minimizing MMD """
-    hidden_dim_1 = 10
-    hidden_dim_2 = 5
-    output_dim = 2
-    input_dim_z = 1
-    model = Generative_Model(input_dim=input_dim_z, hidden_dim_1=hidden_dim_1, hidden_dim_2=hidden_dim_2, output_dim=output_dim)
+    # hidden_dim_1 = 10
+    # hidden_dim_2 = 5
+    # output_dim = 2
+    # input_dim_z = 2
+    mini_batch_size = 60
+    model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians, mini_batch_size=mini_batch_size)
 
     optimizer = optim.SGD(model.parameters(), lr=0.01, momentum=0.9)
     # optimizer = optim.Adam(model.parameters(), lr=1e-3)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    mini_batch_size = 100
-    how_many_epochs = 200
+    how_many_epochs = 300
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -153,17 +197,20 @@ def main():
 
         for i in range(how_many_iter):
 
+            for p in model.parameters():
+                p.data.clamp_(-2., 2.)
+
             # print(i)
             # get the inputs
             inputs = data_samps[i*mini_batch_size:(i+1)*mini_batch_size,:]
-            inputs_to_model = torch.randn((mini_batch_size, input_dim_z))
-            # print(inputs.shape)
-            # print(labels)
+            # inputs_to_model = torch.randn((mini_batch_size, input_dim_z))
 
             # zero the parameter gradients
             optimizer.zero_grad()
 
             # forward + backward + optimize
+            inputs_to_model = torch.randn((mini_batch_size, input_dim))
+            # inputs_to_model = torch.randn((input_dim, mini_batch_size))
             outputs = model(torch.Tensor(inputs_to_model))
             # labels = torch.Tensor(labels)
             # loss = F.binary_cross_entropy(outputs, labels)
@@ -173,6 +220,8 @@ def main():
             mean_emb2 = Gaussian_RF(sigma2, n_features, outputs)
 
             loss = distance_RF(mean_emb1, mean_emb2)
+
+            # loss = mmd2_biased(inputs, outputs)
             loss.backward()
             optimizer.step()
 
@@ -182,9 +231,38 @@ def main():
         training_loss_per_epoch[epoch] = running_loss/n
 
     plt.figure(1)
+    plt.subplot(121)
+    plt.plot(data_samps[:, 0], data_samps[:, 1], 'o')
+    # plt.plot(training_loss_per_epoch)
+    # plt.title('MMD as a function of epoch')
+    # plt.show()
+
+    plt.subplot(122)
+    model.eval()
+    # generated_samples = model(torch.randn((mini_batch_size, input_dim_z)))
+    generated_samples = model(torch.randn((n, input_dim)))
+    generated_samples = generated_samples.detach().numpy()
+    plt.plot(generated_samples[:,0], generated_samples[:,1], 'x')
+    # plt.plot(data_samps[:,0], data_samps[:,1], 'o')
+    plt.show()
+
+    plt.figure(2)
     plt.plot(training_loss_per_epoch)
     plt.title('MMD as a function of epoch')
     plt.show()
+
+    from_model_params = list(model.parameters())
+    estimated_params = from_model_params[0]
+    estimated_mean_params = torch.reshape(estimated_params[0:num_Gaussians * input_dim], (input_dim, num_Gaussians))
+    estimated_var_params = F.softplus(estimated_params[num_Gaussians * input_dim:num_Gaussians * (input_dim + 1)])
+    estimated_mean_params = estimated_mean_params.detach().numpy()
+    estimated_var_params = estimated_var_params.detach().numpy()
+
+
+    print('true mean : ', mean_param)
+    print('estimated mean : ', estimated_mean_params)
+    print('estimated var: ', estimated_var_params)
+
 
     # Diff = K - Kapprox
     # print(np.sqrt(np.sum(Diff**2)))
