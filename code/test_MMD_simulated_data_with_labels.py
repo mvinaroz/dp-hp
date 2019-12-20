@@ -4,6 +4,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -58,19 +59,20 @@ def RFF_Gauss(n_features, X, W):
 
 class Generative_Model(nn.Module):
 
-        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
+        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, n_classes):
             super(Generative_Model, self).__init__()
 
             self.input_size = input_size
             self.hidden_size_1 = hidden_size_1
             self.hidden_size_2 = hidden_size_2
             self.output_size = output_size
+            self.n_classes = n_classes
 
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
             self.relu = torch.nn.ReLU()
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            # self.softmax = torch.nn.Softmax()
+            self.softmax = torch.nn.Softmax()
 
         def forward(self, x):
             hidden = self.fc1(x)
@@ -78,25 +80,36 @@ class Generative_Model(nn.Module):
             output = self.fc2(relu)
             output = self.relu(output)
             output = self.fc3(output)
-            # output = self.softmax(output)
 
-            return output
+            output_features = output[:, 0:-self.n_classes]
+            output_labels = output[:, -self.n_classes:]
+            # output[:,-self.n_classes:] = self.softmax(output[:, -self.n_classes:])
+            output_total = torch.cat((output_features, output_labels), 1)
+            return output_total
 
 def main():
 
     n = 5000 # number of data points divisable by num_Gassians
-    num_Gaussians = 3
+    num_Gaussians = 2
     input_dim = 2
     mean_param = np.zeros((input_dim, num_Gaussians))
     cov_param = np.zeros((input_dim, input_dim, num_Gaussians))
 
-    mean_param[:, 0] = [9, 8]
-    mean_param[:, 1] = [-2, 1]
-    mean_param[:, 2] = [-8, -7]
+    mean_param[:, 0] = [2, 8]
+    mean_param[:, 1] = [-10, -4]
+    # mean_param[:, 2] = [-8, -7]
 
-    cov_param[:, :, 0] = 2*np.eye(input_dim)
-    cov_param[:, :, 1] = 0.2 * np.eye(input_dim)
-    cov_param[:, :, 2] = 0.04 * np.eye(input_dim)
+    cov_mat = np.empty((2,2))
+    cov_mat[0,0] = 1
+    cov_mat[1,1] = 4
+    cov_mat[0,1] = 0.2
+    cov_mat[1,0] = 0.2
+    cov_param[:, :, 0] = cov_mat
+    cov_param[:, :, 1] = cov_mat
+
+    # cov_param[:, :, 0] = 2*np.eye(input_dim)
+    # cov_param[:, :, 1] = 1 * np.eye(input_dim)
+    # cov_param[:, :, 2] = 4 * np.eye(input_dim)
 
     data_samps, true_labels = generate_data(mean_param, cov_param, n)
 
@@ -123,7 +136,8 @@ def main():
     # K = k.eval(data_samps, data_samps)
     #
     # random Fourier features
-    n_features = 500
+    n_features = 200
+    n_classes = num_Gaussians
 
     # fmap = feature.RFFKGauss(sigma2=sigma2, n_features=num_features)
     #
@@ -131,23 +145,21 @@ def main():
     # Kapprox = Phi.dot(Phi.T)
 
     """ training a Generator via minimizing MMD """
-    # hidden_dim_1 = 10
-    # hidden_dim_2 = 5
-    # output_dim = 2
-    # input_dim_z = 2
-    mini_batch_size = 360
+    mini_batch_size = 1000
 
     input_size = 10
     hidden_size_1 = 100
-    hidden_size_2 = 20
+    hidden_size_2 = 50
+    output_size = input_dim + n_classes
+
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-                             output_size=input_dim)
+                             output_size=output_size, n_classes = n_classes)
 
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 1000
+    how_many_epochs = 500
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -157,8 +169,12 @@ def main():
 
     draws = n_features // 2
     W_freq =  np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq), axis=0)
+    mean_emb1_input_features = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq), 0)
 
+    mean_emb_label_normalizer = torch.sqrt(1.0/torch.Tensor([n_classes]))
+    mean_emb1_labels = torch.mean(torch.Tensor(true_labels),0)*mean_emb_label_normalizer
+
+    mean_emb1 = torch.cat((mean_emb1_input_features, mean_emb1_labels),0)
 
     print('Starting Training')
 
@@ -169,14 +185,18 @@ def main():
         for i in range(how_many_iter):
 
             # for p in model.parameters():
-            #     p.data.clamp_(-0.5, 0.5)
+            #     p.data.clamp_(-1.0, 1.0)
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            outputs = model(torch.randn((mini_batch_size, input_dim)))
+            outputs = model(torch.randn((mini_batch_size, input_size)))
 
-            mean_emb2 = torch.mean(RFF_Gauss(n_features, outputs, W_freq), axis=0)
+            samp_input_features = outputs[:,0:input_dim]
+            samp_labels = outputs[:,-n_classes:]
 
+            mean_emb2_input_features = torch.mean(RFF_Gauss(n_features, samp_input_features, W_freq), 0)
+            mean_emb2_labels = torch.mean(samp_labels,0)*mean_emb_label_normalizer
+            mean_emb2 = torch.cat((mean_emb2_input_features, mean_emb2_labels), 0)
 
             loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
             # loss = mmd2_biased(inputs, outputs)
@@ -201,28 +221,37 @@ def main():
     plt.subplot(122)
     model.eval()
     # generated_samples = model(torch.randn((mini_batch_size, input_dim_z)))
-    generated_samples = model(torch.randn((n, input_dim)))
-    generated_samples = generated_samples.detach().numpy()
-    plt.plot(generated_samples[:,0], generated_samples[:,1], 'o')
-    # plt.plot(data_samps[:,0], data_samps[:,1], 'o')
-    # plt.show()
+    # generated_samples = model(torch.randn((n, input_size)))
+    # generated_samples = generated_samples.detach().numpy()
+    generated_samples = samp_input_features.detach().numpy()
+    # plt.plot(generated_samples[:,0], generated_samples[:,1], 'o')
+    # print('mean of samples is', np.mean(generated_samples,0))
+    # print('true mean is', mean_param[:,0])
+    #
+    # print('cov of samples is', np.cov(generated_samples.transpose()))
+    # print('true cov is', cov_mat)
+
+    generated_labels = samp_labels.detach().numpy()
+    labl = np.argmax(generated_labels, axis=1)
+    plt.scatter(generated_samples[:,0], generated_samples[:,1], c=labl, label=labl)
+
 
     plt.figure(2)
     plt.plot(training_loss_per_epoch)
     plt.title('MMD as a function of epoch')
 
-
-    from_model_params = list(model.parameters())
-    estimated_params = from_model_params[0]
-    estimated_mean_params = torch.reshape(estimated_params[0:num_Gaussians * input_dim], (input_dim, num_Gaussians))
-    estimated_var_params = F.softplus(estimated_params[num_Gaussians * input_dim:num_Gaussians * (input_dim + 1)])
-    estimated_mean_params = estimated_mean_params.detach().numpy()
-    estimated_var_params = estimated_var_params.detach().numpy()
-
-
-    print('true mean : ', mean_param)
-    print('estimated mean : ', estimated_mean_params)
-    print('estimated var: ', estimated_var_params)
+    #
+    # from_model_params = list(model.parameters())
+    # estimated_params = from_model_params[0]
+    # estimated_mean_params = torch.reshape(estimated_params[0:num_Gaussians * input_dim], (input_dim, num_Gaussians))
+    # estimated_var_params = F.softplus(estimated_params[num_Gaussians * input_dim:num_Gaussians * (input_dim + 1)])
+    # estimated_mean_params = estimated_mean_params.detach().numpy()
+    # estimated_var_params = estimated_var_params.detach().numpy()
+    #
+    #
+    # print('true mean : ', mean_param)
+    # print('estimated mean : ', estimated_mean_params)
+    # print('estimated var: ', estimated_var_params)
 
     plt.show()
 
