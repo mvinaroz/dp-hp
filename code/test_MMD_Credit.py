@@ -10,28 +10,16 @@ import torch.optim as optim
 import util
 import random
 
-# generate data from 2D Gaussian for sanity check
-def generate_data(mean_param, cov_param, n):
+import pandas as pd
+import seaborn as sns
+sns.set()
+# %matplotlib inline
 
-    how_many_Gaussians = mean_param.shape[1]
-    dim_Gaussians = mean_param.shape[0]
-    data_samps = np.zeros((n, dim_Gaussians))
-    labels = np.zeros((n, how_many_Gaussians))
+from sklearn.model_selection import train_test_split
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import roc_auc_score
+from sklearn.metrics import average_precision_score
 
-    for i in np.arange(0,how_many_Gaussians):
-
-        how_many_samps = np.int(n/how_many_Gaussians)
-        new_samps = np.random.multivariate_normal(mean_param[:, i], cov_param[:, :, i], how_many_samps)
-        data_samps[(i*how_many_samps):((i+1)*how_many_samps),:] = new_samps
-
-        labels[(i*how_many_samps):((i+1)*how_many_samps),i] = 1
-
-
-    idx = np.random.permutation(n)
-    shuffled_x = data_samps[idx,:]
-    shuffled_y = labels[idx,:]
-
-    return shuffled_x, shuffled_y
 
 
 def RFF_Gauss(n_features, X, W):
@@ -102,47 +90,45 @@ def main():
 
     random.seed(0)
 
-    n = 6000 # number of data points divisable by num_Gassians
-    num_Gaussians = 3
-    input_dim = 2
-    mean_param = np.zeros((input_dim, num_Gaussians))
-    cov_param = np.zeros((input_dim, input_dim, num_Gaussians))
+    # (1) load data
+    data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
 
-    mean_param[:, 0] = [2, 8]
-    mean_param[:, 1] = [-10, -4]
-    mean_param[:, 2] = [-1, -7]
+    feature_names = data.iloc[:, 1:30].columns
+    target = data.iloc[:1, 30:].columns
 
-    cov_mat = np.empty((2,2))
-    cov_mat[0,0] = 1
-    cov_mat[1,1] = 4
-    cov_mat[0,1] = -0.25
-    cov_mat[1,0] = -0.25
-    cov_param[:, :, 0] = cov_mat
+    data_features = data[feature_names]
+    data_target = data[target]
 
-    cov_mat[0,1] = 0.4
-    cov_mat[1,0] = 0.4
-    cov_param[:, :, 1] = cov_mat
+    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=0)
 
-    cov_param[:, :, 2] = 2 * np.eye(input_dim)
+    # unpack data
+    data_samps = X_train.values
+    y_labels = y_train.values.ravel()
 
-    data_samps, true_labels = generate_data(mean_param, cov_param, n)
+    n_classes = 2
+    n, input_dim = data_samps.shape
+
+    true_labels = np.zeros((n,n_classes))
+    idx_1 = y_labels==1
+    true_labels[idx_1,1] = 1
 
     # test how to use RFF for computing the kernel matrix
-    med = util.meddistance(data_samps)
+    idx_rp = np.random.permutation(5000)
+    med = util.meddistance(data_samps[idx_rp,:])
     # sigma2 = med**2
     sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 100
-    n_classes = num_Gaussians
+    n_features = 500
+
 
     """ training a Generator via minimizing MMD """
-    mini_batch_size = 2000
+    mini_batch_size = 1000
 
-    input_size = 10
-    hidden_size_1 = 100
-    hidden_size_2 = 50
+    input_size = 100
+    hidden_size_1 = 500
+    hidden_size_2 = 200
     output_size = input_dim + n_classes
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
@@ -202,25 +188,23 @@ def main():
         print('epoch # and running loss are ', [epoch, running_loss])
         training_loss_per_epoch[epoch] = running_loss
 
+
+
     plt.figure(1)
-    plt.subplot(121)
-    true_labl = np.argmax(true_labels, axis=1)
-    plt.scatter(data_samps[:,0], data_samps[:,1], c=true_labl, label=true_labl)
-    plt.title('true data')
-
-    plt.subplot(122)
-    model.eval()
-    generated_samples = samp_input_features.detach().numpy()
-
-    generated_labels = samp_labels.detach().numpy()
-    labl = np.argmax(generated_labels, axis=1)
-    plt.scatter(generated_samples[:,0], generated_samples[:,1], c=labl, label=labl)
-    plt.title('simulated data')
-
-
-    plt.figure(2)
     plt.plot(training_loss_per_epoch)
     plt.title('MMD as a function of epoch')
+
+
+    model.eval()
+    generated_samples = samp_input_features.detach().numpy()
+    generated_labels = samp_labels.detach().numpy()
+
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
+    pred = LR_model.predict(X_test) # test on real data
+
+    print('ROC is', roc_auc_score(y_test, pred))
+    print('PRC is', average_precision_score(y_test, pred))
 
     plt.show()
 
