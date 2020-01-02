@@ -128,9 +128,9 @@ def main():
     """ training a Generator via minimizing MMD """
     mini_batch_size = 1000
 
-    input_size = 100
-    hidden_size_1 = 500
-    hidden_size_2 = 200
+    input_size = 50
+    hidden_size_1 = 200
+    hidden_size_2 = 40
     output_size = input_dim + n_classes
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
@@ -140,7 +140,7 @@ def main():
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 2000
+    how_many_epochs = 100
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -197,7 +197,12 @@ def main():
     plt.title('MMD as a function of epoch')
 
 
-    model.eval()
+    # model.eval()
+
+    outputs = model(torch.randn((n, input_size)))
+    samp_input_features = outputs[:, 0:input_dim]
+    samp_labels = outputs[:, -n_classes:]
+
     generated_samples = samp_input_features.detach().numpy()
     generated_labels = samp_labels.detach().numpy()
 
