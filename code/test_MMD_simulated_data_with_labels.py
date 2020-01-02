@@ -60,16 +60,18 @@ class Generative_Model(nn.Module):
             self.n_classes = n_classes
 
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
+            self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
             self.relu = torch.nn.ReLU()
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
+            self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
             self.softmax = torch.nn.Softmax()
 
         def forward(self, x):
             hidden = self.fc1(x)
-            relu = self.relu(hidden)
+            relu = self.relu(self.bn1(hidden))
             output = self.fc2(relu)
-            output = self.relu(output)
+            output = self.relu(self.bn2(output))
             output = self.fc3(output)
 
             output_features = output[:, 0:-self.n_classes]
@@ -106,7 +108,7 @@ def main():
 
     data_samps, true_labels = generate_data(mean_param, cov_param, n)
 
-  # test how to use RFF for computing the kernel matrix
+    # test how to use RFF for computing the kernel matrix
     med = util.meddistance(data_samps)
     # sigma2 = med**2
     sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
@@ -131,7 +133,7 @@ def main():
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 1000
+    how_many_epochs = 2000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -167,6 +169,8 @@ def main():
             mean_emb2 = torch.mean(outer_emb2, 0)
 
             loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
+
+            # loss = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2) + torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2) + torch.norm(mean_emb1[:,2]-mean_emb2[:,2], p=2)
 
             loss.backward()
             optimizer.step()
