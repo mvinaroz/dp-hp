@@ -110,7 +110,9 @@ def main():
 
     true_labels = np.zeros((n,n_classes))
     idx_1 = y_labels==1
+    idx_0 = y_labels==0
     true_labels[idx_1,1] = 1
+    true_labels[idx_0,0] = 1
 
     # test how to use RFF for computing the kernel matrix
     idx_rp = np.random.permutation(5000)
@@ -120,7 +122,7 @@ def main():
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 500
+    n_features = 100
 
 
     """ training a Generator via minimizing MMD """
