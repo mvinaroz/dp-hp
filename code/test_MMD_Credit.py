@@ -53,7 +53,7 @@ class Generative_Model(nn.Module):
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            self.softmax = torch.nn.Softmax()
+            self.softmax = torch.nn.Softmax(dim=1)
 
             # self.fc1 = torch.nn.utils.weight_norm(torch.nn.Linear(self.input_size, self.hidden_size_1), name='weight')
             # self.relu = torch.nn.ReLU()
