@@ -130,8 +130,8 @@ def main():
     # test how to use RFF for computing the kernel matrix
     idx_rp = np.random.permutation(10000)
     med = util.meddistance(data_samps[idx_rp,:])
-    # sigma2 = med**2
-    sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
+    sigma2 = med**2
+    #sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
@@ -143,8 +143,8 @@ def main():
     mini_batch_size = 4000
 
     input_size = 100 + 1
-    hidden_size_1 = 500
-    hidden_size_2 = 200
+    hidden_size_1 = 1000
+    hidden_size_2 = 500
     output_size = input_dim
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
