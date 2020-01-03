@@ -154,7 +154,7 @@ def main():
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 50
+    how_many_epochs = 1000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -168,10 +168,11 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
-    # n_0 = 1
-    # n_1 = 0.002
     n_0 = 1
-    n_1 = 1
+    n_1 = 0.002 # (ROC is 0.68)
+
+    # n_0 = 1 # when n_0 and n_1 are both 1, ROC is 0.85 and PRC is 0.0126
+    # n_1 = 1
     weights = [n_0, n_1]
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
@@ -183,6 +184,8 @@ def main():
 
     print('Starting Training')
 
+    n_0 = 1
+    n_1 = 1
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -192,7 +195,8 @@ def main():
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            label_input = (1*(torch.rand((mini_batch_size))<0.002)) # to match the scarse label 1 in the training data
+            # label_input = (1*(torch.rand((mini_batch_size))<0.002)) # to match the scarse label 1 in the training data
+            label_input = (1 * (torch.rand((mini_batch_size)) < 0.5))
             label_input = label_input[:,None].type(torch.FloatTensor)
             feature_input = torch.randn((mini_batch_size, input_size-1))
             input_to_model = torch.cat((feature_input, label_input), 1)
@@ -210,6 +214,7 @@ def main():
             label_input_t[idx_1, 1] = 1.
             label_input_t[idx_0, 0] = 1.
 
+            weights = [n_0, n_1]
             emb2_labels = Feature_labels(label_input_t, weights)
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
