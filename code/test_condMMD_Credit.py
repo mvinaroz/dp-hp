@@ -169,14 +169,10 @@ def main():
     # n_0, n_1 = np.sum(true_labels, 0)
 
     n_0 = 1
-<<<<<<< Updated upstream
     n_1 = 0.002 # (ROC is 0.68)
 
     # n_0 = 1 # when n_0 and n_1 are both 1, ROC is 0.85 and PRC is 0.0126
     # n_1 = 1
-=======
-    n_1 = 1
->>>>>>> Stashed changes
     weights = [n_0, n_1]
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
@@ -188,8 +184,8 @@ def main():
 
     print('Starting Training')
 
-    n_0 = 1
-    n_1 = 1
+    ns_0 = 1
+    ns_1 = 1
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -218,7 +214,7 @@ def main():
             label_input_t[idx_1, 1] = 1.
             label_input_t[idx_0, 0] = 1.
 
-            weights = [n_0, n_1]
+            weights = [ns_0, ns_1]
             emb2_labels = Feature_labels(label_input_t, weights)
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
@@ -284,8 +280,8 @@ def main():
 
 
     # save results
-    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1))
+    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
 
     np.save(method + '_loss.npy', training_loss_per_epoch)
     np.save(method + '_input_feature_samps.npy', generated_samples)
