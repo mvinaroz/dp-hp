@@ -143,8 +143,8 @@ def main():
     mini_batch_size = 4000
 
     input_size = 100 + 1
-    hidden_size_1 = 1000
-    hidden_size_2 = 500
+    hidden_size_1 = 500
+    hidden_size_2 = 200
     output_size = input_dim
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
@@ -154,7 +154,7 @@ def main():
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 1000
+    how_many_epochs = 50
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -168,8 +168,10 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
+    # n_0 = 1
+    # n_1 = 0.002
     n_0 = 1
-    n_1 = 0.002
+    n_1 = 1
     weights = [n_0, n_1]
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
@@ -235,9 +237,11 @@ def main():
     plt.yscale('log')
 
     plt.figure(4)
+    plt.subplot(211)
     plt.plot(mean_emb1[:, 0], 'b')
-    plt.plot(mean_emb1[:, 1], 'r')
     plt.plot(mean_emb2[:, 0].detach().numpy(), 'b--')
+    plt.subplot(212)
+    plt.plot(mean_emb1[:, 1], 'r')
     plt.plot(mean_emb2[:, 1].detach().numpy(), 'r--')
 
 
@@ -271,8 +275,8 @@ def main():
 
 
     # save results
-    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2))
+    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1))
 
     np.save(method + '_loss.npy', training_loss_per_epoch)
     np.save(method + '_input_feature_samps.npy', generated_samples)
