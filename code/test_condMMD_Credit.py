@@ -1,5 +1,5 @@
 """" test a simple generating training using MMD for relatively simple datasets """
-""" with generating labels together with the input features """
+""" for generating input features given random noise and the label """
 # Mijung wrote on Dec 20, 2019
 
 import numpy as np
@@ -19,8 +19,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
-
-
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -49,14 +47,14 @@ def Feature_labels(labels, weights):
 
 class Generative_Model(nn.Module):
 
-        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, n_classes):
+        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
             super(Generative_Model, self).__init__()
 
             self.input_size = input_size
             self.hidden_size_1 = hidden_size_1
             self.hidden_size_2 = hidden_size_2
             self.output_size = output_size
-            self.n_classes = n_classes
+            # self.n_classes = n_classes
 
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
             self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
@@ -64,7 +62,7 @@ class Generative_Model(nn.Module):
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            self.softmax = torch.nn.Softmax(dim=1)
+            # self.softmax = torch.nn.Softmax(dim=1)
 
             # self.fc1 = torch.nn.utils.weight_norm(torch.nn.Linear(self.input_size, self.hidden_size_1), name='weight')
             # self.relu = torch.nn.ReLU()
@@ -91,11 +89,11 @@ class Generative_Model(nn.Module):
             # output = self.fc2(relu)
             # output = self.relu(output)
             # output = self.fc3(output)
-
-            output_features = output[:, 0:-self.n_classes]
-            output_labels = self.softmax(output[:, -self.n_classes:])
-            output_total = torch.cat((output_features, output_labels), 1)
-            return output_total
+            #
+            # output_features = output[:, 0:-self.n_classes]
+            # output_labels = self.softmax(output[:, -self.n_classes:])
+            # output_total = torch.cat((output_features, output_labels), 1)
+            return output
 
 def main():
 
@@ -140,14 +138,14 @@ def main():
     # try more random features with a larger batch size
     mini_batch_size = 4000
 
-    input_size = 100
+    input_size = 100 + 1
     hidden_size_1 = 400
     hidden_size_2 = 200
-    output_size = input_dim + n_classes
+    output_size = input_dim
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-                             output_size=output_size, n_classes = n_classes)
+                             output_size=output_size)
 
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
@@ -174,8 +172,8 @@ def main():
     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
     mean_emb1 = torch.mean(outer_emb1, 0)
 
-    plt.plot(mean_emb1[:, 0], 'b')
-    plt.plot(mean_emb1[:, 1], 'r')
+    # plt.plot(mean_emb1[:, 0], 'b')
+    # plt.plot(mean_emb1[:, 1], 'r')
 
     print('Starting Training')
 
@@ -188,19 +186,25 @@ def main():
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            outputs = model(torch.randn((mini_batch_size, input_size)))
+            label_input = (1*(torch.rand((mini_batch_size))<0.002)) # to match the scarse label 1 in the training data
+            label_input = label_input[:,None].type(torch.FloatTensor)
+            feature_input = torch.randn((mini_batch_size, input_size-1))
+            input_to_model = torch.cat((feature_input, label_input), 1)
+            outputs = model(input_to_model)
 
-            samp_input_features = outputs[:,0:input_dim]
-            samp_labels = outputs[:,-n_classes:]
+            # samp_input_features = outputs[:,0:input_dim]
+            # samp_labels = outputs[:,-n_classes:]
 
             """ computing mean embedding of generated samples """
-            emb2_input_features = RFF_Gauss(n_features, samp_input_features, W_freq)
-            # kernel for labels with weights
-            # emb2_labels = samp_labels
-            # ns_0 = 1
-            # ns_1 = 1
-            # weights = [ns_0, ns_1]
-            emb2_labels = Feature_labels(samp_labels, weights)
+            emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
+
+            label_input_t = torch.zeros((mini_batch_size, n_classes))
+            idx_1 = (label_input == 1.).nonzero()[:,0]
+            idx_0 = (label_input == 0.).nonzero()[:,0]
+            label_input_t[idx_1, 1] = 1.
+            label_input_t[idx_0, 0] = 1.
+
+            emb2_labels = Feature_labels(label_input_t, weights)
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
 
@@ -235,10 +239,21 @@ def main():
 
     # model.eval()
 
-    # cannot produce the data for sparse label
-    outputs = model(torch.randn((n, input_size)))
-    samp_input_features = outputs[:, 0:input_dim]
-    samp_labels = outputs[:, -n_classes:]
+    label_input = (1 * (torch.rand((n)) < 0.002))  # to match the scarse label 1 in the training data
+    label_input = label_input[:, None].type(torch.FloatTensor)
+    feature_input = torch.randn((n, input_size - 1))
+    input_to_model = torch.cat((feature_input, label_input), 1)
+
+    outputs = model(input_to_model)
+    samp_input_features = outputs
+
+    label_input_t = torch.zeros((n, n_classes))
+    idx_1 = (label_input == 1.).nonzero()[:, 0]
+    idx_0 = (label_input == 0.).nonzero()[:, 0]
+    label_input_t[idx_1, 1] = 1.
+    label_input_t[idx_0, 0] = 1.
+
+    samp_labels = label_input_t
 
     generated_samples = samp_input_features.detach().numpy()
     generated_labels = samp_labels.detach().numpy()
