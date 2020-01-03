@@ -83,8 +83,48 @@ class RFFKGauss(FeatureMap):
             XWT = X.dot(W.T)
             Z1 = np.cos(XWT)
             Z2 = np.sin(XWT)
-            Z = np.hstack((Z1, Z2))*np.sqrt(1.0/self.n_features)
+            Z = np.hstack((Z1, Z2))*np.sqrt(2.0/self.n_features)
         return Z
 
     def num_features(self, X=None):
         return self.n_features
+
+
+# class RFFKGauss(FeatureMap):
+#     """
+#     A FeatureMap to construct random Fourier features for a Gaussian kernel.
+#     """
+#     def __init__(self, sigma2, n_features, W, seed=1):
+#         """
+#         n_features: number of random Fourier features. The total number of
+#             dimensions will be n_features. Internally draw n_features/2
+#             frequency components. n_features has to be even.
+#         """
+#         if sigma2 <= 0:
+#             raise ValueError('sigma2 is not positive. Was {}'.format(sigma2))
+#         if not (n_features > 0 and n_features%2==0):
+#             raise ValueError('n_features has to be even positive integer (just for our convenience). Was {}'.format(n_features))
+#         self.sigma2 = sigma2
+#         self.n_features = n_features
+#         self.seed =  seed
+#         self.W = W
+#
+#     def gen_features(self, X):
+#         # The following block of code is deterministic given seed.
+#         # Fourier transform formula from
+#         # http://mathworld.wolfram.com/FourierTransformGaussian.html
+#         with util.NumpySeedContext(seed=self.seed):
+#             # n, d = X.shape
+#
+#             # draws = self.n_features//2
+#             # W = np.random.randn(draws, d)/np.sqrt(self.sigma2)
+#             W = self.W
+#             # n x draws
+#             XWT = X.dot(W.T)
+#             Z1 = np.cos(XWT)
+#             Z2 = np.sin(XWT)
+#             Z = np.hstack((Z1, Z2))*np.sqrt(2.0/self.n_features)
+#         return Z
+#
+#     def num_features(self, X=None):
+#         return self.n_features

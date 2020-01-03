@@ -3,6 +3,7 @@ import numpy as np
 import torch.nn as nn
 import torch.optim as optim
 from dataloader import dataloader
+from MMD_utils import Gaussian_RF, distance_RF
 
 class generator(nn.Module):
     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
@@ -36,40 +37,40 @@ class generator(nn.Module):
         x = self.deconv(x)
 
         return x
+#
+# class discriminator(nn.Module):
+#     # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
+#     # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
+#     def __init__(self, input_dim=1, output_dim=1, input_size=32):
+#         super(discriminator, self).__init__()
+#         self.input_dim = input_dim
+#         self.output_dim = output_dim
+#         self.input_size = input_size
+#
+#         self.conv = nn.Sequential(
+#             nn.Conv2d(self.input_dim, 64, 4, 2, 1),
+#             nn.LeakyReLU(0.2),
+#             nn.Conv2d(64, 128, 4, 2, 1),
+#             nn.BatchNorm2d(128),
+#             nn.LeakyReLU(0.2),
+#         )
+#         self.fc = nn.Sequential(
+#             nn.Linear(128 * (self.input_size // 4) * (self.input_size // 4), 1024),
+#             nn.BatchNorm1d(1024),
+#             nn.LeakyReLU(0.2),
+#             nn.Linear(1024, self.output_dim),
+#             # nn.Sigmoid(),
+#         )
+#         utils.initialize_weights(self)
+#
+#     def forward(self, input):
+#         x = self.conv(input)
+#         x = x.view(-1, 128 * (self.input_size // 4) * (self.input_size // 4))
+#         x = self.fc(x)
+#
+#         return x
 
-class discriminator(nn.Module):
-    # Network Architecture is exactly same as in infoGAN (https://arxiv.org/abs/1606.03657)
-    # Architecture : (64)4c2s-(128)4c2s_BL-FC1024_BL-FC1_S
-    def __init__(self, input_dim=1, output_dim=1, input_size=32):
-        super(discriminator, self).__init__()
-        self.input_dim = input_dim
-        self.output_dim = output_dim
-        self.input_size = input_size
-
-        self.conv = nn.Sequential(
-            nn.Conv2d(self.input_dim, 64, 4, 2, 1),
-            nn.LeakyReLU(0.2),
-            nn.Conv2d(64, 128, 4, 2, 1),
-            nn.BatchNorm2d(128),
-            nn.LeakyReLU(0.2),
-        )
-        self.fc = nn.Sequential(
-            nn.Linear(128 * (self.input_size // 4) * (self.input_size // 4), 1024),
-            nn.BatchNorm1d(1024),
-            nn.LeakyReLU(0.2),
-            nn.Linear(1024, self.output_dim),
-            # nn.Sigmoid(),
-        )
-        utils.initialize_weights(self)
-
-    def forward(self, input):
-        x = self.conv(input)
-        x = x.view(-1, 128 * (self.input_size // 4) * (self.input_size // 4))
-        x = self.fc(x)
-
-        return x
-
-class WGAN(object):
+class MMDtest(object):
     def __init__(self, args):
         # parameters
         self.epoch = args.epoch
@@ -82,7 +83,8 @@ class WGAN(object):
         self.gpu_mode = args.gpu_mode
         self.model_name = args.gan_type
         self.input_size = args.input_size
-        self.z_dim = 62
+        # self.z_dim = 62
+        self.z_dim = 10
         self.c = 0.01                   # clipping value
         self.n_critic = 5               # the number of iterations of the critic per generator iteration
 
@@ -92,17 +94,19 @@ class WGAN(object):
 
         # networks init
         self.G = generator(input_dim=self.z_dim, output_dim=data.shape[1], input_size=self.input_size)
-        self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
-        self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
-        self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
+        # self.D = discriminator(input_dim=data.shape[1], output_dim=1, input_size=self.input_size)
+        # self.G_optimizer = optim.Adam(self.G.parameters(), lr=args.lrG, betas=(args.beta1, args.beta2))
+        # self.D_optimizer = optim.Adam(self.D.parameters(), lr=args.lrD, betas=(args.beta1, args.beta2))
+
+        self.G_optimizer = optim.SGD(self.G.parameters(), lr=args.lrG, momentum=0.1)
 
         if self.gpu_mode:
             self.G.cuda()
-            self.D.cuda()
+            # self.D.cuda()
 
         print('---------- Networks architecture -------------')
         utils.print_network(self.G)
-        utils.print_network(self.D)
+        # utils.print_network(self.D)
         print('-----------------------------------------------')
 
         # fixed noise
@@ -121,7 +125,17 @@ class WGAN(object):
         if self.gpu_mode:
             self.y_real_, self.y_fake_ = self.y_real_.cuda(), self.y_fake_.cuda()
 
-        self.D.train()
+        """ hyperparameters for MMD using Random Fourier Features """
+        sigma2 = 1 # for length scale of the kernel
+        # sigma2 = torch.Tensor([sigma2])
+        n_features = 20 # number of random features
+        # n_features = torch.Tensor([n_features])
+
+        # if self.gpu_mode:
+        #     sigma2 = sigma2.cuda()
+        #     n_features = n_features.cuda()
+
+        # self.D.train()
         print('training start!!')
         start_time = time.time()
         for epoch in range(self.epoch):
@@ -135,42 +149,52 @@ class WGAN(object):
                 if self.gpu_mode:
                     x_, z_ = x_.cuda(), z_.cuda()
 
-                # update D network
-                self.D_optimizer.zero_grad()
-
-                D_real = self.D(x_)
-                D_real_loss = -torch.mean(D_real)
-
-                G_ = self.G(z_)
-                D_fake = self.D(G_)
-                D_fake_loss = torch.mean(D_fake)
-
-                D_loss = D_real_loss + D_fake_loss
-
-                D_loss.backward()
-                self.D_optimizer.step()
-
-                # clipping D
-                for p in self.D.parameters():
-                    p.data.clamp_(-self.c, self.c)
+                # # update D network
+                # self.D_optimizer.zero_grad()
+                #
+                # D_real = self.D(x_)
+                # D_real_loss = -torch.mean(D_real)
+                #
+                # G_ = self.G(z_)
+                # D_fake = self.D(G_)
+                # D_fake_loss = torch.mean(D_fake)
+                #
+                # D_loss = D_real_loss + D_fake_loss
+                #
+                # D_loss.backward()
+                # self.D_optimizer.step()
+                #
+                # # clipping D
+                # for p in self.D.parameters():
+                #     p.data.clamp_(-self.c, self.c)
 
                 if ((iter+1) % self.n_critic) == 0:
                     # update G network
                     self.G_optimizer.zero_grad()
 
                     G_ = self.G(z_)
-                    D_fake = self.D(G_)
-                    G_loss = -torch.mean(D_fake)
+                    # D_fake = self.D(G_)
+                    # G_loss = -torch.mean(D_fake)
+
+                    """ computing MMD on actual data (x_) and generated data (G_) """
+                    mean_emb1 = Gaussian_RF(sigma2, n_features, x_, self.gpu_mode)
+                    mean_emb2 = Gaussian_RF(sigma2, n_features, G_, self.gpu_mode)
+
+                    G_loss = distance_RF(mean_emb1, mean_emb2)
+
                     self.train_hist['G_loss'].append(G_loss.item())
 
                     G_loss.backward()
                     self.G_optimizer.step()
 
-                    self.train_hist['D_loss'].append(D_loss.item())
+                    # self.train_hist['D_loss'].append(D_loss.item())
 
+                # if ((iter + 1) % 100) == 0:
+                #     print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
+                #           ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
                 if ((iter + 1) % 100) == 0:
-                    print("Epoch: [%2d] [%4d/%4d] D_loss: %.8f, G_loss: %.8f" %
-                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, D_loss.item(), G_loss.item()))
+                    print("Epoch: [%2d] [%4d/%4d] G_loss: %.8f" %
+                          ((epoch + 1), (iter + 1), self.data_loader.dataset.__len__() // self.batch_size, G_loss.item()))
 
             self.train_hist['per_epoch_time'].append(time.time() - epoch_start_time)
             with torch.no_grad():
@@ -222,7 +246,7 @@ class WGAN(object):
             os.makedirs(save_dir)
 
         torch.save(self.G.state_dict(), os.path.join(save_dir, self.model_name + '_G.pkl'))
-        torch.save(self.D.state_dict(), os.path.join(save_dir, self.model_name + '_D.pkl'))
+        # torch.save(self.D.state_dict(), os.path.join(save_dir, self.model_name + '_D.pkl'))
 
         with open(os.path.join(save_dir, self.model_name + '_history.pkl'), 'wb') as f:
             pickle.dump(self.train_hist, f)
@@ -231,4 +255,4 @@ class WGAN(object):
         save_dir = os.path.join(self.save_dir, self.dataset, self.model_name)
 
         self.G.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_G.pkl')))
-        self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_D.pkl')))
+        # self.D.load_state_dict(torch.load(os.path.join(save_dir, self.model_name + '_D.pkl')))

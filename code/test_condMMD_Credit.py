@@ -169,10 +169,14 @@ def main():
     # n_0, n_1 = np.sum(true_labels, 0)
 
     n_0 = 1
+<<<<<<< Updated upstream
     n_1 = 0.002 # (ROC is 0.68)
 
     # n_0 = 1 # when n_0 and n_1 are both 1, ROC is 0.85 and PRC is 0.0126
     # n_1 = 1
+=======
+    n_1 = 1
+>>>>>>> Stashed changes
     weights = [n_0, n_1]
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
