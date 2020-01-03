@@ -20,6 +20,10 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
+import os
+
+Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
     # Fourier transform formula from
@@ -126,8 +130,8 @@ def main():
     # test how to use RFF for computing the kernel matrix
     idx_rp = np.random.permutation(10000)
     med = util.meddistance(data_samps[idx_rp,:])
-    sigma2 = med**2
-    # sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
+    # sigma2 = med**2
+    sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
@@ -139,7 +143,7 @@ def main():
     mini_batch_size = 4000
 
     input_size = 100 + 1
-    hidden_size_1 = 400
+    hidden_size_1 = 500
     hidden_size_2 = 200
     output_size = input_dim
 
@@ -164,16 +168,16 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
-    n_0 = 100
-    n_1 = 0.2
+    n_0 = 1
+    n_1 = 0.002
     weights = [n_0, n_1]
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
     mean_emb1 = torch.mean(outer_emb1, 0)
 
-    # plt.plot(mean_emb1[:, 0], 'b')
-    # plt.plot(mean_emb1[:, 1], 'r')
+    plt.plot(mean_emb1[:, 0], 'b')
+    plt.plot(mean_emb1[:, 1], 'r')
 
     print('Starting Training')
 
@@ -265,42 +269,56 @@ def main():
     print('ROC is', roc_auc_score(y_test, pred))
     print('PRC is', average_precision_score(y_test, pred))
 
+
+    # save results
+    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2))
+
+    np.save(method + '_loss.npy', training_loss_per_epoch)
+    np.save(method + '_input_feature_samps.npy', generated_samples)
+    np.save(method + '_output_label_samps.npy', generated_labels)
+
+
+if __name__ == '__main__':
+    main()
+
     # not just looking at the numbers, let's also look at the statistic of each of the input features
     # inspection code from https://www.kaggle.com/renjithmadhavan/credit-card-fraud-detection-using-python
-    plt.figure(1, figsize=(15, 12))
-    df = data
-    plt.subplot(5, 6, 1); plt.plot(df.V1); plt.subplot(5, 6, 15); plt.plot(df.V15)
-    plt.subplot(5, 6, 2); plt.plot(df.V2); plt.subplot(5, 6, 16); plt.plot(df.V16)
-    plt.subplot(5, 6, 3); plt.plot(df.V3); plt.subplot(5, 6, 17); plt.plot(df.V17)
-    plt.subplot(5, 6, 4); plt.plot(df.V4); plt.subplot(5, 6, 18); plt.plot(df.V18)
-    plt.subplot(5, 6, 5); plt.plot(df.V5); plt.subplot(5, 6, 19); plt.plot(df.V19)
-    plt.subplot(5, 6, 6); plt.plot(df.V6); plt.subplot(5, 6, 20); plt.plot(df.V20)
-    plt.subplot(5, 6, 7); plt.plot(df.V7); plt.subplot(5, 6, 21); plt.plot(df.V21)
-    plt.subplot(5, 6, 8); plt.plot(df.V8); plt.subplot(5, 6, 22); plt.plot(df.V22)
-    plt.subplot(5, 6, 9); plt.plot(df.V9); plt.subplot(5, 6, 23); plt.plot(df.V23)
-    plt.subplot(5, 6, 10); plt.plot(df.V10); plt.subplot(5, 6, 24); plt.plot(df.V24)
-    plt.subplot(5, 6, 11); plt.plot(df.V11); plt.subplot(5, 6, 25); plt.plot(df.V25)
-    plt.subplot(5, 6, 12); plt.plot(df.V12); plt.subplot(5, 6, 26); plt.plot(df.V26)
-    plt.subplot(5, 6, 13); plt.plot(df.V13); plt.subplot(5, 6, 27); plt.plot(df.V27)
-    plt.subplot(5, 6, 14); plt.plot(df.V14); plt.subplot(5, 6, 28); plt.plot(df.V28)
-    plt.subplot(5, 6, 29); plt.plot(df.Amount)
 
-    plt.figure(2, figsize=(15, 12))
-    plt.subplot(5, 6, 1); plt.plot(generated_samples[:,0]); plt.subplot(5, 6, 15); plt.plot(generated_samples[:,14])
-    plt.subplot(5, 6, 2); plt.plot(generated_samples[:,1]); plt.subplot(5, 6, 16); plt.plot(generated_samples[:,15])
-    plt.subplot(5, 6, 3); plt.plot(generated_samples[:,2]); plt.subplot(5, 6, 17); plt.plot(generated_samples[:,16])
-    plt.subplot(5, 6, 4); plt.plot(generated_samples[:,3]); plt.subplot(5, 6, 18); plt.plot(generated_samples[:,17])
-    plt.subplot(5, 6, 5); plt.plot(generated_samples[:,4]); plt.subplot(5, 6, 19); plt.plot(generated_samples[:,18])
-    plt.subplot(5, 6, 6); plt.plot(generated_samples[:,5]); plt.subplot(5, 6, 20); plt.plot(generated_samples[:,19])
-    plt.subplot(5, 6, 7); plt.plot(generated_samples[:,6]); plt.subplot(5, 6, 21); plt.plot(generated_samples[:, 20])
-    plt.subplot(5, 6, 8); plt.plot(generated_samples[:,7]); plt.subplot(5, 6, 22); plt.plot(generated_samples[:,21])
-    plt.subplot(5, 6, 9); plt.plot(generated_samples[:,8]); plt.subplot(5, 6, 23); plt.plot(generated_samples[:,22])
-    plt.subplot(5, 6, 10); plt.plot(generated_samples[:,9]); plt.subplot(5, 6, 24); plt.plot(generated_samples[:,23])
-    plt.subplot(5, 6, 11); plt.plot(generated_samples[:,10]); plt.subplot(5, 6, 25); plt.plot(generated_samples[:,24])
-    plt.subplot(5, 6, 12); plt.plot(generated_samples[:,11]); plt.subplot(5, 6, 26); plt.plot(generated_samples[:,25])
-    plt.subplot(5, 6, 13); plt.plot(generated_samples[:,12]); plt.subplot(5, 6, 27); plt.plot(generated_samples[:,26])
-    plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
-    plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
+    # plt.figure(1, figsize=(15, 12))
+    # df = data
+    # plt.subplot(5, 6, 1); plt.plot(df.V1); plt.subplot(5, 6, 15); plt.plot(df.V15)
+    # plt.subplot(5, 6, 2); plt.plot(df.V2); plt.subplot(5, 6, 16); plt.plot(df.V16)
+    # plt.subplot(5, 6, 3); plt.plot(df.V3); plt.subplot(5, 6, 17); plt.plot(df.V17)
+    # plt.subplot(5, 6, 4); plt.plot(df.V4); plt.subplot(5, 6, 18); plt.plot(df.V18)
+    # plt.subplot(5, 6, 5); plt.plot(df.V5); plt.subplot(5, 6, 19); plt.plot(df.V19)
+    # plt.subplot(5, 6, 6); plt.plot(df.V6); plt.subplot(5, 6, 20); plt.plot(df.V20)
+    # plt.subplot(5, 6, 7); plt.plot(df.V7); plt.subplot(5, 6, 21); plt.plot(df.V21)
+    # plt.subplot(5, 6, 8); plt.plot(df.V8); plt.subplot(5, 6, 22); plt.plot(df.V22)
+    # plt.subplot(5, 6, 9); plt.plot(df.V9); plt.subplot(5, 6, 23); plt.plot(df.V23)
+    # plt.subplot(5, 6, 10); plt.plot(df.V10); plt.subplot(5, 6, 24); plt.plot(df.V24)
+    # plt.subplot(5, 6, 11); plt.plot(df.V11); plt.subplot(5, 6, 25); plt.plot(df.V25)
+    # plt.subplot(5, 6, 12); plt.plot(df.V12); plt.subplot(5, 6, 26); plt.plot(df.V26)
+    # plt.subplot(5, 6, 13); plt.plot(df.V13); plt.subplot(5, 6, 27); plt.plot(df.V27)
+    # plt.subplot(5, 6, 14); plt.plot(df.V14); plt.subplot(5, 6, 28); plt.plot(df.V28)
+    # plt.subplot(5, 6, 29); plt.plot(df.Amount)
+    #
+    # plt.figure(2, figsize=(15, 12))
+    # plt.subplot(5, 6, 1); plt.plot(generated_samples[:,0]); plt.subplot(5, 6, 15); plt.plot(generated_samples[:,14])
+    # plt.subplot(5, 6, 2); plt.plot(generated_samples[:,1]); plt.subplot(5, 6, 16); plt.plot(generated_samples[:,15])
+    # plt.subplot(5, 6, 3); plt.plot(generated_samples[:,2]); plt.subplot(5, 6, 17); plt.plot(generated_samples[:,16])
+    # plt.subplot(5, 6, 4); plt.plot(generated_samples[:,3]); plt.subplot(5, 6, 18); plt.plot(generated_samples[:,17])
+    # plt.subplot(5, 6, 5); plt.plot(generated_samples[:,4]); plt.subplot(5, 6, 19); plt.plot(generated_samples[:,18])
+    # plt.subplot(5, 6, 6); plt.plot(generated_samples[:,5]); plt.subplot(5, 6, 20); plt.plot(generated_samples[:,19])
+    # plt.subplot(5, 6, 7); plt.plot(generated_samples[:,6]); plt.subplot(5, 6, 21); plt.plot(generated_samples[:, 20])
+    # plt.subplot(5, 6, 8); plt.plot(generated_samples[:,7]); plt.subplot(5, 6, 22); plt.plot(generated_samples[:,21])
+    # plt.subplot(5, 6, 9); plt.plot(generated_samples[:,8]); plt.subplot(5, 6, 23); plt.plot(generated_samples[:,22])
+    # plt.subplot(5, 6, 10); plt.plot(generated_samples[:,9]); plt.subplot(5, 6, 24); plt.plot(generated_samples[:,23])
+    # plt.subplot(5, 6, 11); plt.plot(generated_samples[:,10]); plt.subplot(5, 6, 25); plt.plot(generated_samples[:,24])
+    # plt.subplot(5, 6, 12); plt.plot(generated_samples[:,11]); plt.subplot(5, 6, 26); plt.plot(generated_samples[:,25])
+    # plt.subplot(5, 6, 13); plt.plot(generated_samples[:,12]); plt.subplot(5, 6, 27); plt.plot(generated_samples[:,26])
+    # plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
+    # plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
 
     plt.show()
 
