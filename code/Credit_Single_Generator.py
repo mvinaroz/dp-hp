@@ -20,7 +20,7 @@ from sklearn.metrics import average_precision_score
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+Results_PATH = "/".join([os.getenv("HOME"), "separate_Credit/"])
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -144,21 +144,58 @@ def main():
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
+        # if which_class==1:
+        #
+        #     mini_batch_size = 200
+        #     input_size = 10
+        #     hidden_size_1 = 100
+        #     hidden_size_2 = 50
+        #     output_size = input_dim
+        #     how_many_epochs = 1000
+        #
+        # else: # for extremely imbalanced dataset
+        #     mini_batch_size = 10000 # large minibatch size for speeding up the training process
+        #     input_size = 100
+        #     hidden_size_1 = 500
+        #     hidden_size_2 = 200
+        #     output_size = input_dim
+        #     how_many_epochs = 400
+
+        # if which_class==1:
+        #
+        #     mini_batch_size = 100
+        #     input_size = 20
+        #     hidden_size_1 = 200
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+        #     how_many_epochs = 1000
+        #
+        # else: # for extremely imbalanced dataset
+        #     mini_batch_size = 4000 # large minibatch size for speeding up the training process
+        #     input_size = 100
+        #     hidden_size_1 = 500
+        #     hidden_size_2 = 200
+        #     output_size = input_dim
+        #     how_many_epochs = 400
+
         if which_class==1:
+
             mini_batch_size = 100
             input_size = 10
-            hidden_size_1 = 100
-            hidden_size_2 = 50
+            hidden_size_1 = 50
+            hidden_size_2 = 20
             output_size = input_dim
             how_many_epochs = 1000
 
         else: # for extremely imbalanced dataset
-            mini_batch_size = 4000
-            input_size = 100
-            hidden_size_1 = 500
+            mini_batch_size = 10000 # large minibatch size for speeding up the training process
+            input_size = 200
+            hidden_size_1 = 1000
             hidden_size_2 = 200
             output_size = input_dim
             how_many_epochs = 400
+
+
 
 
         # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
@@ -223,17 +260,28 @@ def main():
 
         if which_class==1:
             generated_samples_pos = samp_input_features.detach().numpy()
+
+            # save results
+            method = os.path.join(Results_PATH, 'Credit_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            np.save(method + '_loss.npy', training_loss_per_epoch)
+            np.save(method + '_input_feature_samps.npy', generated_samples_pos)
+
         else:
             generated_samples_neg = samp_input_features.detach().numpy()
 
-    plt.figure(3)
-    plt.plot(training_loss_per_epoch)
-    plt.title('MMD as a function of epoch')
-    plt.yscale('log')
+            # save results
+            method = os.path.join(Results_PATH, 'Credit_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            np.save(method + '_loss.npy', training_loss_per_epoch)
+            np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
-    plt.figure(4)
-    plt.plot(mean_emb1, 'b')
-    plt.plot(mean_emb2.detach().numpy(), 'r--')
+        # plt.figure(3)
+        # plt.plot(training_loss_per_epoch)
+        # plt.title('MMD as a function of epoch')
+        # plt.yscale('log')
+        #
+        # plt.figure(4)
+        # plt.plot(mean_emb1, 'b')
+        # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
     # mix data for positive and negative labels
     generated_input_features = np.concatenate((generated_samples_pos, generated_samples_neg), axis=0)
@@ -248,17 +296,18 @@ def main():
     LR_model.fit(shuffled_x_train, shuffled_y_train) # training on synthetic data
     pred = LR_model.predict(X_test) # test on real data
 
-    print('ROC is', roc_auc_score(y_test, pred))
-    print('PRC is', average_precision_score(y_test, pred))
 
-    #
-    # # save results
-    # method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
-    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
-    #
-    # np.save(method + '_loss.npy', training_loss_per_epoch)
-    # np.save(method + '_input_feature_samps.npy', generated_samples)
-    # np.save(method + '_output_label_samps.npy', generated_labels)
+    ROC = roc_auc_score(y_test, pred)
+    PRC = average_precision_score(y_test, pred)
+
+    print('ROC is', ROC)
+    print('PRC is', PRC)
+
+    method = os.path.join(Results_PATH, 'Credit_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',
+                          (mini_batch_size, input_size, hidden_size_1, hidden_size_2)) # save with the label 1 setup
+    np.save(method + '_PRC.npy', ROC)
+    np.save(method + '_ROC.npy', PRC)
+
 
 
 if __name__ == '__main__':

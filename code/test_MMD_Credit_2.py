@@ -123,6 +123,9 @@ def main():
         data_features = data[feature_names]
         data_target = data[target]
 
+        n_0 = 1
+        n_1 = 0.002
+
     elif format == 'npy':
         data_features_npy = np.load('../data/Isolet/isolet_data.npy')
         data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
@@ -148,6 +151,9 @@ def main():
 
         data_features = pd.DataFrame(values, index=index)
         data_target = pd.DataFrame(values_l, index=index_l)
+
+        n_0 = 10
+        n_1 = 2
 
 
     X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.80, test_size=0.20, random_state=0)
@@ -220,9 +226,15 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
     #these are manual numebers for the weights, e.g. in creadit dataset 0.2% are positive labels
     n_0 = 100
     n_1 = 0.2
+=======
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
 
     if n_classes==2:
         weights = [n_0, n_1]
