@@ -329,10 +329,4 @@ if __name__ == '__main__':
     # plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
     # plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
 
-    plt.show()
-
-if __name__ == '__main__':
-    main()
-
-
-# if this doesn't work, then try out the conditional generator, where label is also an input with the random noise
+    # plt.show()
