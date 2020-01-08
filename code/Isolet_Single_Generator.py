@@ -149,20 +149,38 @@ def main(inp, h1, h2, mini_batch_size):
         # hidden_size_2 = h2 * input_dim
         # output_size = input_dim
 
+        # doesn't work
+        # if which_class == 1:
+        #
+        #     mini_batch_size = 200
+        #     input_size = 40
+        #     hidden_size_1 = 200
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+        #     how_many_epochs = 1000
+        #
+        # else:  # for extremely imbalanced dataset
+        #     mini_batch_size = 4000  # large minibatch size for speeding up the training process
+        #     input_size = 100
+        #     hidden_size_1 = 500
+        #     hidden_size_2 = 200
+        #     output_size = input_dim
+        #     how_many_epochs = 100  # 400
+
         if which_class==1:
 
-            mini_batch_size = 20
-            input_size = 20
-            hidden_size_1 = 50
-            hidden_size_2 = 20
+            mini_batch_size = 200
+            input_size = 200
+            hidden_size_1 = 100
+            hidden_size_2 = 100
             output_size = input_dim
             how_many_epochs = 50
 
         else: # for extremely imbalanced dataset
 
-            mini_batch_size = 20
-            input_size = 20
-            hidden_size_1 = 200
+            mini_batch_size = 200
+            input_size = 400
+            hidden_size_1 = 300
             hidden_size_2 = 100
             output_size = input_dim
             how_many_epochs = 50
@@ -181,7 +199,7 @@ def main(inp, h1, h2, mini_batch_size):
         model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size)
 
-        optimizer = optim.Adam(model.parameters(), lr=1e-2)
+        optimizer = optim.Adam(model.parameters(), lr=1e-3)
         how_many_iter = np.int(n/mini_batch_size)
 
         training_loss_per_epoch = np.zeros(how_many_epochs)
