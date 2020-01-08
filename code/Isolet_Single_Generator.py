@@ -169,21 +169,21 @@ def main(inp, h1, h2, mini_batch_size):
 
         if which_class==1:
 
-            mini_batch_size = 200
-            input_size = 200
+            mini_batch_size = 400
+            input_size = 400
             hidden_size_1 = 100
             hidden_size_2 = 100
             output_size = input_dim
-            how_many_epochs = 50
+            how_many_epochs = 30
 
         else: # for extremely imbalanced dataset
 
-            mini_batch_size = 200
+            mini_batch_size = 400
             input_size = 400
             hidden_size_1 = 300
             hidden_size_2 = 100
             output_size = input_dim
-            how_many_epochs = 50
+            how_many_epochs = 30
 
             # mini_batch_size = 4000 # large minibatch size for speeding up the training process
             # input_size = 100
