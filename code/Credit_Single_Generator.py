@@ -53,20 +53,6 @@ class Generative_Model(nn.Module):
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            # self.softmax = torch.nn.Softmax(dim=1)
-
-            # self.fc1 = torch.nn.utils.weight_norm(torch.nn.Linear(self.input_size, self.hidden_size_1), name='weight')
-            # self.relu = torch.nn.ReLU()
-            # self.fc2 = torch.nn.utils.weight_norm(torch.nn.Linear(self.hidden_size_1, self.hidden_size_2), name='weight')
-
-            # self.fc1 = torch.nn.utils.spectral_norm(torch.nn.Linear(self.input_size, self.hidden_size_1))
-            # self.relu = torch.nn.ReLU()
-            # self.fc2 = torch.nn.utils.spectral_norm(torch.nn.Linear(self.hidden_size_1, self.hidden_size_2))
-
-            # self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            # self.softmax = torch.nn.Softmax(dim=1)
-
-
 
         def forward(self, x):
             hidden = self.fc1(x)
@@ -75,15 +61,6 @@ class Generative_Model(nn.Module):
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
 
-            # hidden = self.fc1(x)
-            # relu = self.relu(hidden)
-            # output = self.fc2(relu)
-            # output = self.relu(output)
-            # output = self.fc3(output)
-            #
-            # output_features = output[:, 0:-self.n_classes]
-            # output_labels = self.softmax(output[:, -self.n_classes:])
-            # output_total = torch.cat((output_features, output_labels), 1)
             return output
 
 def main():
@@ -100,6 +77,14 @@ def main():
     data_target = data[target]
 
     X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=0)
+
+    # test logistic regression on the real data
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_train.values.ravel()) # training on synthetic data
+    pred = LR_model.predict(X_test) # test on real data
+
+    print('ROC on real test data is', roc_auc_score(y_test, pred))
+    print('PRC on real test data is', average_precision_score(y_test, pred))
 
     y_labels = y_train.values.ravel()  # X_train_pos
     X_train = X_train.values
@@ -136,7 +121,6 @@ def main():
         med = util.meddistance(data_samps[idx_rp,:])
         del idx_rp
         sigma2 = med**2
-        #sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
         print('length scale from median heuristic is', sigma2)
 
         # random Fourier features
@@ -161,50 +145,46 @@ def main():
         #     output_size = input_dim
         #     how_many_epochs = 400
 
-        # if which_class==1:
-        #
-        #     mini_batch_size = 100
-        #     input_size = 20
-        #     hidden_size_1 = 200
-        #     hidden_size_2 = 100
-        #     output_size = input_dim
-        #     how_many_epochs = 1000
-        #
-        # else: # for extremely imbalanced dataset
-        #     mini_batch_size = 4000 # large minibatch size for speeding up the training process
-        #     input_size = 100
-        #     hidden_size_1 = 500
-        #     hidden_size_2 = 200
-        #     output_size = input_dim
-        #     how_many_epochs = 400
-
         if which_class==1:
 
             mini_batch_size = 100
-            input_size = 10
-            hidden_size_1 = 50
-            hidden_size_2 = 20
+            input_size = 20
+            hidden_size_1 = 200
+            hidden_size_2 = 100
             output_size = input_dim
             how_many_epochs = 1000
 
         else: # for extremely imbalanced dataset
-            mini_batch_size = 10000 # large minibatch size for speeding up the training process
-            input_size = 200
-            hidden_size_1 = 1000
+            mini_batch_size = 4000 # large minibatch size for speeding up the training process
+            input_size = 100
+            hidden_size_1 = 500
             hidden_size_2 = 200
             output_size = input_dim
             how_many_epochs = 400
 
+        # if which_class==1:
+        #
+        #     mini_batch_size = 100
+        #     input_size = 10
+        #     hidden_size_1 = 50
+        #     hidden_size_2 = 20
+        #     output_size = input_dim
+        #     how_many_epochs = 1000
+        #
+        # else: # for extremely imbalanced dataset
+        #     mini_batch_size = 10000 # large minibatch size for speeding up the training process
+        #     input_size = 200
+        #     hidden_size_1 = 1000
+        #     hidden_size_2 = 200
+        #     output_size = input_dim
+        #     how_many_epochs = 400
 
 
 
-        # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
         model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size)
 
-        # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
         optimizer = optim.Adam(model.parameters(), lr=1e-2)
-        # optimizer = optim.SGD(model.parameters(), lr=0.001)
         how_many_iter = np.int(n/mini_batch_size)
 
         training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -214,7 +194,7 @@ def main():
 
         """ computing mean embedding of true data """
         emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
-        mean_emb1 = torch.mean(emb1_input_features, axis=0)
+        mean_emb1 = torch.mean(emb1_input_features, 0)
 
         del data_samps
         del emb1_input_features
@@ -237,7 +217,7 @@ def main():
 
                 """ computing mean embedding of generated samples """
                 emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
-                mean_emb2 = torch.mean(emb2_input_features, axis=0)
+                mean_emb2 = torch.mean(emb2_input_features, 0)
 
                 loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
 
@@ -247,8 +227,6 @@ def main():
                 # print statistics
                 running_loss += loss.item()
 
-            # if running_loss<=1e-4:
-            #     break
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
@@ -262,7 +240,7 @@ def main():
             generated_samples_pos = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Credit_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            method = os.path.join(Results_PATH, 'Credit_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
@@ -270,7 +248,7 @@ def main():
             generated_samples_neg = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Credit_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            method = os.path.join(Results_PATH, 'Credit_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
@@ -303,8 +281,8 @@ def main():
     print('ROC is', ROC)
     print('PRC is', PRC)
 
-    method = os.path.join(Results_PATH, 'Credit_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s',
-                          (mini_batch_size, input_size, hidden_size_1, hidden_size_2)) # save with the label 1 setup
+    method = os.path.join(Results_PATH, 'Credit_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s'
+                          %(mini_batch_size, input_size, hidden_size_1, hidden_size_2)) # save with the label 1 setup
     np.save(method + '_PRC.npy', ROC)
     np.save(method + '_ROC.npy', PRC)
 
