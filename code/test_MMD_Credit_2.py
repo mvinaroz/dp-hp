@@ -127,17 +127,17 @@ def main():
         data_features_npy = np.load('../data/Isolet/isolet_data.npy')
         data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
 
-        target_pos=np.where(data_target_npy==1)
-        target_neg=np.where(data_target_npy==0)
-
-        data_features_npy_pos=data_features_npy[target_pos]
-        data_target_npy_pos=np.ones(len(data_features_npy_pos))
-
-        data_features_npy_neg = data_features_npy[target_neg]
-        data_target_npy_neg=np.ones(len(data_features_npy_neg))
-
-        data_features_npy=data_features_npy_pos
-        data_target_npy=data_target_npy_pos
+        # target_pos=np.where(data_target_npy==1)
+        # target_neg=np.where(data_target_npy==0)
+        #
+        # data_features_npy_pos=data_features_npy[target_pos]
+        # data_target_npy_pos=np.ones(len(data_features_npy_pos))
+        #
+        # data_features_npy_neg = data_features_npy[target_neg]
+        # data_target_npy_neg=np.ones(len(data_features_npy_neg))
+        #
+        # data_features_npy=data_features_npy_pos
+        # data_target_npy=data_target_npy_pos
 
         # dtype = [('Col1', 'int32'), ('Col2', 'float32'), ('Col3', 'float32')]
         values = data_features_npy
@@ -214,25 +214,42 @@ def main():
     ###########################################################
     """ computing mean embedding of true data """
 
+    #we choose arbitrary n_features number and then we reduce the existing features from each training instance to that with n_features
     emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq) ## data_samps (199364, 29)
 
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
+    #these are manual numebers for the weights, e.g. in creadit dataset 0.2% are positive labels
     n_0 = 100
     n_1 = 0.2
 
     if n_classes==2:
         weights = [n_0, n_1]
+        #true labels: for each instance we have a one-got vector
+        # to balance we weigh each entry, e.g. 0.01 for false and 5 for true label because we have 500 more false labels
+        # array([[1., 0.],
+        #        [1., 0.],
+        #        [0., 1.],
+        #        ...,
+        #        [0., 1.],
+        #        [1., 0.],
+        #        [0., 1.]])
+        # tensor([[0.0100, 0.0000],
+        #         [0.0100, 0.0000],
+        #         [0.0000, 5.0000],
+        #         ...,
+        #         [0.0000, 5.0000],
+        #         [0.0100, 0.0000],
+        #         [0.0000, 5.0000]])
+
         emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
         # emb1_labels = torch.Tensor(true_labels)
+        #for some reason combining features and labels
         outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
         mean_emb1 = torch.mean(outer_emb1, 0)
     elif n_classes==1:
         mean_emb1 = torch.mean(emb1_input_features, 0)
-
-
-
 
     #plt.plot(mean_emb1[:, 0].cpu().numpy(), 'b')
     #plt.plot(mean_emb1[:, 1].cpu().numpy(), 'r')
@@ -267,7 +284,11 @@ def main():
             # ns_1 = 1
             # weights = [ns_0, ns_1]
             emb2_labels = Feature_labels(samp_labels, weights)
+            #e.g. [4000, 100, 2]=[4000, 100], [4000, 2]
+            # k stays means we deal with each row (data/label pair separately)
+            # each feature vector is multiplied by both frequencies getting [num_features, 2] matrix for each instance
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+            #mean across all the examples [100,2]
             mean_emb2 = torch.mean(outer_emb2, 0)
 
 
