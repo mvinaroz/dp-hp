@@ -150,7 +150,7 @@ def main():
         if which_class==1:
 
             mini_batch_size = 200
-            input_size = 20
+            input_size = 40
             hidden_size_1 = 200
             hidden_size_2 = 100
             output_size = input_dim
