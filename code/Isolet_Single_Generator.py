@@ -7,6 +7,7 @@ import torch.nn as nn
 import torch.optim as optim
 import util
 import random
+import argparse
 
 import pandas as pd
 import seaborn as sns
@@ -20,7 +21,10 @@ from sklearn.metrics import average_precision_score
 
 import os
 
+
+
 Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
+Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -63,9 +67,12 @@ class Generative_Model(nn.Module):
 
             return output
 
-def main():
+def main(inp, h1, h2, mini_batch_size):
 
     random.seed(0)
+
+    #############################33
+    # get classification on real data
 
     # (1) load data
     data_features_npy = np.load('../data/Isolet/isolet_data.npy')
@@ -102,6 +109,9 @@ def main():
     X_train_neg = X_train[y_labels==0,:]
     y_train_neg = y_labels[y_labels == 0]
 
+    #############################################3
+    # train generator
+
     n_classes = 2
 
     for which_class in range(n_classes):
@@ -130,15 +140,39 @@ def main():
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
 
-        mini_batch_size = n
-
-        input_size = np.int(0.1 * input_dim)
-        hidden_size_1 = 4 * input_dim
-        hidden_size_2 = 2 * input_dim
+        # mini_batch_size = n
+        #
+        input_size = np.int(inp * input_dim)
+        hidden_size_1 = h1 * input_dim
+        hidden_size_2 = h2 * input_dim
         output_size = input_dim
+
+        # if which_class==1:
+        #
+        #     mini_batch_size = 200
+        #     input_size = 20
+        #     hidden_size_1 = 200
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+        #
+        # else: # for extremely imbalanced dataset
+        #
+        #     mini_batch_size = 200
+        #     input_size = 20
+        #     hidden_size_1 = 200
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+
+            # mini_batch_size = 4000 # large minibatch size for speeding up the training process
+            # input_size = 100
+            # hidden_size_1 = 500
+            # hidden_size_2 = 200
+            # output_size = input_dim
+            # how_many_epochs = 400
 
         how_many_epochs = 100
 
+        output_size=input_dim
 
         model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size)
@@ -158,7 +192,10 @@ def main():
         del data_samps
         del emb1_input_features
 
-        plt.plot(mean_emb1, 'b')
+        #plt.plot(mean_emb1, 'b')
+
+        ######################################33
+        # start training
 
         print('Starting Training')
 
@@ -189,6 +226,9 @@ def main():
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
+
+        #################################3
+        # generate samples
 
         """ now generated samples using the trained generator """
         input_to_model = torch.randn((n, input_size))
@@ -248,7 +288,7 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    main(0.2,4,2, 100)
 
     # not just looking at the numbers, let's also look at the statistic of each of the input features
     # inspection code from https://www.kaggle.com/renjithmadhavan/credit-card-fraud-detection-using-python

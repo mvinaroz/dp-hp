@@ -21,6 +21,8 @@ from sklearn.metrics import average_precision_score
 import os
 
 Results_PATH = "/".join([os.getenv("HOME"), "separate_Credit/"])
+Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_Credit"
+
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -199,7 +201,7 @@ def main():
         del data_samps
         del emb1_input_features
 
-        plt.plot(mean_emb1, 'b')
+        #plt.plot(mean_emb1, 'b')
 
         print('Starting Training')
 
