@@ -154,7 +154,7 @@ def main():
             hidden_size_1 = 200
             hidden_size_2 = 100
             output_size = input_dim
-            how_many_epochs = 10#1000
+            how_many_epochs = 1000
 
         else: # for extremely imbalanced dataset
             mini_batch_size = 4000 # large minibatch size for speeding up the training process
@@ -162,7 +162,7 @@ def main():
             hidden_size_1 = 500
             hidden_size_2 = 200
             output_size = input_dim
-            how_many_epochs = 40#400
+            how_many_epochs = 100#400
 
         # if which_class==1:
         #

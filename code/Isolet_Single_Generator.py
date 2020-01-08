@@ -21,10 +21,12 @@ from sklearn.metrics import average_precision_score
 
 import os
 
+user='kamil'
 
-
-Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
-Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
+if user=='mijung':
+    Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
+elif user =='kamil':
+    Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -142,26 +144,28 @@ def main(inp, h1, h2, mini_batch_size):
 
         # mini_batch_size = n
         #
-        input_size = np.int(inp * input_dim)
-        hidden_size_1 = h1 * input_dim
-        hidden_size_2 = h2 * input_dim
-        output_size = input_dim
+        # input_size = np.int(inp * input_dim)
+        # hidden_size_1 = h1 * input_dim
+        # hidden_size_2 = h2 * input_dim
+        # output_size = input_dim
 
-        # if which_class==1:
-        #
-        #     mini_batch_size = 200
-        #     input_size = 20
-        #     hidden_size_1 = 200
-        #     hidden_size_2 = 100
-        #     output_size = input_dim
-        #
-        # else: # for extremely imbalanced dataset
-        #
-        #     mini_batch_size = 200
-        #     input_size = 20
-        #     hidden_size_1 = 200
-        #     hidden_size_2 = 100
-        #     output_size = input_dim
+        if which_class==1:
+
+            mini_batch_size = 20
+            input_size = 20
+            hidden_size_1 = 50
+            hidden_size_2 = 20
+            output_size = input_dim
+            how_many_epochs = 50
+
+        else: # for extremely imbalanced dataset
+
+            mini_batch_size = 20
+            input_size = 20
+            hidden_size_1 = 200
+            hidden_size_2 = 100
+            output_size = input_dim
+            how_many_epochs = 50
 
             # mini_batch_size = 4000 # large minibatch size for speeding up the training process
             # input_size = 100
@@ -170,7 +174,7 @@ def main(inp, h1, h2, mini_batch_size):
             # output_size = input_dim
             # how_many_epochs = 400
 
-        how_many_epochs = 100
+
 
         output_size=input_dim
 
