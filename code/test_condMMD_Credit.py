@@ -122,8 +122,8 @@ def main():
     n, input_dim = data_samps.shape
 
     true_labels = np.zeros((n,n_classes))
-    idx_1 = y_labels==1
-    idx_0 = y_labels==0
+    idx_1 = y_labels == 1
+    idx_0 = y_labels == 0
     true_labels[idx_1,1] = 1
     true_labels[idx_0,0] = 1
 
@@ -136,7 +136,6 @@ def main():
 
     # random Fourier features
     n_features = 100
-
 
     """ training a Generator via minimizing MMD """
     # try more random features with a larger batch size
@@ -252,7 +251,7 @@ def main():
 
     # model.eval()
 
-    label_input = (1 * (torch.rand((n)) < 0.002))  # to match the scarse label 1 in the training data
+    label_input = (1 * (torch.rand((n)) < 0.5))  # to match the scarse label 1 in the training data
     label_input = label_input[:, None].type(torch.FloatTensor)
     feature_input = torch.randn((n, input_size - 1))
     input_to_model = torch.cat((feature_input, label_input), 1)

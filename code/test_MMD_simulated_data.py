@@ -230,7 +230,6 @@ def main():
 
             mean_emb2 = torch.mean(RFF_Gauss(n_features, outputs, W_freq), axis=0)
 
-
             loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
             # loss = mmd2_biased(inputs, outputs)
             loss.backward()

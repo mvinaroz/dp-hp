@@ -125,6 +125,9 @@ def main():
     # load results
     method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s' % (
     mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2))
+
+
+
     training_loss_per_epoch = np.load(method + '_loss.npy')
 
     plt.figure(2)
