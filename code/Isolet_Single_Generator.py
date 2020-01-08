@@ -129,22 +129,6 @@ def main():
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
-        # if which_class==1:
-        #
-        #     mini_batch_size = 200
-        #     input_size = 10
-        #     hidden_size_1 = 100
-        #     hidden_size_2 = 50
-        #     output_size = input_dim
-        #     how_many_epochs = 1000
-        #
-        # else: # for extremely imbalanced dataset
-        #     mini_batch_size = 10000 # large minibatch size for speeding up the training process
-        #     input_size = 100
-        #     hidden_size_1 = 500
-        #     hidden_size_2 = 200
-        #     output_size = input_dim
-        #     how_many_epochs = 400
 
         mini_batch_size = n
 
