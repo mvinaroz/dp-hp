@@ -66,19 +66,6 @@ class Generative_Model(nn.Module):
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            # self.softmax = torch.nn.Softmax(dim=1)
-
-            # self.fc1 = torch.nn.utils.weight_norm(torch.nn.Linear(self.input_size, self.hidden_size_1), name='weight')
-            # self.relu = torch.nn.ReLU()
-            # self.fc2 = torch.nn.utils.weight_norm(torch.nn.Linear(self.hidden_size_1, self.hidden_size_2), name='weight')
-
-            # self.fc1 = torch.nn.utils.spectral_norm(torch.nn.Linear(self.input_size, self.hidden_size_1))
-            # self.relu = torch.nn.ReLU()
-            # self.fc2 = torch.nn.utils.spectral_norm(torch.nn.Linear(self.hidden_size_1, self.hidden_size_2))
-
-            # self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-            # self.softmax = torch.nn.Softmax(dim=1)
-
 
 
         def forward(self, x):
@@ -88,15 +75,6 @@ class Generative_Model(nn.Module):
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
 
-            # hidden = self.fc1(x)
-            # relu = self.relu(hidden)
-            # output = self.fc2(relu)
-            # output = self.relu(output)
-            # output = self.fc3(output)
-            #
-            # output_features = output[:, 0:-self.n_classes]
-            # output_labels = self.softmax(output[:, -self.n_classes:])
-            # output_total = torch.cat((output_features, output_labels), 1)
             return output
 
 def main():
@@ -156,9 +134,9 @@ def main():
 
     """ training a Generator via minimizing MMD """
     # try more random features with a larger batch size
-    mini_batch_size = n
+    mini_batch_size = np.int(n/2)
 
-    input_size = np.int(0.1*input_dim) + 1
+    input_size = np.int(0.05*input_dim) + 1
     hidden_size_1 = 4*input_dim
     hidden_size_2 = 2*input_dim
     output_size = input_dim
@@ -183,8 +161,10 @@ def main():
 
     # kernel for labels with weights
     n_0, n_1 = np.sum(true_labels, 0)
+    n_0 = n_0/np.max([n_0, n_1])
+    n_1 = n_1/np.max([n_0, n_1])
 
-    weights = [n_0, n_1]/np.max([n_0, n_1])
+    weights = [n_0, n_1]
     positive_label_ratio = n_1/n_0
 
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
@@ -294,7 +274,7 @@ def main():
 
 
     # save results
-    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
+    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
     mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
 
     np.save(method + '_loss.npy', training_loss_per_epoch)
