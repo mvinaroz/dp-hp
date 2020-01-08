@@ -226,15 +226,10 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
-<<<<<<< Updated upstream
-<<<<<<< Updated upstream
     #these are manual numebers for the weights, e.g. in creadit dataset 0.2% are positive labels
-    n_0 = 100
-    n_1 = 0.2
-=======
->>>>>>> Stashed changes
-=======
->>>>>>> Stashed changes
+    n_0 = 80
+    n_1 = 20
+
 
     if n_classes==2:
         weights = [n_0, n_1]
