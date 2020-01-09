@@ -141,7 +141,7 @@ def main():
 
         # random Fourier features
 
-        n_features = 10000
+        # n_features = 10000
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
@@ -197,11 +197,17 @@ def main():
             # output_size = input_dim
             # how_many_epochs = 400
 
-        mini_batch_size = n
-        input_size = 10 + 1
-        hidden_size_1 = 2*input_dim
-        hidden_size_2 = np.int(1.2* input_dim)
-        output_size = input_dim
+
+        # in this particular setup
+        # n_features = 10000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 2*input_dim
+        # hidden_size_2 = np.int(1.2* input_dim)
+        # output_size = input_dim
+        #
+        # ROC is 0.8255916092106221
+        # PRC is 0.44640266105356663
 
         # in this particular setup:
         # n_features = 10000
@@ -214,6 +220,14 @@ def main():
         #
         # ROC is 0.8116268530623435
         # PRC is 0.4288499474923227
+
+
+        n_features = 15000
+        mini_batch_size = n
+        input_size = 10 + 1
+        hidden_size_1 = 2*input_dim
+        hidden_size_2 = np.int(1.2* input_dim)
+        output_size = input_dim
 
         how_many_epochs = 1000
 
@@ -327,6 +341,8 @@ def main():
                           %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features)) # save with the label 1 setup
     np.save(method + '_PRC.npy', ROC)
     np.save(method + '_ROC.npy', PRC)
+
+    print('model specifics are', method)
 
 
 
