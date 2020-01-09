@@ -222,12 +222,21 @@ def main():
         # PRC is 0.4288499474923227
 
 
-        n_features = 15000
+        # n_features = 15000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 2*input_dim
+        # hidden_size_2 = np.int(1.2* input_dim)
+        # output_size = input_dim
+
+
+        n_features = 10000
         mini_batch_size = n
         input_size = 10 + 1
-        hidden_size_1 = 2*input_dim
-        hidden_size_2 = np.int(1.2* input_dim)
+        hidden_size_1 = 4*input_dim
+        hidden_size_2 = 2* input_dim
         output_size = input_dim
+
 
         how_many_epochs = 1000
 
