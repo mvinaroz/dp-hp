@@ -137,7 +137,7 @@ def main(inp, h1, h2, mini_batch_size):
         print('length scale from median heuristic is', sigma2)
 
         # random Fourier features
-        n_features = 100
+        n_features = 20000
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
