@@ -125,21 +125,47 @@ def main():
     # test how to use RFF for computing the kernel matrix
     idx_rp = np.random.permutation(np.min([n, 10000]))
     med = util.meddistance(data_samps[idx_rp,:])
-    #sigma2 = med**2
-    sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
+    sigma2 = med**2
+    # sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 100
+    n_features = 10000
+    # with 4000 features, we get 0.75 and 0.36
+
+    # with 8000 randome features, we get
+    # ROC is 0.7957169525948002
+    # PRC is 0.4116904472410067
+
+    # ROC is 0.8159059840695851
+    # PRC is 0.43734046549898964
+    # n_features = 10000
+    # for     # input_size = 5 + 1
+    #     # hidden_size_1 = input_dim
+    #     # hidden_size_2 = np.int(1.2* input_dim)
+    #     # output_size = input_dim
 
     """ training a Generator via minimizing MMD """
     # try more random features with a larger batch size
     mini_batch_size = n
 
-    input_size = 50 + 1
-    hidden_size_1 = 4*input_dim
-    hidden_size_2 = np.int(2*input_dim)
+    input_size = 10 + 1
+    hidden_size_1 = 2 * input_dim
+    hidden_size_2 = np.int(1.2* input_dim)
     output_size = input_dim
+
+    # input_size = 5 + 1
+    # hidden_size_1 = input_dim
+    # hidden_size_2 = np.int(1.2* input_dim)
+    # output_size = input_dim
+
+    # input_size = 2 + 1
+    # hidden_size_1 = np.int(0.5*input_dim)
+    # hidden_size_2 = np.int(0.7* input_dim)
+    # output_size = input_dim
+    # ROC is 0.7981208749606029
+    # PRC is 0.4150323558700088
+    # n_features are  10000
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
@@ -163,6 +189,7 @@ def main():
     n_0, n_1 = np.sum(true_labels, 0)
     positive_label_ratio = n_1/n_0
     max_ratio = np.max([n_0, n_1])
+
     n_0 = n_0/max_ratio
     n_1 = n_1/max_ratio 
 
@@ -173,8 +200,8 @@ def main():
     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
     mean_emb1 = torch.mean(outer_emb1, 0)
 
-    plt.plot(mean_emb1[:, 0], 'b')
-    plt.plot(mean_emb1[:, 1], 'r')
+    # plt.plot(mean_emb1[:, 0], 'b')
+    # plt.plot(mean_emb1[:, 1], 'r')
 
     print('Starting Training')
 
@@ -272,15 +299,19 @@ def main():
 
     print('ROC is', roc_auc_score(y_test, pred))
     print('PRC is', average_precision_score(y_test, pred))
-
+    print('n_features are ', n_features)
 
     # save results
-    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
+    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
+
+    print('model specifics are', method)
 
     np.save(method + '_loss.npy', training_loss_per_epoch)
     np.save(method + '_input_feature_samps.npy', generated_samples)
     np.save(method + '_output_label_samps.npy', generated_labels)
+
+    # plt.show()
 
 
 if __name__ == '__main__':
