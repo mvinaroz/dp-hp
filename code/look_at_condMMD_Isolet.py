@@ -1,6 +1,6 @@
 """" test a simple generating training using MMD for relatively simple datasets """
-""" for generating input features given random noise and the label for ISOLET data """
-# Mijung wrote on Jan 09, 2020
+""" for generating input features given random noise and the label """
+# Mijung wrote on Dec 20, 2019
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -49,33 +49,6 @@ def Feature_labels(labels, weights):
 
     return weighted_labels_feature
 
-class Generative_Model(nn.Module):
-
-        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
-            super(Generative_Model, self).__init__()
-
-            self.input_size = input_size
-            self.hidden_size_1 = hidden_size_1
-            self.hidden_size_2 = hidden_size_2
-            self.output_size = output_size
-            # self.n_classes = n_classes
-
-            self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
-            self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
-            self.relu = torch.nn.ReLU()
-            self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
-            self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
-            self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
-
-
-        def forward(self, x):
-            hidden = self.fc1(x)
-            relu = self.relu(self.bn1(hidden))
-            output = self.fc2(relu)
-            output = self.relu(self.bn2(output))
-            output = self.fc3(output)
-
-            return output
 
 def main():
 
@@ -109,75 +82,129 @@ def main():
     print('ROC on real test data is', roc_auc_score(y_test, pred))
     print('PRC on real test data is', average_precision_score(y_test, pred))
 
-    # ROC on real test data is 0.939003966752
-    # PRC on real test data is 0.823399229853
-
-
     n_classes = 2
     n, input_dim = data_samps.shape
+    print('input dimension is ', input_dim)
 
     true_labels = np.zeros((n,n_classes))
-    idx_1 = y_labels == 1
-    idx_0 = y_labels == 0
+    idx_1 = y_labels==1
+    idx_0 = y_labels==0
     true_labels[idx_1,1] = 1
     true_labels[idx_0,0] = 1
 
     # test how to use RFF for computing the kernel matrix
-    idx_rp = np.random.permutation(np.min([n, 10000]))
-    med = util.meddistance(data_samps[idx_rp,:])
-    sigma2 = med**2
-    # sigma2 = med # it seems to be more useful to use smaller length scale than median heuristic
-    print('length scale from median heuristic is', sigma2)
+    # idx_rp = np.random.permutation(np.min([n, 10000]))
+    # med = util.meddistance(data_samps[idx_rp, :])
+    # # sigma2 = med**2
+    # sigma2 = med  # it seems to be more useful to use smaller length scale than median heuristic
+    # print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 10000
-    # with 4000 features, we get 0.75 and 0.36
-
-    # with 8000 randome features, we get
-    # ROC is 0.7957169525948002
-    # PRC is 0.4116904472410067
-
-    # ROC is 0.8159059840695851
-    # PRC is 0.43734046549898964
-    # n_features = 10000
-    # for     # input_size = 5 + 1
-    #     # hidden_size_1 = input_dim
-    #     # hidden_size_2 = np.int(1.2* input_dim)
-    #     # output_size = input_dim
+    n_features = 50
 
     """ training a Generator via minimizing MMD """
-    # try more random features with a larger batch size
-    mini_batch_size = n
 
+    # (setup 1) this doesn't seem the training was over.
+    # The MMD curve is still going down.
+    # two embeddings look quite different although following the general trends
+    # ROC=0.5632 and PRC=0.217
+    # mini_batch_size = np.int(n / 2)
+    # input_size = 30 + 1
+    # hidden_size_1 = 4 * input_dim
+    # hidden_size_2 = np.int(2 * input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+    # (setup 2) in this case, ROC=0.7227 and PRC=0.2999
+    # but the problem is that the embeddings don't look similar at all.
+    # although the MMD curve looks saturated. local minima?
+    # mini_batch_size = n
+    # input_size = 20 + 1
+    # hidden_size_1 = 2 * input_dim
+    # hidden_size_2 = np.int(1.2 * input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+    # (setup 3) too much variability due to the high input dimension
+    # mini_batch_size = n
+    # input_size = 50 + 1
+    # hidden_size_1 = 4 * input_dim
+    # hidden_size_2 = np.int(2 * input_dim)
+    # output_size = input_dim
+    # sigma2 = 14.937177511163213
+
+    # (setup 4) the embeddings are quite off
+    # ROC=0.5777 and PRC=0.2353
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = 4 * input_dim
+    # hidden_size_2 = np.int(2* input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+    # (setup 5) the loss isn't going down so much, maybe the random feature dimension is too high?
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = 2 * input_dim
+    # hidden_size_2 = np.int(1.2* input_dim)
+    # output_size = input_dim
+    # sigma2 = 14.937177511163213
+
+    # (setup 6) ROC is 0.7240701818514119 and PRC is 0.3010082271488266
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = 2 * input_dim
+    # hidden_size_2 = np.int(1.2* input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+    # so far the random features are 100. Maybe this is way too much for this dataset? try out a smaller number of random features.
+
+
+
+    # (setup 7) with n_features=50
+    # still the features don't match.
+    # ROC is 0.6132519717198768
+    # PRC is 0.23139869635745094
+    # n_features = 50
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = 2 * input_dim
+    # hidden_size_2 = np.int(1.2* input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+    # (setup 8) make the model smaller?
+    # ROC is 0.7022558452239527
+    # PRC is 0.2827474501967809
+    # n_features = 50
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = np.int(1.2 * input_dim)
+    # hidden_size_2 = np.int(1.05* input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+    # (setup 9) still not learning the embeddings right
+    # ROC is 0.6634042450023965
+    # PRC is 0.2585441926033944
+    # n_features = 100
+    # mini_batch_size = n
+    # input_size = 10 + 1
+    # hidden_size_1 = np.int(1.2 * input_dim)
+    # hidden_size_2 = np.int(1.05* input_dim)
+    # output_size = input_dim
+    # sigma2 = 223.11927200000005
+
+
+    # trying a smaller mini-batch size
+    mini_batch_size = np.int(n/2)
+    n_features = 100
     input_size = 10 + 1
     hidden_size_1 = 2 * input_dim
     hidden_size_2 = np.int(1.2* input_dim)
     output_size = input_dim
+    sigma2 = 223.11927200000005
 
-    # input_size = 5 + 1
-    # hidden_size_1 = input_dim
-    # hidden_size_2 = np.int(1.2* input_dim)
-    # output_size = input_dim
-
-    # input_size = 2 + 1
-    # hidden_size_1 = np.int(0.5*input_dim)
-    # hidden_size_2 = np.int(0.7* input_dim)
-    # output_size = input_dim
-    # ROC is 0.7981208749606029
-    # PRC is 0.4150323558700088
-    # n_features are  10000
-
-    # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
-    model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-                             output_size=output_size)
-
-    # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 1000
-    how_many_iter = np.int(n/mini_batch_size)
-
-    training_loss_per_epoch = np.zeros(how_many_epochs)
 
     draws = n_features // 2
     W_freq =  np.random.randn(draws, input_dim) / np.sqrt(sigma2)
@@ -186,112 +213,52 @@ def main():
     emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
 
     # kernel for labels with weights
-    n_0, n_1 = np.sum(true_labels, 0)
-    positive_label_ratio = n_1/n_0
-    max_ratio = np.max([n_0, n_1])
+    n_0 = 1.0
+    n_1 = 0.2406933788007957
+    # n_1 = 1.0
 
-    n_0 = n_0/max_ratio
-    n_1 = n_1/max_ratio 
+    ns_0 = n_0
+    ns_1 = n_1
 
     weights = [n_0, n_1]
-
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
-    # emb1_labels = torch.Tensor(true_labels)
     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
     mean_emb1 = torch.mean(outer_emb1, 0)
 
-    # plt.plot(mean_emb1[:, 0], 'b')
-    # plt.plot(mean_emb1[:, 1], 'r')
-
-    print('Starting Training')
-
-    ns_0 = weights[0]
-    ns_1 = weights[1]
-
-    for epoch in range(how_many_epochs):  # loop over the dataset multiple times
-
-        running_loss = 0.0
-        # annealing_rate =
-
-        for i in range(how_many_iter):
-
-            # zero the parameter gradients
-            optimizer.zero_grad()
-            # label_input = (1*(torch.rand((mini_batch_size))<0.002)) # to match the scarse label 1 in the training data
-            label_input = (1 * (torch.rand((mini_batch_size)) < positive_label_ratio))
-            label_input = label_input[:,None].type(torch.FloatTensor)
-            feature_input = torch.randn((mini_batch_size, input_size-1))
-            input_to_model = torch.cat((feature_input, label_input), 1)
-            outputs = model(input_to_model)
-
-            # samp_input_features = outputs[:,0:input_dim]
-            # samp_labels = outputs[:,-n_classes:]
-
-            """ computing mean embedding of generated samples """
-            emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
-
-            label_input_t = torch.zeros((mini_batch_size, n_classes))
-            idx_1 = (label_input == 1.).nonzero()[:,0]
-            idx_0 = (label_input == 0.).nonzero()[:,0]
-            label_input_t[idx_1, 1] = 1.
-            label_input_t[idx_0, 0] = 1.
-
-            weights = [ns_0, ns_1]
-            emb2_labels = Feature_labels(label_input_t, weights)
-            outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
-            mean_emb2 = torch.mean(outer_emb2, 0)
-
-            loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
-
-            # loss = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2) + torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2) + torch.norm(mean_emb1[:,2]-mean_emb2[:,2], p=2)
-
-            loss.backward()
-            optimizer.step()
-
-            # print statistics
-            running_loss += loss.item()
-
-        # if running_loss<=1e-4:
-        #     break
-        print('epoch # and running loss are ', [epoch, running_loss])
-        training_loss_per_epoch[epoch] = running_loss
-
-
-
-    plt.figure(3)
-    plt.plot(training_loss_per_epoch)
-    plt.title('MMD as a function of epoch')
-    plt.yscale('log')
-
-    plt.figure(4)
+    plt.figure(1)
     plt.subplot(211)
     plt.plot(mean_emb1[:, 0], 'b')
-    plt.plot(mean_emb2[:, 0].detach().numpy(), 'b--')
     plt.subplot(212)
     plt.plot(mean_emb1[:, 1], 'r')
+
+    # load results
+    # method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s' % (
+    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2))
+    # method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
+    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
+
+    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
+
+    training_loss_per_epoch = np.load(method + '_loss.npy')
+    generated_samples = np.load(method + '_input_feature_samps.npy')
+    generated_labels = np.load(method + '_output_label_samps.npy')
+
+    plt.figure(2)
+    plt.plot(training_loss_per_epoch)
+    plt.title('MMD as a function of epoch')
+
+    emb2_input_features = RFF_Gauss(n_features, torch.Tensor(generated_samples), W_freq)
+    emb2_labels = Feature_labels(torch.Tensor(generated_labels), weights)
+    outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+    mean_emb2 = torch.mean(outer_emb2, 0)
+
+    plt.figure(1)
+    plt.subplot(211)
+    plt.plot(mean_emb2[:, 0].detach().numpy(), 'b--')
+    plt.subplot(212)
     plt.plot(mean_emb2[:, 1].detach().numpy(), 'r--')
 
-
-    # model.eval()
-
-    label_input = (1 * (torch.rand((n)) < positive_label_ratio))  # to match the scarse label 1 in the training data
-    label_input = label_input[:, None].type(torch.FloatTensor)
-    feature_input = torch.randn((n, input_size - 1))
-    input_to_model = torch.cat((feature_input, label_input), 1)
-
-    outputs = model(input_to_model)
-    samp_input_features = outputs
-
-    label_input_t = torch.zeros((n, n_classes))
-    idx_1 = (label_input == 1.).nonzero()[:, 0]
-    idx_0 = (label_input == 0.).nonzero()[:, 0]
-    label_input_t[idx_1, 1] = 1.
-    label_input_t[idx_0, 0] = 1.
-
-    samp_labels = label_input_t
-
-    generated_samples = samp_input_features.detach().numpy()
-    generated_labels = samp_labels.detach().numpy()
 
     LR_model = LogisticRegression(solver='lbfgs', max_iter=5000)
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
@@ -299,23 +266,10 @@ def main():
 
     print('ROC is', roc_auc_score(y_test, pred))
     print('PRC is', average_precision_score(y_test, pred))
-    print('n_features are ', n_features)
-
-    # save results
-    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
-
-    print('model specifics are', method)
-
-    np.save(method + '_loss.npy', training_loss_per_epoch)
-    np.save(method + '_input_feature_samps.npy', generated_samples)
-    np.save(method + '_output_label_samps.npy', generated_labels)
-
-    # plt.show()
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
     # not just looking at the numbers, let's also look at the statistic of each of the input features
     # inspection code from https://www.kaggle.com/renjithmadhavan/credit-card-fraud-detection-using-python
@@ -355,3 +309,10 @@ if __name__ == '__main__':
     # plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
     # plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
 
+    plt.show()
+
+if __name__ == '__main__':
+    main()
+
+
+# if this doesn't work, then try out the conditional generator, where label is also an input with the random noise

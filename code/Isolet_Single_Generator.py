@@ -21,7 +21,9 @@ from sklearn.metrics import average_precision_score
 
 import os
 
-user='kamil'
+# user='kamil'
+
+user='mijung'
 
 if user=='mijung':
     Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
@@ -69,7 +71,8 @@ class Generative_Model(nn.Module):
 
             return output
 
-def main(inp, h1, h2, mini_batch_size):
+# def main(inp, h1, h2, mini_batch_size):
+def main():
 
     random.seed(0)
 
@@ -137,7 +140,8 @@ def main(inp, h1, h2, mini_batch_size):
         print('length scale from median heuristic is', sigma2)
 
         # random Fourier features
-        n_features = 20000
+
+        n_features = 10000
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
@@ -167,23 +171,24 @@ def main(inp, h1, h2, mini_batch_size):
         #     output_size = input_dim
         #     how_many_epochs = 100  # 400
 
-        if which_class==1:
-
-            mini_batch_size = 400
-            input_size = 400
-            hidden_size_1 = 100
-            hidden_size_2 = 100
-            output_size = input_dim
-            how_many_epochs = 30
-
-        else: # for extremely imbalanced dataset
-
-            mini_batch_size = 400
-            input_size = 400
-            hidden_size_1 = 300
-            hidden_size_2 = 100
-            output_size = input_dim
-            how_many_epochs = 30
+        # if which_class==1:
+        #
+        #     mini_batch_size = 400
+        #     input_size = 400
+        #     hidden_size_1 = 100
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+        #     how_many_epochs = 30
+        #
+        #
+        # else: # for extremely imbalanced dataset
+        #
+        #     mini_batch_size = 400
+        #     input_size = 400
+        #     hidden_size_1 = 300
+        #     hidden_size_2 = 100
+        #     output_size = input_dim
+        #     how_many_epochs = 30
 
             # mini_batch_size = 4000 # large minibatch size for speeding up the training process
             # input_size = 100
@@ -192,9 +197,25 @@ def main(inp, h1, h2, mini_batch_size):
             # output_size = input_dim
             # how_many_epochs = 400
 
+        mini_batch_size = n
+        input_size = 10 + 1
+        hidden_size_1 = 2*input_dim
+        hidden_size_2 = np.int(1.2* input_dim)
+        output_size = input_dim
 
+        # in this particular setup:
+        # n_features = 10000
+        # mini_batch_size = n
+        # input_size = 5 + 1
+        # hidden_size_1 = input_dim
+        # hidden_size_2 = np.int(1.2* input_dim)
+        # output_size = input_dim
+        # how_many_epochs = 200
+        #
+        # ROC is 0.8116268530623435
+        # PRC is 0.4288499474923227
 
-        output_size=input_dim
+        how_many_epochs = 1000
 
         model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size)
@@ -261,7 +282,7 @@ def main(inp, h1, h2, mini_batch_size):
             generated_samples_pos = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
@@ -269,7 +290,7 @@ def main(inp, h1, h2, mini_batch_size):
             generated_samples_neg = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
@@ -302,16 +323,17 @@ def main(inp, h1, h2, mini_batch_size):
     print('ROC is', ROC)
     print('PRC is', PRC)
 
-    method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s'
-                          %(mini_batch_size, input_size, hidden_size_1, hidden_size_2)) # save with the label 1 setup
+    method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s'
+                          %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features)) # save with the label 1 setup
     np.save(method + '_PRC.npy', ROC)
     np.save(method + '_ROC.npy', PRC)
 
 
 
 if __name__ == '__main__':
-    main(0.2,4,2, 100)
+    # main(0.2,4,2, 100)
 
+    main()
     # not just looking at the numbers, let's also look at the statistic of each of the input features
     # inspection code from https://www.kaggle.com/renjithmadhavan/credit-card-fraud-detection-using-python
 

@@ -135,15 +135,21 @@ def main():
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 100
+    # n_features = 100
+    n_features = 1000
 
     """ training a Generator via minimizing MMD """
     # try more random features with a larger batch size
-    mini_batch_size = 4000
+    mini_batch_size = np.int(n/100)
 
-    input_size = 100 + 1
-    hidden_size_1 = 500
-    hidden_size_2 = 200
+    # input_size = 100 + 1
+    # hidden_size_1 = 500
+    # hidden_size_2 = 200
+    # output_size = input_dim
+
+    input_size = 5 + 1
+    hidden_size_1 = 4*input_dim
+    hidden_size_2 = np.int(2*input_dim)
     output_size = input_dim
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
@@ -153,7 +159,7 @@ def main():
     # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     # optimizer = optim.SGD(model.parameters(), lr=0.001)
-    how_many_epochs = 1000
+    how_many_epochs = 200
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -167,12 +173,21 @@ def main():
     # kernel for labels with weights
     # n_0, n_1 = np.sum(true_labels, 0)
 
-    n_0 = 1
-    n_1 = 0.002 # (ROC is 0.68)
+    # n_0 = 1
+    # n_1 = 0.002 # (ROC is 0.68)
 
     # n_0 = 1 # when n_0 and n_1 are both 1, ROC is 0.85 and PRC is 0.0126
     # n_1 = 1
+
+    n_0, n_1 = np.sum(true_labels, 0)
+    positive_label_ratio = n_1 / n_0
+    max_ratio = np.max([n_0, n_1])
+
+    n_0 = n_0 / max_ratio
+    n_1 = n_1 / max_ratio
+
     weights = [n_0, n_1]
+
     emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
     # emb1_labels = torch.Tensor(true_labels)
     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
@@ -183,8 +198,9 @@ def main():
 
     print('Starting Training')
 
-    ns_0 = 1
-    ns_1 = 1
+    ns_0 = n_0
+    ns_1 = n_1
+
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
         running_loss = 0.0
@@ -195,7 +211,7 @@ def main():
             # zero the parameter gradients
             optimizer.zero_grad()
             # label_input = (1*(torch.rand((mini_batch_size))<0.002)) # to match the scarse label 1 in the training data
-            label_input = (1 * (torch.rand((mini_batch_size)) < 0.5))
+            label_input = (1 * (torch.rand((mini_batch_size)) < positive_label_ratio))
             label_input = label_input[:,None].type(torch.FloatTensor)
             feature_input = torch.randn((mini_batch_size, input_size-1))
             input_to_model = torch.cat((feature_input, label_input), 1)
@@ -251,7 +267,7 @@ def main():
 
     # model.eval()
 
-    label_input = (1 * (torch.rand((n)) < 0.5))  # to match the scarse label 1 in the training data
+    label_input = (1 * (torch.rand((n)) < positive_label_ratio))  # to match the scarse label 1 in the training data
     label_input = label_input[:, None].type(torch.FloatTensor)
     feature_input = torch.randn((n, input_size - 1))
     input_to_model = torch.cat((feature_input, label_input), 1)
@@ -270,7 +286,7 @@ def main():
     generated_samples = samp_input_features.detach().numpy()
     generated_labels = samp_labels.detach().numpy()
 
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=5000)
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
     pred = LR_model.predict(X_test) # test on real data
 
@@ -279,13 +295,19 @@ def main():
 
 
     # save results
-    method = os.path.join(Results_PATH, 'condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1))
+    print('n_features are ', n_features)
+
+    # save results
+    method = os.path.join(Results_PATH, 'Credit_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
+    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
+
+    print('model specifics are', method)
 
     np.save(method + '_loss.npy', training_loss_per_epoch)
     np.save(method + '_input_feature_samps.npy', generated_samples)
     np.save(method + '_output_label_samps.npy', generated_labels)
 
+    plt.show()
 
 if __name__ == '__main__':
     main()
@@ -327,11 +349,3 @@ if __name__ == '__main__':
     # plt.subplot(5, 6, 13); plt.plot(generated_samples[:,12]); plt.subplot(5, 6, 27); plt.plot(generated_samples[:,26])
     # plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
     # plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
-
-    plt.show()
-
-if __name__ == '__main__':
-    main()
-
-
-# if this doesn't work, then try out the conditional generator, where label is also an input with the random noise
