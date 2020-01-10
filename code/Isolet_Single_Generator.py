@@ -229,14 +229,70 @@ def main():
         # hidden_size_2 = np.int(1.2* input_dim)
         # output_size = input_dim
 
+        # for this spcific setup:
+        # ROC is 0.8714255875063177
+        # PRC is 0.53208413488387
+        #
+        # n_features = 20000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
 
-        n_features = 10000
+        # n_features = 40000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
+
+
+        # n_features = 60000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
+        #
+        # ROC is 0.8984067720115552
+        # PRC is 0.6593494400475596
+
+        # n_features = 80000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
+        #
+        # ROC is 0.9096384418703971
+        # PRC is 0.6801363555293651
+
+        # n_features = 100000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
+        #
+        # ROC is 0.9119127501132959
+        # PRC is 0.677248891443724
+
+        # n_features = 120000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
+
+        n_features = 160000
         mini_batch_size = n
         input_size = 10 + 1
         hidden_size_1 = 4*input_dim
         hidden_size_2 = 2* input_dim
         output_size = input_dim
 
+        print('number of random features is', n_features)
 
         how_many_epochs = 1000
 
