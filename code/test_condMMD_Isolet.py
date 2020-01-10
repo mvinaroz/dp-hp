@@ -130,7 +130,7 @@ def main():
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 10000
+    n_features = 80000
     # with 4000 features, we get 0.75 and 0.36
 
     # with 8000 randome features, we get
@@ -190,8 +190,10 @@ def main():
     positive_label_ratio = n_1/n_0
     max_ratio = np.max([n_0, n_1])
 
-    n_0 = n_0/max_ratio
-    n_1 = n_1/max_ratio 
+    # n_0 = n_0/max_ratio
+    # n_1 = n_1/max_ratio
+    n_0 = 1.0
+    n_1 = 1.0
 
     weights = [n_0, n_1]
 
@@ -207,6 +209,8 @@ def main():
 
     ns_0 = weights[0]
     ns_1 = weights[1]
+
+    lamb = 1 / positive_label_ratio
 
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
@@ -241,9 +245,16 @@ def main():
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
 
-            loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
+            # loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
 
-            # loss = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2) + torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2) + torch.norm(mean_emb1[:,2]-mean_emb2[:,2], p=2)
+            MMD1 = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2)**2
+            MMD2 = torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2)**2
+
+            print('MMD1 and MM2 values are ', [MMD1.detach().numpy(), MMD2.detach().numpy()])
+
+            loss = MMD1 + lamb*MMD2
+
+            print('MMD2 times lamb is', MMD2.detach().numpy() * lamb)
 
             loss.backward()
             optimizer.step()
