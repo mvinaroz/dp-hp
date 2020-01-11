@@ -1,5 +1,3 @@
-""" test training seperate generators for each label """
-
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -17,6 +15,8 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+
+from sklearn.preprocessing import Imputer
 
 import os
 
@@ -76,15 +76,28 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
     random.seed(0)
 
-    #############################33
-    # get classification on real data
 
-    #data = pd.read_csv("../data/Epileptic/data.csv")
+    data_nan=pd.read_csv("../data//Cervical/kag_risk_factors_cervical_cancer.csv")
 
-    data=pd.read_csv("data.csv")
+    data_con = data_nan.replace("?", np.nan)
+
+    data = data_con.convert_objects(convert_numeric=True)
+
+
+
 
     feature_names = data.iloc[:, 1:-1].columns
     target = data.iloc[:, -1:].columns
+
+    #print(feature_names)
+
+
+
+    for i in feature_names:
+        print (i)
+
+        imputer = Imputer(missing_values=np.nan, strategy='median', axis=0)
+        data[[i]] = imputer.fit_transform(data[[i]])
 
     data_features = data[feature_names]
     data_target = data[target]
@@ -92,19 +105,16 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     #print(data_features)
 
     #print(data_target)
+    #print("asa")
+    #print(np.sum(data_target))
 
     # for index, row in data_target.iterrows():
     #     print(row)
 
-    for i, row in data_target.iterrows():
-      if data_target.at[i,'y']!=1:
-        #print(data_target.at[i,'y'])
-        data_target.at[i,'y'] = 0
-
-    #print(data_target)
-    #print(np.sum(data_target))
-
-    ####################################################3
+    # for i, row in data_target.iterrows():
+    #   if data_target.at[i,'y']!=1:
+    #     #print(data_target.at[i,'y'])
+    #     data_target.at[i,'y'] = 0
 
     X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30,
                                                         random_state=0)
@@ -153,7 +163,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         print('length scale from median heuristic is', sigma2)
 
         # random Fourier features
-        n_features = features_num #20000
+        n_features = features_num  # 20000
 
         """ training a Generator via minimizing MMD """
         # try more random features with a larger batch size
@@ -185,12 +195,12 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
         if which_class == 1:
 
-            mini_batch_size = batch_cl1#400
-            input_size = input_cl1 #400
-            hidden_size_1 = hidden1_cl1 #100
-            hidden_size_2 = hidden2_cl1 #100
+            mini_batch_size = batch_cl1  # 400
+            input_size = input_cl1  # 400
+            hidden_size_1 = hidden1_cl1  # 100
+            hidden_size_2 = hidden2_cl1  # 100
             output_size = input_dim
-            how_many_epochs = epochs_num_cl1# 30
+            how_many_epochs = epochs_num_cl1  # 30
 
         else:  # for extremely imbalanced dataset
 
@@ -200,7 +210,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             hidden_size_2 = hidden2_cl0  # 100
 
             output_size = input_dim
-            how_many_epochs = epochs_num_cl0 #30
+            how_many_epochs = epochs_num_cl0  # 30
 
             # mini_batch_size = 4000 # large minibatch size for speeding up the training process
             # input_size = 100
@@ -275,7 +285,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
             # save results
             method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-            mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+                mini_batch_size, input_size, hidden_size_1, hidden_size_2))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
@@ -284,7 +294,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
             # save results
             method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-            mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+                mini_batch_size, input_size, hidden_size_1, hidden_size_2))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
@@ -324,17 +334,14 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
 
 if __name__ == '__main__':
+    ROCs = []
+    PRCs = []
 
-    ROCs=[]
-    PRCs=[]
+    #tup = (10000, 400, 400, 300, 100, 30, 400, 400, 100, 100, 30)
+    roc, prc = main(1000, 400, 400, 300, 100, 300,    15, 10, 10, 10,  300)
+    # ROCs
 
-    tup=(10000, 400, 400, 300, 100, 30, 400, 400, 100, 100, 30)
-    roc, prc=main(tup)
-    #ROCs
-
-
-
-    #def main(features_num, batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0, batch_cl1, input_cl1,
+    # def main(features_num, batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0, batch_cl1, input_cl1,
     #         hidden1_cl1, hidden2_cl1, epochs_num_cl1):
 
 
