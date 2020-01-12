@@ -79,6 +79,8 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
     random.seed(0)
 
+
+    print(socket.gethostname())
     if socket.gethostname()!='login2':
         data_nan=pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
     else:
