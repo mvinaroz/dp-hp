@@ -87,9 +87,9 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    data_con = data_nan.replace("?", np.nan)
+    data = data_nan.replace("?", np.nan)
 
-    data = data_con.convert_objects(convert_numeric=True)
+    #data = data_con.convert_objects(convert_numeric=True)
 
 
 
