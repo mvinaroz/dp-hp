@@ -84,7 +84,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     if socket.gethostname()!='g003':
         data_nan=pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
     else:
-        data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+        data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
     data_con = data_nan.replace("?", np.nan)
