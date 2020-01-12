@@ -17,6 +17,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
 from sklearn.preprocessing import Imputer
+from sklearn.impute import SimpleImputer
 
 import os
 
@@ -94,9 +95,9 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
 
     for i in feature_names:
-        print (i)
+        #print (i)
 
-        imputer = Imputer(missing_values=np.nan, strategy='median', axis=0)
+        imputer = SimpleImputer(missing_values=np.nan, strategy='median')
         data[[i]] = imputer.fit_transform(data[[i]])
 
     data_features = data[feature_names]
@@ -269,7 +270,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
                 # print statistics
                 running_loss += loss.item()
 
-            print('epoch # and running loss are ', [epoch, running_loss])
+            #print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
         #################################3
@@ -337,12 +338,33 @@ if __name__ == '__main__':
     ROCs = []
     PRCs = []
 
-    #tup = (10000, 400, 400, 300, 100, 30, 400, 400, 100, 100, 30)
-    roc, prc = main(1000, 400, 400, 300, 100, 300,    15, 10, 10, 10,  300)
-    # ROCs
+    from sklearn.model_selection import ParameterGrid
+    grid = ParameterGrid({
+                            "f":        [300,500],
 
-    # def main(features_num, batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0, batch_cl1, input_cl1,
-    #         hidden1_cl1, hidden2_cl1, epochs_num_cl1):
+                            "b_0":      [100,200,300],
+                            "i_0":      [300,400,500],
+                            "lh1_0":    [300,400,500],
+                            "lh2_0":    [200,300,400],
+                            "e_0":      [300, 500,700,1000],
 
+                            "b_1":      [20,30,50],
+                            "i_1":      [10,15,20],
+                            "lh1_1":    [3,5,7],
+                            "lh2_1":    [3,5,7],
+                            "e_1":      [300, 500, 700, 1000]
+                          })
+
+    for params in grid:
+        print("*"*100)
+        print(params)
+        for i in range(3):
+            roc, prc = main(params["f"],
+                            params["b_0"], params["i_0"], params["lh1_0"], params["lh2_0"], params["e_0"],
+                            params['b_1'], params["i_1"], params["lh1_1"], params["lh2_1"], params['e_1'])
+                #explanation
+                #main(features_num,
+                # batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0,
+                # batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1,    epochs_num_cl1):
 
 
