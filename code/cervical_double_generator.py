@@ -22,6 +22,7 @@ from sklearn.impute import SimpleImputer
 import os
 
 user='kamil'
+save_results = False
 
 if user=='mijung':
     Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
@@ -78,7 +79,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     random.seed(0)
 
 
-    data_nan=pd.read_csv("../data//Cervical/kag_risk_factors_cervical_cancer.csv")
+    data_nan=pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
     data_con = data_nan.replace("?", np.nan)
 
@@ -326,10 +327,11 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     print('ROC is', ROC)
     print('PRC is', PRC)
 
-    method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s'
-                          % (mini_batch_size, input_size, hidden_size_1, hidden_size_2))  # save with the label 1 setup
-    np.save(method + '_PRC.npy', ROC)
-    np.save(method + '_ROC.npy', PRC)
+    if save_results:
+        method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s'
+                              % (mini_batch_size, input_size, hidden_size_1, hidden_size_2))  # save with the label 1 setup
+        np.save(method + '_PRC.npy', ROC)
+        np.save(method + '_ROC.npy', PRC)
 
     return ROC, PRC
 
