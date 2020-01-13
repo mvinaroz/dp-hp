@@ -12,6 +12,9 @@ import seaborn as sns
 sns.set()
 # %matplotlib inline
 
+import warnings
+warnings.filterwarnings("ignore")
+
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
@@ -90,44 +93,54 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    preprocessing='removalf'
+    preprocessing='removald'
 
-    data = data_nan.replace("?", np.nan)
-
-    #data = data_con.convert_objects(convert_numeric=True)
-
-
-    #######################################
-    if preprocessing=='removal':
-
-        df1 = data_nan.convert_objects(convert_numeric=True)
-
-        df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
-
-        """ this is the key in this data-preprocessing """
-        df = df1[df1.isnull().sum(axis=1) < 3]
-
-        numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
-                        'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)',
-                        'STDs:Timesincefirstdiagnosis', 'STDs:Timesincelastdiagnosis']
-        categorical_df = ['Smokes', 'HormonalContraceptives', 'IUD', 'STDs', 'STDs:condylomatosis',
+    numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
+                        'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)'
+                        #]
+                        ,'STDs:Timesincefirstdiagnosis', 'STDs:Timesincelastdiagnosis']
+    categorical_df = ['Smokes', 'HormonalContraceptives', 'IUD', 'STDs', 'STDs:condylomatosis',
                           'STDs:vulvo-perinealcondylomatosis', 'STDs:syphilis', 'STDs:pelvicinflammatorydisease',
                           'STDs:genitalherpes', 'STDs:AIDS', 'STDs:cervicalcondylomatosis',
                           'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV', 'STDs:Numberofdiagnosis',
                           'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology', 'Biopsy']
 
+
+    data = data_nan.replace("?", np.nan)
+    feature_names = data.iloc[:, :-1].columns
+
+
+    #data = data_con.convert_objects(convert_numeric=True)
+
+
+    #######################################
+    if preprocessing=='removald':
+
+        df1 = data_nan.convert_objects(convert_numeric=True)
+        #df1=pd.to_numeric(data_nan)
+
+        df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
+
+        """ this is the key in this data-preprocessing """
+        data = df1[df1.isnull().sum(axis=1) < 3]
+
+
+
         for feature in numerical_df:
             # print(feature, '', df[feature].convert_objects(convert_numeric=True).mean())
             # print(df[feature])
-            feature_mean = round(df[feature].convert_objects(convert_numeric=True).mean(), 1)
-            df[feature] = df[feature].fillna(feature_mean)
+            feature_mean = round(data[feature].convert_objects(convert_numeric=True).mean(), 1)
+            data[feature] = data[feature].fillna(feature_mean)
             # print(df[feature])
 
         for feature in categorical_df:
-            df[feature] = df[feature].convert_objects(convert_numeric=True).fillna(0.0)
+            data[feature] = data[feature].convert_objects(convert_numeric=True).fillna(0.0)
 
-        data_target = df['Biopsy']
-        data_features = df
+        data_target = data['Biopsy']
+        data_features = data
+
+        data_numerical = data[numerical_df]
+        data_categorical = data[categorical_df]
 
 
     ################################
@@ -135,7 +148,6 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     else:
 
 
-        feature_names = data.iloc[:, :-1].columns
         target = data.iloc[:, -1:].columns
 
         #print(feature_names)
@@ -149,6 +161,17 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
         data_features = data[feature_names]
         data_target = data[target]
+
+        numerical_df2 = feature_names[[0, 1, 2, 3, 5, 6, 8, 10, 12, 26, 27]]
+        categorical_df2 = feature_names[
+            [4, 7, 9, 11, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 28, 29, 30, 31, 32, 33, 34]]
+
+        data_numerical = data[numerical_df2]
+        data_categorical = data[categorical_df2]
+
+
+
+
 
     #print(data_features)
 
@@ -164,7 +187,16 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     #     #print(data_target.at[i,'y'])
     #     data_target.at[i,'y'] = 0
 
-    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30,
+    ##################################################3
+
+    #optionsfor data_features:
+    # data - all
+    # data_categorical
+    # data_numerical
+
+    data_features=data_numerical
+
+    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.80, test_size=0.20,
                                                         random_state=0)
 
     # test logistic regression on the real data
@@ -188,7 +220,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     X_train_neg = X_train[y_labels == 0, :]
     y_train_neg = y_labels[y_labels == 0]
 
-    #############################################3
+    ###############################################################3
     # train generator
 
     n_classes = 2
@@ -291,7 +323,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
         # plt.plot(mean_emb1, 'b')
 
-        ######################################33
+        ############################################################33
         # start training
 
         print('Starting Training')
@@ -385,36 +417,45 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
 
 if __name__ == '__main__':
-    ROCs = []
-    PRCs = []
 
-    from sklearn.model_selection import ParameterGrid
-    grid = ParameterGrid({
-                            "f":        [300,500],
+    run='single'
+    if run=='single':
+        main(400, 100, 300, 300, 200, 300, 20, 10, 3, 3, 300)
 
-                            "b_0":      [100,200,300],
-                            "i_0":      [300,400,500],
-                            "lh1_0":    [300,400,500],
-                            "lh2_0":    [200,300,400],
-                            "e_0":      [300, 500,700,1000],
+    elif run == 'grid':
 
-                            "b_1":      [20,30,50],
-                            "i_1":      [10,15,20],
-                            "lh1_1":    [3,5,7],
-                            "lh2_1":    [3,5,7],
-                            "e_1":      [300, 500, 700, 1000]
-                          })
 
-    for params in grid:
-        print("*"*100)
-        print(params)
-        for i in range(3):
-            roc, prc = main(params["f"],
-                            params["b_0"], params["i_0"], params["lh1_0"], params["lh2_0"], params["e_0"],
-                            params['b_1'], params["i_1"], params["lh1_1"], params["lh2_1"], params['e_1'])
-                #explanation
-                #main(features_num,
-                # batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0,
-                # batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1,    epochs_num_cl1):
+
+        ROCs = []
+        PRCs = []
+
+        from sklearn.model_selection import ParameterGrid
+        grid = ParameterGrid({
+                                "f":        [300,500],
+
+                                "b_0":      [100,200,300],
+                                "i_0":      [300,400,500],
+                                "lh1_0":    [300,400,500],
+                                "lh2_0":    [200,300,400],
+                                "e_0":      [300, 500,700,1000],
+
+                                "b_1":      [20,30,50],
+                                "i_1":      [10,15,20],
+                                "lh1_1":    [3,5,7],
+                                "lh2_1":    [3,5,7],
+                                "e_1":      [300, 500, 700, 1000]
+                              })
+
+        for params in grid:
+            print("*"*100)
+            print(params)
+            for i in range(3):
+                roc, prc = main(params["f"],
+                                params["b_0"], params["i_0"], params["lh1_0"], params["lh2_0"], params["e_0"],
+                                params['b_1'], params["i_1"], params["lh1_1"], params["lh2_1"], params['e_1'])
+                    #explanation
+                    #main(features_num,
+                    # batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0,
+                    # batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1,    epochs_num_cl1):
 
 
