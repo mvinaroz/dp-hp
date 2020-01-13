@@ -16,6 +16,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+from sklearn.tree import DecisionTreeClassifier
 
 from sklearn.preprocessing import Imputer
 from sklearn.impute import SimpleImputer
@@ -30,6 +31,8 @@ if user=='mijung':
 elif user =='kamil':
     Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
+#X - data
+#W  - random samples for generation
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
     # Fourier transform formula from
@@ -87,28 +90,65 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
+    preprocessing='removalf'
+
     data = data_nan.replace("?", np.nan)
 
     #data = data_con.convert_objects(convert_numeric=True)
 
 
+    #######################################
+    if preprocessing=='removal':
+
+        df1 = data_nan.convert_objects(convert_numeric=True)
+
+        df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
+
+        """ this is the key in this data-preprocessing """
+        df = df1[df1.isnull().sum(axis=1) < 3]
+
+        numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
+                        'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)',
+                        'STDs:Timesincefirstdiagnosis', 'STDs:Timesincelastdiagnosis']
+        categorical_df = ['Smokes', 'HormonalContraceptives', 'IUD', 'STDs', 'STDs:condylomatosis',
+                          'STDs:vulvo-perinealcondylomatosis', 'STDs:syphilis', 'STDs:pelvicinflammatorydisease',
+                          'STDs:genitalherpes', 'STDs:AIDS', 'STDs:cervicalcondylomatosis',
+                          'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV', 'STDs:Numberofdiagnosis',
+                          'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology', 'Biopsy']
+
+        for feature in numerical_df:
+            # print(feature, '', df[feature].convert_objects(convert_numeric=True).mean())
+            # print(df[feature])
+            feature_mean = round(df[feature].convert_objects(convert_numeric=True).mean(), 1)
+            df[feature] = df[feature].fillna(feature_mean)
+            # print(df[feature])
+
+        for feature in categorical_df:
+            df[feature] = df[feature].convert_objects(convert_numeric=True).fillna(0.0)
+
+        data_target = df['Biopsy']
+        data_features = df
 
 
-    feature_names = data.iloc[:, 1:-1].columns
-    target = data.iloc[:, -1:].columns
+    ################################
 
-    #print(feature_names)
-
+    else:
 
 
-    for i in feature_names:
-        #print (i)
+        feature_names = data.iloc[:, :-1].columns
+        target = data.iloc[:, -1:].columns
 
-        imputer = SimpleImputer(missing_values=np.nan, strategy='median')
-        data[[i]] = imputer.fit_transform(data[[i]])
+        #print(feature_names)
 
-    data_features = data[feature_names]
-    data_target = data[target]
+
+        for i in feature_names:
+            #print (i)
+
+            imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+            data[[i]] = imputer.fit_transform(data[[i]])
+
+        data_features = data[feature_names]
+        data_target = data[target]
 
     #print(data_features)
 
@@ -129,6 +169,8 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
     # test logistic regression on the real data
     LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    #LR_model = DecisionTreeClassifier()
+
     LR_model.fit(X_train, y_train.values.ravel())  # training on synthetic data
     pred = LR_model.predict(X_test)  # test on real data
 
@@ -294,8 +336,8 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             # save results
             method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
                 mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-            np.save(method + '_loss.npy', training_loss_per_epoch)
-            np.save(method + '_input_feature_samps.npy', generated_samples_pos)
+            # np.save(method + '_loss.npy', training_loss_per_epoch)
+            # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
         else:
             generated_samples_neg = samp_input_features.detach().numpy()
@@ -303,8 +345,8 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             # save results
             method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
                 mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-            np.save(method + '_loss.npy', training_loss_per_epoch)
-            np.save(method + '_input_feature_samps.npy', generated_samples_neg)
+            # np.save(method + '_loss.npy', training_loss_per_epoch)
+            # np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
         # plt.figure(3)
         # plt.plot(training_loss_per_epoch)

@@ -67,6 +67,7 @@ class Generative_Model(nn.Module):
 
 def main():
 
+
     random.seed(0)
 
     # (1) load data
