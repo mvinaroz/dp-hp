@@ -130,7 +130,7 @@ def main():
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 80000
+    n_features = 100000
     # with 4000 features, we get 0.75 and 0.36
 
     # with 8000 randome features, we get
@@ -149,10 +149,16 @@ def main():
     # try more random features with a larger batch size
     mini_batch_size = n
 
+    mini_batch_size = n
     input_size = 10 + 1
-    hidden_size_1 = 2 * input_dim
-    hidden_size_2 = np.int(1.2* input_dim)
+    hidden_size_1 = 4 * input_dim
+    hidden_size_2 = 2 * input_dim
     output_size = input_dim
+
+    # input_size = 10 + 1
+    # hidden_size_1 = 2 * input_dim
+    # hidden_size_2 = np.int(1.2* input_dim)
+    # output_size = input_dim
 
     # input_size = 5 + 1
     # hidden_size_1 = input_dim
@@ -166,6 +172,43 @@ def main():
     # ROC is 0.7981208749606029
     # PRC is 0.4150323558700088
     # n_features are  10000
+
+    # ROC is 0.8964718849250383
+    # PRC is 0.6234979683851403
+    # n_features
+    # are
+    # 120000
+    # model
+    # specifics
+    # are / is / ei / mpark / condMMD / Isolet_condMMD_mini_batch_size = 4366
+    # _input_size = 11
+    # _hidden1 = 2468
+    # _hidden2 = 1234
+    # _sigma2 = 223.11927200000005
+    # _n0 = 1.0
+    # _n1 = 0.2406933788007957
+    # _ns0 = 1.0
+    # _ns1 = 0.2406933788007957
+    # _nfeatures = 120000
+
+    # ROC is 0.8933396990341416
+    # PRC is 0.6292907098352154
+    # n_features
+    # are
+    # 80000
+    # model
+    # specifics
+    # are / is / ei / mpark / condMMD / Isolet_condMMD_mini_batch_size = 4366
+    # _input_size = 11
+    # _hidden1 = 1234
+    # _hidden2 = 740
+    # _sigma2 = 223.11927200000005
+    # _n0 = 1.0
+    # _n1 = 1.0
+    # _ns0 = 1.0
+    # _ns1 = 1.0
+    # _nfeatures = 80000
+    #   lamb = 1 / positive_label_ratio
 
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,

@@ -284,6 +284,9 @@ def main():
         # hidden_size_1 = 4*input_dim
         # hidden_size_2 = 2* input_dim
         # output_size = input_dim
+        #
+        # ROC is 0.9070349697038643
+        # PRC is 0.68161950763151
 
         n_features = 160000
         mini_batch_size = n
@@ -291,6 +294,10 @@ def main():
         hidden_size_1 = 4*input_dim
         hidden_size_2 = 2* input_dim
         output_size = input_dim
+        #
+        # ROC is 0.9070349697038643
+        # PRC is 0.68161950763151
+
 
         print('number of random features is', n_features)
 
