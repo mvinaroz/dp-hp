@@ -112,7 +112,7 @@ class Generative_Model(nn.Module):
 
 def main():
 
-    seed_number = 0
+    seed_number = 1
     random.seed(seed_number)
 
     # data pre-prosessing code from https://www.kaggle.com/kernels/scriptcontent/17172286/download
@@ -135,12 +135,12 @@ def main():
     df = df1[df1.isnull().sum(axis=1) < 10]
 
     numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
-                    'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)',
+                    'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)', 'STDs:Numberofdiagnosis',
                     'STDs:Timesincefirstdiagnosis', 'STDs:Timesincelastdiagnosis']
     categorical_df = ['Smokes', 'HormonalContraceptives', 'IUD', 'STDs', 'STDs:condylomatosis',
                       'STDs:vulvo-perinealcondylomatosis', 'STDs:syphilis', 'STDs:pelvicinflammatorydisease',
                       'STDs:genitalherpes', 'STDs:AIDS', 'STDs:cervicalcondylomatosis',
-                      'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV', 'STDs:Numberofdiagnosis',
+                      'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV',
                       'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology', 'Biopsy']
 
     feature_names = numerical_df + categorical_df[:-1]
@@ -163,6 +163,7 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.80, test_size=0.20, random_state=seed_number)  # 60% training and 40% test
 
     # test logistic regression on the real data
+
     LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
     LR_model.fit(X_train, y_train)  # training on synthetic data
     pred = LR_model.predict(X_test)  # test on real data
@@ -223,7 +224,7 @@ def main():
         print('length scale from median heuristic is', sigma2)
 
         """ specifics of generators are defined here, comment this later """
-        features_num = 15000
+        features_num = 1000
         if which_class == 1:
             batch_cl1 = np.int(n/3)
             input_cl1 = 5
@@ -274,18 +275,24 @@ def main():
         training_loss_per_epoch = np.zeros(how_many_epochs)
 
         draws = n_features // 2
-        W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+        # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+        #
+        # """ computing mean embedding of true data """
+        # emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+
+        W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
 
         """ computing mean embedding of true data """
-        emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+        numerical_input_data = data_samps[:, 0:num_numerical_inputs]
+        emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq),0)
 
-        # numerical_input_data = data_samps[:, 0:num_numerical_inputs]
-        # categorical_input_data = data_samps[:, num_numerical_inputs:]
+        categorical_input_data = data_samps[:, num_numerical_inputs:]
+        emb1_categorical = torch.Tensor(np.mean(categorical_input_data, 0)/np.sqrt(num_categorical_inputs))
 
         # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
         # emb1_categorical =
 
-        mean_emb1 = torch.mean(emb1_input_features, 0)
+        mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
 
         # del data_samps
         # del emb1_input_features
@@ -309,8 +316,18 @@ def main():
                 outputs = model(input_to_model)
 
                 """ computing mean embedding of generated samples """
-                emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
-                mean_emb2 = torch.mean(emb2_input_features, 0)
+                # emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
+                # mean_emb2 = torch.mean(emb2_input_features, 0)
+
+                """ write down the embeddings for two types of features """
+
+                numerical_samps = outputs[:, 0:num_numerical_inputs]
+                emb2_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_samps), W_freq), 0)
+
+                categorical_samps = outputs[:, num_numerical_inputs:]
+                emb2_categorical = torch.mean(categorical_samps, 0) * torch.sqrt(1.0/torch.Tensor([num_categorical_inputs]))
+
+                mean_emb2 = torch.cat((emb2_numerical, emb2_categorical))
 
                 loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
 
@@ -375,6 +392,22 @@ def main():
 
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
+
+
+    clf = tree.DecisionTreeClassifier()
+    clf.fit(shuffled_x_train, shuffled_y_train)
+    y_pred = clf.predict(X_test)
+
+    print('ROC by decision tree trained on generated data is', roc_auc_score(y_test, y_pred)) # 1.0
+    print('PRC by decision tree trained on generated data', average_precision_score(y_test, y_pred)) # 1.0
+
+    clfAB = AdaBoostClassifier(n_estimators=100)
+    clfAB.fit(shuffled_x_train, shuffled_y_train)
+    y_predAB = clfAB.predict(X_test)
+
+    print('ROC by AdaBoost trained on generated data is', roc_auc_score(y_test, y_predAB)) # 1.0
+    print('PRC by AdaBoost trained on generated data is', average_precision_score(y_test, y_predAB)) # 1.0
+
 
     if save_results:
         method = os.path.join(Results_PATH, 'Cervical_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s'
