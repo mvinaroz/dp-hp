@@ -130,7 +130,7 @@ def main():
     print('length scale from median heuristic is', sigma2)
 
     # random Fourier features
-    n_features = 100000
+    n_features = 140000
     # with 4000 features, we get 0.75 and 0.36
 
     # with 8000 randome features, we get
@@ -210,6 +210,42 @@ def main():
     # _nfeatures = 80000
     #   lamb = 1 / positive_label_ratio
 
+    # ROC is 0.8788163899389602
+    # PRC is 0.5970650003377006
+    # n_features
+    # are
+    # 100000
+    # model
+    # specifics
+    # are / is / ei / mpark / condMMD / Isolet_condMMD_mini_batch_size = 4366
+    # _input_size = 11
+    # _hidden1 = 2468
+    # _hidden2 = 1234
+    # _sigma2 = 223.11927200000005
+    # _n0 = 1.0
+    # _n1 = 1.0
+    # _ns0 = 1.0
+    # _ns1 = 1.0
+    # _nfeatures = 100000
+
+    # ROC is 0.898716353945398
+    # PRC is 0.6115967662963735
+    # n_features
+    # are
+    # 140000
+    # model
+    # specifics
+    # are / is / ei / mpark / condMMD / Isolet_condMMD_mini_batch_size = 4366
+    # _input_size = 11
+    # _hidden1 = 2468
+    # _hidden2 = 1234
+    # _sigma2 = 223.11927200000005
+    # _n0 = 1.0
+    # _n1 = 0.2406933788007957
+    # _ns0 = 1.0
+    # _ns1 = 0.2406933788007957
+    # _nfeatures = 140000
+
     # model = Generative_Model(input_dim=input_dim, how_many_Gaussians=num_Gaussians)
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                              output_size=output_size)
@@ -233,10 +269,10 @@ def main():
     positive_label_ratio = n_1/n_0
     max_ratio = np.max([n_0, n_1])
 
-    # n_0 = n_0/max_ratio
-    # n_1 = n_1/max_ratio
-    n_0 = 1.0
-    n_1 = 1.0
+    n_0 = n_0/max_ratio
+    n_1 = n_1/max_ratio
+    # n_0 = 1.0
+    # n_1 = 1.0
 
     weights = [n_0, n_1]
 
@@ -253,7 +289,7 @@ def main():
     ns_0 = weights[0]
     ns_1 = weights[1]
 
-    lamb = 1 / positive_label_ratio
+    # lamb = 1 / positive_label_ratio
 
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
@@ -288,16 +324,16 @@ def main():
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
 
-            # loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
+            loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
 
-            MMD1 = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2)**2
-            MMD2 = torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2)**2
-
-            print('MMD1 and MM2 values are ', [MMD1.detach().numpy(), MMD2.detach().numpy()])
-
-            loss = MMD1 + lamb*MMD2
-
-            print('MMD2 times lamb is', MMD2.detach().numpy() * lamb)
+            # MMD1 = torch.norm(mean_emb1[:,0]-mean_emb2[:,0], p=2)**2
+            # MMD2 = torch.norm(mean_emb1[:,1]-mean_emb2[:,1], p=2)**2
+            #
+            # print('MMD1 and MM2 values are ', [MMD1.detach().numpy(), MMD2.detach().numpy()])
+            #
+            # loss = MMD1 + lamb*MMD2
+            #
+            # print('MMD2 times lamb is', MMD2.detach().numpy() * lamb)
 
             loss.backward()
             optimizer.step()
