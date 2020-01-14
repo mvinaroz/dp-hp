@@ -107,7 +107,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    preprocessing='remdoval'
+    preprocessing='removdal'
 
     numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
                         'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)'
@@ -221,7 +221,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         print("data used: " , data_used)
 
 
-        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.80, test_size=0.20,
+        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.60, test_size=0.40,
                                                             random_state=0)
 
         # test logistic regression on the real data
