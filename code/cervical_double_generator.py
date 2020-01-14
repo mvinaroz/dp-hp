@@ -107,7 +107,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    preprocessing='remodsval'
+    preprocessing='remdoval'
 
     numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
                         'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)'
@@ -151,7 +151,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             data[feature] = data[feature].convert_objects(convert_numeric=True).fillna(0.0)
 
         data_target = data['Biopsy']
-        data_features = data
+        data_features = data.iloc[:, :-1]
 
         data_numerical = data[numerical_df]
         data_categorical = data[categorical_df]
