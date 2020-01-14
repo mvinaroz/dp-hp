@@ -111,7 +111,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
                           'STDs:vulvo-perinealcondylomatosis', 'STDs:syphilis', 'STDs:pelvicinflammatorydisease',
                           'STDs:genitalherpes', 'STDs:AIDS', 'STDs:cervicalcondylomatosis',
                           'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV', 'STDs:Numberofdiagnosis',
-                          'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology', 'Biopsy']
+                          'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology']
 
 
     data = data_nan.replace("?", np.nan)
@@ -420,6 +420,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 if __name__ == '__main__':
 
     run='single'
+
     if run=='single':
         main(400, 100, 300, 300, 200, 300, 20, 10, 3, 3, 300)
 
