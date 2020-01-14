@@ -12,6 +12,8 @@ import seaborn as sns
 sns.set()
 # %matplotlib inline
 
+
+
 import warnings
 warnings.filterwarnings("ignore")
 
@@ -25,6 +27,9 @@ from sklearn.preprocessing import Imputer
 from sklearn.impute import SimpleImputer
 
 import os
+
+device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+print(device)
 
 user='kamil'
 save_results = False
@@ -42,12 +47,13 @@ def RFF_Gauss(n_features, X, W):
     # Fourier transform formula from
     # http://mathworld.wolfram.com/FourierTransformGaussian.html
 
-    W = torch.Tensor(W)
+    W = torch.Tensor(W).to(device)
+    X = X.to(device)
     XWT = torch.mm(X, torch.t(W))
     Z1 = torch.cos(XWT)
     Z2 = torch.sin(XWT)
 
-    Z = torch.cat((Z1, Z2),1) * torch.sqrt(2.0/torch.Tensor([n_features]))
+    Z = torch.cat((Z1, Z2),1) * torch.sqrt(2.0/torch.Tensor([n_features]).to(device))
     return Z
 
 
@@ -101,7 +107,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    preprocessing='removal'
+    preprocessing='removdal'
 
     numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
                         'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)'
@@ -145,7 +151,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             data[feature] = data[feature].convert_objects(convert_numeric=True).fillna(0.0)
 
         data_target = data['Biopsy']
-        data_features = data
+        data_features = data.iloc[:, :-1]
 
         data_numerical = data[numerical_df]
         data_categorical = data[categorical_df]
@@ -206,7 +212,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     for data_used in ["all", "numerical", "categorical"]:
 
         if data_used=="all":
-            data_features=data
+            data_features=data_features
         elif data_used=="numerical":
             data_features=data_numerical
         elif data_used=="categorical":
@@ -215,7 +221,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         print("data used: " , data_used)
 
 
-        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.80, test_size=0.20,
+        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.60, test_size=0.40,
                                                             random_state=0)
 
         # test logistic regression on the real data
@@ -300,6 +306,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             draws = n_features // 2
             W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
+
             #####
 
             """ computing mean embedding of true data """
@@ -318,7 +325,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
             # start training
 
             model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-                                     output_size=output_size)
+                                     output_size=output_size).to(device)
 
             optimizer = optim.Adam(model.parameters(), lr=1e-3)
             how_many_iter = np.int(n / mini_batch_size)
@@ -336,6 +343,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
                     # zero the parameter gradients
                     optimizer.zero_grad()
                     input_to_model = torch.randn((mini_batch_size, input_size))
+                    input_to_model = input_to_model.to(device)
                     outputs = model(input_to_model)
 
                     """ computing mean embedding of generated samples """
@@ -358,11 +366,12 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
             """ now generated samples using the trained generator """
             input_to_model = torch.randn((n, input_size))
+            input_to_model=input_to_model.to(device)
             outputs = model(input_to_model)
             samp_input_features = outputs
 
             if which_class == 1:
-                generated_samples_pos = samp_input_features.detach().numpy()
+                generated_samples_pos = samp_input_features.cpu().detach().numpy()
 
                 # save results
                 method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
@@ -371,7 +380,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
                 # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
             else:
-                generated_samples_neg = samp_input_features.detach().numpy()
+                generated_samples_neg = samp_input_features.cpu().detach().numpy()
 
                 # save results
                 method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
