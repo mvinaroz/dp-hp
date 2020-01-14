@@ -107,7 +107,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
         data_nan=pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
 
-    preprocessing='removal'
+    preprocessing='remodsval'
 
     numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
                         'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)'
@@ -212,7 +212,7 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
     for data_used in ["all", "numerical", "categorical"]:
 
         if data_used=="all":
-            data_features=data
+            data_features=data_features
         elif data_used=="numerical":
             data_features=data_numerical
         elif data_used=="categorical":
