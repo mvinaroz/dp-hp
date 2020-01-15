@@ -35,6 +35,8 @@ warnings.filterwarnings('ignore')
 
 import os
 
+from sdgym import load_dataset
+
 user='mijung'
 save_results = False
 
@@ -111,6 +113,9 @@ class Generative_Model(nn.Module):
 
 
 def main():
+
+    data, categorical_columns, ordinal_columns = load_dataset('adult')
+
 
     seed_number = 1
     random.seed(seed_number)
