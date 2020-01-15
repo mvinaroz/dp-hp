@@ -76,6 +76,9 @@ def main():
 
     random.seed(0)
 
+    is_private = True
+    print('is private?', is_private)
+
     #############################33
     # get classification on real data
 
@@ -258,12 +261,12 @@ def main():
         # ROC is 0.8984067720115552
         # PRC is 0.6593494400475596
 
-        # n_features = 80000
-        # mini_batch_size = n
-        # input_size = 10 + 1
-        # hidden_size_1 = 4*input_dim
-        # hidden_size_2 = 2* input_dim
-        # output_size = input_dim
+        n_features = 80000
+        mini_batch_size = n
+        input_size = 10 + 1
+        hidden_size_1 = 4*input_dim
+        hidden_size_2 = 2* input_dim
+        output_size = input_dim
         #
         # ROC is 0.9096384418703971
         # PRC is 0.6801363555293651
@@ -274,9 +277,17 @@ def main():
         # hidden_size_1 = 4*input_dim
         # hidden_size_2 = 2* input_dim
         # output_size = input_dim
-        #
+
         # ROC is 0.9119127501132959
         # PRC is 0.677248891443724
+        #
+        # ROC is 0.8484531160540612
+        # PRC is 0.5333513241319746
+        # Private_Isolet_separate_generators_batch_size = 847
+        # _input_size = 11
+        # _hidden1 = 2468
+        # _hidden2 = 1234
+        # _nfeat = 100000
 
         # n_features = 120000
         # mini_batch_size = n
@@ -288,12 +299,12 @@ def main():
         # ROC is 0.9070349697038643
         # PRC is 0.68161950763151
 
-        n_features = 160000
-        mini_batch_size = n
-        input_size = 10 + 1
-        hidden_size_1 = 4*input_dim
-        hidden_size_2 = 2* input_dim
-        output_size = input_dim
+        # n_features = 160000
+        # mini_batch_size = n
+        # input_size = 10 + 1
+        # hidden_size_1 = 4*input_dim
+        # hidden_size_2 = 2* input_dim
+        # output_size = input_dim
         #
         # ROC is 0.9070349697038643
         # PRC is 0.68161950763151
@@ -317,6 +328,15 @@ def main():
         """ computing mean embedding of true data """
         emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
         mean_emb1 = torch.mean(emb1_input_features, 0)
+
+        if is_private:
+
+            """ private version of the embedding """
+            privacy_parameter = 1
+            sensitivity = torch.Tensor([2])/torch.Tensor([n])
+            std_for_noise = torch.Tensor([privacy_parameter])*sensitivity
+            noise = std_for_noise*torch.randn(n_features)
+            mean_emb1 = mean_emb1 + noise
 
         del data_samps
         del emb1_input_features
@@ -368,7 +388,10 @@ def main():
             generated_samples_pos = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
+            if is_private:
+                method = os.path.join(Results_PATH, 'Private_Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
+            else:
+                method = os.path.join(Results_PATH, 'Isolet_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' % (mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
@@ -376,7 +399,11 @@ def main():
             generated_samples_neg = samp_input_features.detach().numpy()
 
             # save results
-            method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
+            if is_private:
+                method = os.path.join(Results_PATH, 'Private_Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' % (
+                                      mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
+            else:
+                method = os.path.join(Results_PATH, 'Isolet_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s' %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
@@ -409,7 +436,12 @@ def main():
     print('ROC is', ROC)
     print('PRC is', PRC)
 
-    method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s'
+    if is_private:
+        method = os.path.join(Results_PATH,
+                              'Private_Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s'
+                              % (mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features))
+    else:
+        method = os.path.join(Results_PATH, 'Isolet_separate_generators_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_nfeat=%s'
                           %(mini_batch_size, input_size, hidden_size_1, hidden_size_2, n_features)) # save with the label 1 setup
     np.save(method + '_PRC.npy', ROC)
     np.save(method + '_ROC.npy', PRC)
