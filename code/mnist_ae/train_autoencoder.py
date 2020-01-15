@@ -55,10 +55,11 @@ def main():
   parser.add_argument('--save-model', action='store_true', default=False)
 
   parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--d-enc', type=int, default=5)
+  parser.add_argument('--d-enc', type=int, default=2)
   args = parser.parse_args()
 
   args.save_model = True
+  args.conv_ae = True
 
   pt.manual_seed(args.seed)
 
@@ -68,8 +69,8 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
 
   if args.conv_ae:
-    enc = ConvEncoder(args.d_enc, nc=(1, 4, 8, 16), extra_conv=True).to(device)
-    dec = ConvDecoder(args.d_enc, nc=(16, 8, 4, 1), extra_conv=True).to(device)
+    enc = ConvEncoder(args.d_enc, nc=(1, 8, 16, 32), extra_conv=True).to(device)
+    dec = ConvDecoder(args.d_enc, nc=(32, 16, 8, 1), extra_conv=True).to(device)
   else:
     enc = FCEncoder(args.d_enc).to(device)
     dec = FCDecoder(args.d_enc).to(device)

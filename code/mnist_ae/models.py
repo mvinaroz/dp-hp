@@ -83,7 +83,7 @@ class FCEncoder(nn.Module):
 
 class FCDecoder(nn.Module):
 
-  def __init__(self, d_enc, d_hid=(100, 300), extra_layer=False):
+  def __init__(self, d_enc, d_hid=(100, 300), extra_layer=False, do_reshape=True):
     super(FCDecoder, self).__init__()
     self.fc1 = nn.Linear(d_enc, d_hid[0])
 
@@ -95,13 +95,14 @@ class FCDecoder(nn.Module):
       self.fc3 = nn.Linear(d_hid[0], 28*28)
     self.relu = nn.ReLU()
     self.tanh = nn.Tanh()
+    self.do_reshape = do_reshape
 
   def forward(self, x):
     x = self.relu(self.fc1(x))
     x = self.relu(self.fc2(x)) if self.fc2 is not None else x
     x = self.fc3(x)
     # print(x.shape)
-    x = x.reshape(x.shape[0], 1, 28, 28)
+    x = x.reshape(x.shape[0], 1, 28, 28) if self.do_reshape else x
     # print(x.shape)
     return x
 
@@ -122,6 +123,27 @@ class FCGenerator(nn.Module):
     # x = self.tanh(self.fc3(x))
     x = self.fc3(x)
     x = x.reshape(x.shape[0], 1, 28, 28)
+    return x
+
+  def get_code(self, batch_size):
+    return pt.randn(batch_size, self.d_code)
+
+
+class FCLatentGenerator(nn.Module):
+  def __init__(self, d_code, d_enc, d_hid=100, extra_layer=False):
+    super(FCLatentGenerator, self).__init__()
+    self.fc1 = nn.Linear(d_code, d_hid)
+    self.fc2 = nn.Linear(d_hid, d_hid) if extra_layer else None
+    self.fc3 = nn.Linear(d_hid, d_enc)
+    self.relu = nn.ReLU()
+    # self.tanh = nn.Tanh()
+    self.d_code = d_code
+
+  def forward(self, x):
+    x = self.relu(self.fc1(x))
+    x = self.relu(self.fc2(x)) if self.fc2 is not None else x
+    # x = self.tanh(self.fc3(x))
+    x = self.fc3(x)
     return x
 
   def get_code(self, batch_size):
