@@ -28,6 +28,10 @@ from sklearn.impute import SimpleImputer
 
 import os
 
+from sdgym import load_dataset
+
+data, categorical_columns, ordinal_columns = load_dataset('adult')
+
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -92,6 +96,8 @@ def main(features_num, batch_cl0,  input_cl0, hidden1_cl0, hidden2_cl0, epochs_n
 
     ######################3
 
+
+    data, categorical_columns, ordinal_columns = load_dataset('adult')
 
 
 

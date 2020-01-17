@@ -130,23 +130,7 @@ def main():
         n_features = 100
 
         """ training a Generator via minimizing MMD """
-        # try more random features with a larger batch size
-        # if which_class==1:
-        #
-        #     mini_batch_size = 200
-        #     input_size = 10
-        #     hidden_size_1 = 100
-        #     hidden_size_2 = 50
-        #     output_size = input_dim
-        #     how_many_epochs = 1000
-        #
-        # else: # for extremely imbalanced dataset
-        #     mini_batch_size = 10000 # large minibatch size for speeding up the training process
-        #     input_size = 100
-        #     hidden_size_1 = 500
-        #     hidden_size_2 = 200
-        #     output_size = input_dim
-        #     how_many_epochs = 400
+
 
         if which_class==1:
 
@@ -165,22 +149,7 @@ def main():
             output_size = input_dim
             how_many_epochs = 100#400
 
-        # if which_class==1:
-        #
-        #     mini_batch_size = 100
-        #     input_size = 10
-        #     hidden_size_1 = 50
-        #     hidden_size_2 = 20
-        #     output_size = input_dim
-        #     how_many_epochs = 1000
-        #
-        # else: # for extremely imbalanced dataset
-        #     mini_batch_size = 10000 # large minibatch size for speeding up the training process
-        #     input_size = 200
-        #     hidden_size_1 = 1000
-        #     hidden_size_2 = 200
-        #     output_size = input_dim
-        #     how_many_epochs = 400
+
 
 
 
@@ -255,14 +224,6 @@ def main():
             np.save(method + '_loss.npy', training_loss_per_epoch)
             np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
-        # plt.figure(3)
-        # plt.plot(training_loss_per_epoch)
-        # plt.title('MMD as a function of epoch')
-        # plt.yscale('log')
-        #
-        # plt.figure(4)
-        # plt.plot(mean_emb1, 'b')
-        # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
     # mix data for positive and negative labels
     generated_input_features = np.concatenate((generated_samples_pos, generated_samples_neg), axis=0)
@@ -293,43 +254,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
-    # not just looking at the numbers, let's also look at the statistic of each of the input features
-    # inspection code from https://www.kaggle.com/renjithmadhavan/credit-card-fraud-detection-using-python
-
-    # plt.figure(1, figsize=(15, 12))
-    # df = data
-    # plt.subplot(5, 6, 1); plt.plot(df.V1); plt.subplot(5, 6, 15); plt.plot(df.V15)
-    # plt.subplot(5, 6, 2); plt.plot(df.V2); plt.subplot(5, 6, 16); plt.plot(df.V16)
-    # plt.subplot(5, 6, 3); plt.plot(df.V3); plt.subplot(5, 6, 17); plt.plot(df.V17)
-    # plt.subplot(5, 6, 4); plt.plot(df.V4); plt.subplot(5, 6, 18); plt.plot(df.V18)
-    # plt.subplot(5, 6, 5); plt.plot(df.V5); plt.subplot(5, 6, 19); plt.plot(df.V19)
-    # plt.subplot(5, 6, 6); plt.plot(df.V6); plt.subplot(5, 6, 20); plt.plot(df.V20)
-    # plt.subplot(5, 6, 7); plt.plot(df.V7); plt.subplot(5, 6, 21); plt.plot(df.V21)
-    # plt.subplot(5, 6, 8); plt.plot(df.V8); plt.subplot(5, 6, 22); plt.plot(df.V22)
-    # plt.subplot(5, 6, 9); plt.plot(df.V9); plt.subplot(5, 6, 23); plt.plot(df.V23)
-    # plt.subplot(5, 6, 10); plt.plot(df.V10); plt.subplot(5, 6, 24); plt.plot(df.V24)
-    # plt.subplot(5, 6, 11); plt.plot(df.V11); plt.subplot(5, 6, 25); plt.plot(df.V25)
-    # plt.subplot(5, 6, 12); plt.plot(df.V12); plt.subplot(5, 6, 26); plt.plot(df.V26)
-    # plt.subplot(5, 6, 13); plt.plot(df.V13); plt.subplot(5, 6, 27); plt.plot(df.V27)
-    # plt.subplot(5, 6, 14); plt.plot(df.V14); plt.subplot(5, 6, 28); plt.plot(df.V28)
-    # plt.subplot(5, 6, 29); plt.plot(df.Amount)
-    #
-    # plt.figure(2, figsize=(15, 12))
-    # plt.subplot(5, 6, 1); plt.plot(generated_samples[:,0]); plt.subplot(5, 6, 15); plt.plot(generated_samples[:,14])
-    # plt.subplot(5, 6, 2); plt.plot(generated_samples[:,1]); plt.subplot(5, 6, 16); plt.plot(generated_samples[:,15])
-    # plt.subplot(5, 6, 3); plt.plot(generated_samples[:,2]); plt.subplot(5, 6, 17); plt.plot(generated_samples[:,16])
-    # plt.subplot(5, 6, 4); plt.plot(generated_samples[:,3]); plt.subplot(5, 6, 18); plt.plot(generated_samples[:,17])
-    # plt.subplot(5, 6, 5); plt.plot(generated_samples[:,4]); plt.subplot(5, 6, 19); plt.plot(generated_samples[:,18])
-    # plt.subplot(5, 6, 6); plt.plot(generated_samples[:,5]); plt.subplot(5, 6, 20); plt.plot(generated_samples[:,19])
-    # plt.subplot(5, 6, 7); plt.plot(generated_samples[:,6]); plt.subplot(5, 6, 21); plt.plot(generated_samples[:, 20])
-    # plt.subplot(5, 6, 8); plt.plot(generated_samples[:,7]); plt.subplot(5, 6, 22); plt.plot(generated_samples[:,21])
-    # plt.subplot(5, 6, 9); plt.plot(generated_samples[:,8]); plt.subplot(5, 6, 23); plt.plot(generated_samples[:,22])
-    # plt.subplot(5, 6, 10); plt.plot(generated_samples[:,9]); plt.subplot(5, 6, 24); plt.plot(generated_samples[:,23])
-    # plt.subplot(5, 6, 11); plt.plot(generated_samples[:,10]); plt.subplot(5, 6, 25); plt.plot(generated_samples[:,24])
-    # plt.subplot(5, 6, 12); plt.plot(generated_samples[:,11]); plt.subplot(5, 6, 26); plt.plot(generated_samples[:,25])
-    # plt.subplot(5, 6, 13); plt.plot(generated_samples[:,12]); plt.subplot(5, 6, 27); plt.plot(generated_samples[:,26])
-    # plt.subplot(5, 6, 14); plt.plot(generated_samples[:,13]); plt.subplot(5, 6, 28); plt.plot(generated_samples[:,27])
-    # plt.subplot(5, 6, 29); plt.plot(generated_samples[:,28])
-
-    # plt.show()
