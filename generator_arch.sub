@@ -1,9 +1,9 @@
 #executable = /home/kadamczewski/miniconda3/envs/BayesianNeuralNetwork/bin/python
 executable =/home/kadamczewski/miniconda3/bin/python
 
-arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/code/Credit_Single_Generator.py
+arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/code/Generator_census.py
 
-var=credit_arch_search
+var=adult_arch_search
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
 log = clust/clust_log/$(var).$(Process).log

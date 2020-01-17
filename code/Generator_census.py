@@ -15,6 +15,13 @@
 #ROC on generated samples using Logistic regression is 0.5032258064516129
 #PRC on generated samples using Logistic regression is 0.24531711257085265
 
+#epoch # and running loss are  [9980, 10.4443359375]
+#epoch # and running loss are  [9980, 13.737520217895508]
+#ROC on generated samples using Logistic regression is 0.5509010910420554
+#PRC on generated samples using Logistic regression is 0.26801810670635856
+
+#loss doesn't realy reflect the roc
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -222,19 +229,19 @@ for which_class in range(n_classes):
     # generator
 
     """ specifics of generators are defined here, comment this later """
-    features_num = 15000
+    features_num = 30000
     if which_class == 1:
         batch_cl1 = n
         input_cl1 = 100
         hidden1_cl1 = 20 * input_dim
         hidden2_cl1 = np.int(20 * input_dim)
-        epochs_num_cl1 = 10000
+        epochs_num_cl1 = 50000
     else:
         batch_cl0 = n
         input_cl0 = 100
         hidden1_cl0 = 20 * input_dim
         hidden2_cl0 = np.int(20 * input_dim)
-        epochs_num_cl0 = 10000
+        epochs_num_cl0 = 50000
 
     """ end of comment """
 
