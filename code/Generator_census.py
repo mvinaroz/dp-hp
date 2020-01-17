@@ -346,7 +346,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                 # print statistics
                 running_loss += loss.item()
 
-            if epoch % 20 == 0:
+            if epoch % 1 == 0:
                 print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
@@ -409,7 +409,10 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
 
-main(15000, n, 100, 20* input_dim, 20 * input_dim, 2000,     n, 100, 20* input_dim, 20 * input_dim, 2000)
+# number of (training) samples
+#input_dim - dimension of the input/number of features of the real data input
+
+main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
 
 # """ specifics of generators are defined here, comment this later """
 # features_num = 1000
