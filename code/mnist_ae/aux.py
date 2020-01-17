@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch as pt
 from torchvision import datasets, transforms
@@ -21,9 +22,12 @@ def rff_gauss(x, w):
 
 
 def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True):
-  mnist_mean = 0.1307
-  mnist_sdev = 0.3081
-  prep_transforms = transforms.Compose([transforms.ToTensor(), transforms.Normalize((mnist_mean,), (mnist_sdev,))])
+  transforms_list = [transforms.ToTensor()]
+  if normalize:
+    mnist_mean = 0.1307
+    mnist_sdev = 0.3081
+    transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
+  prep_transforms = transforms.Compose(transforms_list)
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
   train_loader = pt.utils.data.DataLoader(datasets.MNIST('../../data', train=True, transform=prep_transforms),
                                           batch_size=batch_size, shuffle=True, **kwargs)
@@ -33,9 +37,8 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True)
 
 
 def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True):
-  n_imgs = n_rows * n_cols
   bs = mnist_mat.shape[0]
-  n_to_fill = n_imgs - bs
+  n_to_fill = n_rows * n_cols - bs
   mnist_mat = np.reshape(mnist_mat, (bs, 28, 28))
   fill_mat = np.zeros((n_to_fill, 28, 28))
   mnist_mat = np.concatenate([mnist_mat, fill_mat])
@@ -50,6 +53,19 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True):
   # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
   # print(mnist_mat_flat.dtype)
   save_img(save_path, mnist_mat_flat)
+
+
+def save_gen_labels(label_mat, n_rows, n_cols, save_path, save_raw=True):
+  if save_raw:
+    np.save(save_path + '_raw.npy', label_mat)
+  max_labels = np.argmax(label_mat, axis=1)
+  bs = label_mat.shape[0]
+  n_to_fill = n_rows * n_cols - bs
+  fill_mat = np.zeros((n_to_fill,), dtype=np.int) - 1
+  max_labels = np.concatenate([max_labels, fill_mat])
+  max_labels_flat = np.stack(np.split(max_labels, n_cols, axis=0), axis=1)
+  with open(save_path + '_max_labels.txt', mode='w+') as file:
+    file.write(str(max_labels_flat))
 
 
 def denormalize(mnist_mat):
@@ -110,3 +126,36 @@ def dist_matrix(x, y):
   d2[d2 < 0] = 0
   d = np.sqrt(d2)
   return d
+
+def log_args(log_dir, args):
+  """ print and save all args """
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+  with open(os.path.join(log_dir, 'args_log'), 'w') as f:
+    lines = [' • {:<25}- {}\n'.format(key, val) for key, val in vars(args).items()]
+    f.writelines(lines)
+    for line in lines:
+      print(line.rstrip())
+  print('-------------------------------------------')
+
+
+def parse_n_hid(n_hid, conv=False):
+  """
+  make sure conversion is the same everywhere
+  """
+  if conv:  #
+    return [(s[0], [int(k) for k in s[1:].split('-')]) for s in n_hid.split(',')]
+  else:  # fully connected case: just a list of linear ops
+    return tuple([int(k) for k in n_hid.split(',')])
+
+
+def flat_data(data, labels, device, n_labels=10, add_label=False):
+  # then make one_hot
+  bs = data.shape[0]
+  if add_label:
+    gen_one_hots = pt.zeros(bs, n_labels, device=device)
+    gen_one_hots.scatter_(1, labels[:, None], 1)
+    labels = gen_one_hots
+    return pt.cat([pt.reshape(data, (bs, -1)), labels], dim=1)
+  else:
+    return pt.reshape(data, (bs, -1))

@@ -2,7 +2,7 @@ import torch as pt
 import torch.nn.functional as nnf
 from torch.optim.lr_scheduler import StepLR
 import argparse
-from mnist_ae.models import ConvEncoder, ConvDecoder, FCEncoder, FCDecoder
+from mnist_ae.models_ae import ConvEncoder, ConvDecoder, FCEncoder, FCDecoder
 from mnist_ae.aux import get_mnist_dataloaders, plot_mnist_batch
 
 

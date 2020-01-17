@@ -2,7 +2,7 @@ import torch as pt
 from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
-from mnist_ae.models import ConvEncoder, ConvDecoder, FCEncoder, FCDecoder, FCLatentGenerator
+from mnist_ae.models_ae import ConvEncoder, ConvDecoder, FCEncoder, FCDecoder, FCLatentGenerator
 from mnist_ae.aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance
 
 
