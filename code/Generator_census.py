@@ -387,10 +387,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
     # mix data for positive and negative labels
-    generated_input_features=np.concatenate((generated_samples_pos, generated_samples_neg), axis=0)
-
-    for i in categorical_columns:
-        np.around(generated_input_features[1])
+    generated_input_features=np.round(np.concatenate((generated_samples_pos, generated_samples_neg), axis=0))
 
 
     corresponding_labels = np.concatenate((y_train_pos, y_train_neg))
@@ -409,7 +406,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
 
-main(15000, n, 100, 20* input_dim, 20 * input_dim, 2000,     n, 100, 20* input_dim, 20 * input_dim, 2000)
+main(10000, n, 100, 20* input_dim, 20 * input_dim, 20000,     n, 100, 20* input_dim, 20 * input_dim, 20000)
 
 # """ specifics of generators are defined here, comment this later """
 # features_num = 1000
