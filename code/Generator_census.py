@@ -15,6 +15,13 @@
 #ROC on generated samples using Logistic regression is 0.5032258064516129
 #PRC on generated samples using Logistic regression is 0.24531711257085265
 
+#epoch # and running loss are  [9980, 10.4443359375]
+#epoch # and running loss are  [9980, 13.737520217895508]
+#ROC on generated samples using Logistic regression is 0.5509010910420554
+#PRC on generated samples using Logistic regression is 0.26801810670635856
+
+#loss doesn't realy reflect the roc
+
 import numpy as np
 import matplotlib.pyplot as plt
 import torch
@@ -65,8 +72,6 @@ print(device)
 #os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
 ##################
-
-############
 
 seed_number=1000
 
@@ -192,219 +197,234 @@ y_train_pos=np.concatenate((y_train_pos, y_train_pos, y_train_pos))
 X_train_neg = X_train[y_labels == 0, :]
 y_train_neg = y_labels[y_labels == 0]
 
+n, input_dim = X_train_pos.shape
 #############################################3
 # train generators
 
-n_classes = 2
+def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_num_cl1, batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0):
 
-for which_class in range(n_classes):
+    n_classes = 2
 
-    if which_class == 1:
-        """ First train for positive label """
-        n, input_dim = X_train_pos.shape
-        data_samps = X_train_pos
-        # del X_train_pos
-        print('number of data samples for this class is', n)
-    else:
-        n, input_dim = X_train_neg.shape
-        data_samps = X_train_neg
-        # del X_train_neg
-        print('number of data samples for this class is', n)
+    for which_class in range(n_classes):
 
-    # test how to use RFF for computing the kernel matrix
-    idx_rp = np.random.permutation(np.min([n, 10000]))
-    med = util.meddistance(data_samps[idx_rp, :])
-    del idx_rp
-    sigma2 = med ** 2
-    print('length scale from median heuristic is', sigma2)
+        if which_class == 1:
+            """ First train for positive label """
+            n, input_dim = X_train_pos.shape
+            data_samps = X_train_pos
+            # del X_train_pos
+            print('number of data samples for this class is', n)
+        else:
+            n, input_dim = X_train_neg.shape
+            data_samps = X_train_neg
+            # del X_train_neg
+            print('number of data samples for this class is', n)
 
-    #########################################################3
-    # generator
+        # test how to use RFF for computing the kernel matrix
+        idx_rp = np.random.permutation(np.min([n, 10000]))
+        med = util.meddistance(data_samps[idx_rp, :])
+        del idx_rp
+        sigma2 = med ** 2
+        print('length scale from median heuristic is', sigma2)
 
-    """ specifics of generators are defined here, comment this later """
-    features_num = 15000
-    if which_class == 1:
-        batch_cl1 = n
-        input_cl1 = 100
-        hidden1_cl1 = 20 * input_dim
-        hidden2_cl1 = np.int(20 * input_dim)
-        epochs_num_cl1 = 10000
-    else:
-        batch_cl0 = n
-        input_cl0 = 100
-        hidden1_cl0 = 20 * input_dim
-        hidden2_cl0 = np.int(20 * input_dim)
-        epochs_num_cl0 = 10000
+        #########################################################3
+        # generator
 
-    """ end of comment """
 
-    # random Fourier features
-    n_features = features_num  # 20000
 
-    """ training a Generator via minimizing MMD """
-    if which_class == 1:
+        """ end of comment """
 
-        mini_batch_size = batch_cl1  # 400
-        input_size = input_cl1  # 400
-        hidden_size_1 = hidden1_cl1  # 100
-        hidden_size_2 = hidden2_cl1  # 100
-        output_size = input_dim
-        how_many_epochs = epochs_num_cl1  # 30
+        # random Fourier features
+        n_features = features_num  # 20000
 
-    else:  # for extremely imbalanced dataset
+        """ training a Generator via minimizing MMD """
+        if which_class == 1:
 
-        mini_batch_size = batch_cl0  # 400
-        input_size = input_cl0  # 400
-        hidden_size_1 = hidden1_cl0  # 300
-        hidden_size_2 = hidden2_cl0  # 100
+            mini_batch_size = batch_cl1  # 400
+            input_size = input_cl1  # 400
+            hidden_size_1 = hidden1_cl1  # 100
+            hidden_size_2 = hidden2_cl1  # 100
+            output_size = input_dim
+            how_many_epochs = epochs_num_cl1  # 30
+
+        else:  # for extremely imbalanced dataset
+
+            mini_batch_size = batch_cl0  # 400
+            input_size = input_cl0  # 400
+            hidden_size_1 = hidden1_cl0  # 300
+            hidden_size_2 = hidden2_cl0  # 100
+
+            output_size = input_dim
+            how_many_epochs = epochs_num_cl0  # 30
 
         output_size = input_dim
-        how_many_epochs = epochs_num_cl0  # 30
 
-    output_size = input_dim
+        # model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
+        #                          output_size=output_size, num_categorical_inputs=num_categorical_inputs,
+        #                          num_numerical_inputs=num_numerical_inputs)
+        #
+        # optimizer = optim.Adam(model.parameters(), lr=1e-2)
+        # how_many_iter = np.int(n / mini_batch_size)
 
-    # model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-    #                          output_size=output_size, num_categorical_inputs=num_categorical_inputs,
-    #                          num_numerical_inputs=num_numerical_inputs)
-    #
-    # optimizer = optim.Adam(model.parameters(), lr=1e-2)
-    # how_many_iter = np.int(n / mini_batch_size)
+        # training_loss_per_epoch = np.zeros(how_many_epochs)
 
-    # training_loss_per_epoch = np.zeros(how_many_epochs)
+        draws = n_features // 2
 
-    draws = n_features // 2
+        datatype='mixed'
 
-    datatype='mixed'
+        if datatype=='numerical_only':
+            W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
-    if datatype=='numerical_only':
-        W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+            """ computing mean embedding of true data """
+            emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
 
-        """ computing mean embedding of true data """
-        emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+        elif datatype=='mixed':
+            W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
 
-    elif datatype=='mixed':
-        W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+            """ computing mean embedding of true data """
+            numerical_input_data = data_samps[:, 0:num_numerical_inputs]
+            emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
 
-        """ computing mean embedding of true data """
-        numerical_input_data = data_samps[:, 0:num_numerical_inputs]
-        emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
+            categorical_input_data = data_samps[:, num_numerical_inputs:]
+            emb1_categorical = torch.Tensor(np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
 
-        categorical_input_data = data_samps[:, num_numerical_inputs:]
-        emb1_categorical = torch.Tensor(np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
+        # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
+        # emb1_categorical =
 
-    # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
-    # emb1_categorical =
+        mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
 
-    mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
+        # del data_samps
+        # del emb1_input_features
 
-    # del data_samps
-    # del emb1_input_features
+        # plt.plot(mean_emb1, 'b')
 
-    # plt.plot(mean_emb1, 'b')
+        ######################################33
+        # start training
 
-    ######################################33
-    # start training
+        model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
+                                 output_size=output_size, num_categorical_inputs=num_categorical_inputs,
+                                 num_numerical_inputs=num_numerical_inputs).to(device)
 
-    model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
-                             output_size=output_size, num_categorical_inputs=num_categorical_inputs,
-                             num_numerical_inputs=num_numerical_inputs).to(device)
+        optimizer = optim.Adam(model.parameters(), lr=1e-2)
+        how_many_iter = np.int(n / mini_batch_size)
 
-    optimizer = optim.Adam(model.parameters(), lr=1e-2)
-    how_many_iter = np.int(n / mini_batch_size)
-
-    training_loss_per_epoch = np.zeros(how_many_epochs)
+        training_loss_per_epoch = np.zeros(how_many_epochs)
 
 
-    print('Starting Training')
+        print('Starting Training')
 
-    for epoch in range(how_many_epochs):  # loop over the dataset multiple times
+        for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
-        running_loss = 0.0
-        # annealing_rate =
+            running_loss = 0.0
+            # annealing_rate =
 
-        for i in range(how_many_iter):
-            # zero the parameter gradients
-            optimizer.zero_grad()
-            input_to_model = torch.randn((mini_batch_size, input_size))
-            input_to_model=input_to_model.to(device)
-            outputs = model(input_to_model)
+            for i in range(how_many_iter):
+                # zero the parameter gradients
+                optimizer.zero_grad()
+                input_to_model = torch.randn((mini_batch_size, input_size))
+                input_to_model=input_to_model.to(device)
+                outputs = model(input_to_model)
 
-            """ computing mean embedding of generated samples """
-            # emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
-            # mean_emb2 = torch.mean(emb2_input_features, 0)
+                """ computing mean embedding of generated samples """
+                # emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
+                # mean_emb2 = torch.mean(emb2_input_features, 0)
 
-            """ write down the embeddings for two types of features """
+                """ write down the embeddings for two types of features """
 
-            numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
-            emb2_numerical = torch.mean(RFF_Gauss(n_features, numerical_samps, W_freq), 0) #W_freq [n_features/2,6], n_features=10000
+                numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
+                emb2_numerical = torch.mean(RFF_Gauss(n_features, numerical_samps, W_freq), 0) #W_freq [n_features/2,6], n_features=10000
 
-            categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
-            emb2_categorical = torch.mean(categorical_samps, 0) * torch.sqrt(1.0/torch.Tensor([num_categorical_inputs])).to(device) # 8
+                categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
+                emb2_categorical = torch.mean(categorical_samps, 0) * torch.sqrt(1.0/torch.Tensor([num_categorical_inputs])).to(device) # 8
 
-            mean_emb2 = torch.cat((emb2_numerical, emb2_categorical))
+                mean_emb2 = torch.cat((emb2_numerical, emb2_categorical))
 
-            loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
+                loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
 
-            loss.backward()
-            optimizer.step()
+                loss.backward()
+                optimizer.step()
 
-            # print statistics
-            running_loss += loss.item()
+                # print statistics
+                running_loss += loss.item()
 
-        if epoch % 20 == 0:
-            print('epoch # and running loss are ', [epoch, running_loss])
-        training_loss_per_epoch[epoch] = running_loss
+            if epoch % 1 == 0:
+                print('epoch # and running loss are ', [epoch, running_loss])
+            training_loss_per_epoch[epoch] = running_loss
 
-    #################################3
-    # generate samples
+        #######################################################3
+        # generate samples
 
-    """ now generated samples using the trained generator """
-    input_to_model = torch.randn((n, input_size))
-    input_to_model=input_to_model.to(device)
-    outputs = model(input_to_model)
-    samp_input_features = outputs
+        """ now generated samples using the trained generator """
+        input_to_model = torch.randn((n, input_size))
+        input_to_model=input_to_model.to(device)
+        outputs = model(input_to_model)
+        samp_input_features = outputs
 
-    if which_class == 1:
-        generated_samples_pos = samp_input_features.cpu().detach().numpy()
+        if which_class == 1:
+            generated_samples_pos = samp_input_features.cpu().detach().numpy()
 
-        # save results
-        # method = os.path.join(Results_PATH, 'Cervical_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-        #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-        # np.save(method + '_loss.npy', training_loss_per_epoch)
-        # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
+            # save results
+            # method = os.path.join(Results_PATH, 'Cervical_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
+            #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            # np.save(method + '_loss.npy', training_loss_per_epoch)
+            # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
 
-    else:
-        generated_samples_neg = samp_input_features.cpu().detach().numpy()
+        else:
+            generated_samples_neg = samp_input_features.cpu().detach().numpy()
 
-        # save results
-        # method = os.path.join(Results_PATH, 'Cervical_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-        #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-        # np.save(method + '_loss.npy', training_loss_per_epoch)
-        # np.save(method + '_input_feature_samps.npy', generated_samples_neg)
+            # save results
+            # method = os.path.join(Results_PATH, 'Cervical_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
+            #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+            # np.save(method + '_loss.npy', training_loss_per_epoch)
+            # np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
-    # plt.figure(3)
-    # plt.plot(training_loss_per_epoch)
-    # plt.title('MMD as a function of epoch')
-    # plt.yscale('log')
-    #
-    # plt.figure(4)
-    # plt.plot(mean_emb1, 'b')
-    # plt.plot(mean_emb2.detach().numpy(), 'r--')
+        # plt.figure(3)
+        # plt.plot(training_loss_per_epoch)
+        # plt.title('MMD as a function of epoch')
+        # plt.yscale('log')
+        #
+        # plt.figure(4)
+        # plt.plot(mean_emb1, 'b')
+        # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
-# mix data for positive and negative labels
-generated_input_features = np.round(np.concatenate((generated_samples_pos, generated_samples_neg), axis=0))
-corresponding_labels = np.concatenate((y_train_pos, y_train_neg))
+    # mix data for positive and negative labels
+    generated_input_features=np.concatenate((generated_samples_pos, generated_samples_neg), axis=0)
 
-idx_shuffle = np.random.permutation(n_tot)
-shuffled_x_train = generated_input_features[idx_shuffle, :]
-shuffled_y_train = corresponding_labels[idx_shuffle]
+    for i in categorical_columns:
+        np.around(generated_input_features[1])
 
-LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
-LR_model_ours.fit(shuffled_x_train, shuffled_y_train)  # training on synthetic data
-pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-ROC_ours = roc_auc_score(y_test, pred_ours)
-PRC_ours = average_precision_score(y_test, pred_ours)
+    corresponding_labels = np.concatenate((y_train_pos, y_train_neg))
 
-print('ROC on generated samples using Logistic regression is', ROC_ours)
-print('PRC on generated samples using Logistic regression is', PRC_ours)
+    idx_shuffle = np.random.permutation(n_tot)
+    shuffled_x_train = generated_input_features[idx_shuffle, :]
+    shuffled_y_train = corresponding_labels[idx_shuffle]
+
+    LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model_ours.fit(shuffled_x_train, shuffled_y_train)  # training on synthetic data
+    pred_ours = LR_model_ours.predict(X_test)  # test on real data
+
+    ROC_ours = roc_auc_score(y_test, pred_ours)
+    PRC_ours = average_precision_score(y_test, pred_ours)
+
+    print('ROC on generated samples using Logistic regression is', ROC_ours)
+    print('PRC on generated samples using Logistic regression is', PRC_ours)
+
+# number of (training) samples
+#input_dim - dimension of the input/number of features of the real data input
+
+main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
+
+# """ specifics of generators are defined here, comment this later """
+# features_num = 1000
+# if which_class == 1:
+#     batch_cl1 = n
+#     input_cl1 = 100
+#     hidden1_cl1 = 20 * input_dim
+#     hidden2_cl1 = np.int(20 * input_dim)
+#     epochs_num_cl1 = 20
+# else:
+#     batch_cl0 = n
+#     input_cl0 = 100
+#     hidden1_cl0 = 20 * input_dim
+#     hidden2_cl0 = np.int(20 * input_dim)
+#     epochs_num_cl0 = 20
