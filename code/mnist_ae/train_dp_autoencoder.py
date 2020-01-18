@@ -7,15 +7,18 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec
-from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, parse_n_hid, flat_data
+from models_ae import FCEnc, FCDec, ConvEnc, ConvDec
+from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
 
 
-def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, log_interval):
+def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
-    data = flat_data(data.to(device), labels.to(device), device, add_label=label_ae)
+    data = data.to(device)
+    if not conv_ae:
+      data = flat_data(data, labels.to(device), device, add_label=label_ae)
+
     optimizer.zero_grad()
 
     data_enc = enc(data)
@@ -58,14 +61,15 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
       # aggregate samplewise grads, replace normal grad
       for param in dec.parameters():
+        # print(param.batch_l2, param.grad_batch)
         clips = pt.clamp_max(dp_spec.clip / param_norms, 1.)
-        clips = clips[:, None] if len(param.grad.shape) == 1 else clips[:, None, None]  # hack for 1d and 2d tensors
-        clipped_sample_grads = param.grad_batch * clips
+        clipped_sample_grads = param.grad_batch * expand_vector(clips, param.grad_batch)
         clipped_grad = pt.mean(clipped_sample_grads, dim=0)
 
         if dp_spec.noise is not None:
           bs = clipped_grad.shape[0]
-          clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * (dp_spec.noise * dp_spec.clip / bs)
+          noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
+          clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
         param.grad = clipped_grad
 
     optimizer.step()
@@ -74,16 +78,15 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), l_enc.item()))
 
 
-def test(enc, dec, device, test_loader, epoch, ce_loss, label_ae, log_dir):
+def test(enc, dec, device, test_loader, epoch, ce_loss, label_ae, conv_ae, log_dir):
   enc.eval()
   dec.eval()
   test_loss = 0
   with pt.no_grad():
     for data, labels in test_loader:
       data = data.to(device)
-      labels = labels.to(device)
-
-      data = flat_data(data, labels, device, add_label=label_ae)
+      if not conv_ae:
+        data = flat_data(data, labels.to(device), device, add_label=label_ae)
 
       reconstruction = dec(enc(data))
 
@@ -107,34 +110,42 @@ def get_args():
 
   # BASICS
   parser.add_argument('--no-cuda', action='store_true', default=False)
-  parser.add_argument('--seed', type=int, default=None)
+  parser.add_argument('--seed', type=int, default=None)  # sampled if none
   parser.add_argument('--log-interval', type=int, default=100)
   parser.add_argument('--base-log-dir', type=str, default='logs/ae/')
-  parser.add_argument('--log-name', type=str, default=None)
-  parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
+  parser.add_argument('--log-name', type=str, default=None)  # set for custom save subdir
+  parser.add_argument('--log-dir', type=str, default=None)  # constructed if None (only set thisto completely alter loc)
   parser.add_argument('--n-labels', type=int, default=10)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
-  parser.add_argument('--epochs', '-ep', type=int, default=20)
+  parser.add_argument('--epochs', '-ep', type=int, default=10)
   parser.add_argument('--lr', type=float, default=0.001)
   parser.add_argument('--lr-decay', type=float, default=0.9)
 
   # MODEL DEFINITION
-  parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
+  parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
-  parser.add_argument('--enc-hid', type=str, default='300,100')
-  parser.add_argument('--dec-hid', type=str, default='100,300')
+  parser.add_argument('--enc-spec', type=str, default='300,100')
+  parser.add_argument('--dec-spec', type=str, default='100,300')
+  # parser.add_argument('--enc-spec', type=str, default='1,8,16,16')
+  # parser.add_argument('--dec-spec', type=str, default='16,16,8,1')
 
   # DP SPEC
-  parser.add_argument('--clip-norm', '-clip', type=float, default=None)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.0)
+  parser.add_argument('--clip-norm', '-clip', type=float, default=1e-5)
+  parser.add_argument('--noise-factor', '-noise', type=float, default=2.0)
   parser.add_argument('--clip-per-layer', action='store_true', default=False)  # not used yet
 
   ar = parser.parse_args()
+
+  # HACKS FOR QUICK ACCESS
+  # ar.ce_loss = True
+  # ar.conv_ae = True
+  # ar.label_ae = True
+
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
   if not os.path.exists(ar.log_dir):
@@ -148,9 +159,9 @@ def get_log_dir(args):
   if args.log_name is not None:
     log_dir = args.base_log_dir + args.log_name
   else:
-    spec_str = f'd{args.d_enc}_enc{args.enc_hid}_dec{args.dec_hid}_clip{args.clip_norm}_sig{args.noise_factor}'
+    spec_str = f'd{args.d_enc}_enc{args.enc_spec}_dec{args.dec_spec}_clip{args.clip_norm}_sig{args.noise_factor}'
     type_str = f'{"label_" if args.label_ae else ""}{"ce_" if args.ce_loss else "mse_"}'
-    log_dir = args.base_log_dir + type_str + spec_str
+    log_dir = args.base_log_dir + type_str + spec_str + '/'
   return log_dir
 
 
@@ -158,16 +169,13 @@ def preprocess_args(args):
   if args.seed is None:
     args.seed = np.random.randint(0, 1000)
 
+  assert not (args.conv_ae and args.label_ae)  # not supported yet, will try conv with siamese loss first
+
 
 def main():
   # Training settings
   ar = get_args()
-
   assert not ar.clip_per_layer  # not implemented yet
-  ar.save_model = True
-  ar.ce_loss = True
-  ar.label_ae = True
-
   pt.manual_seed(ar.seed)
 
   dp_spec = namedtuple('dp_spec', ['clip', 'noise', 'per_layer'])(ar.clip_norm, ar.noise_factor, ar.clip_per_layer)
@@ -179,16 +187,24 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
   d_data = 28**2+ar.n_labels if ar.label_ae else 28**2
 
-  enc = FCEnc(d_in=d_data, d_hid=parse_n_hid(ar.enc_hid), d_enc=ar.d_enc).to(device)
-  dec = extend(FCDec(d_enc=ar.d_enc, d_hid=parse_n_hid(ar.dec_hid), d_out=d_data, use_sigmoid=ar.ce_loss).to(device))
+  enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')])
+  dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')])
+
+  if ar.conv_ae:
+    enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)
+    dec = extend(ConvDec(ar.d_enc, dec_spec, extra_conv=True, use_sigmoid=ar.ce_loss)).to(device)
+    # print(list(enc.layers[0].parameters()), list(enc.parameters()))
+  else:
+    enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc).to(device)
+    dec = extend(FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ce_loss).to(device))
 
   losses = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce'])(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss)
   optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
-    train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.log_interval)
-    test(enc, dec, device, test_loader, epoch, ar.ce_loss, ar.label_ae, ar.log_dir)
+    train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval)
+    test(enc, dec, device, test_loader, epoch, ar.ce_loss, ar.label_ae, ar.conv_ae, ar.log_dir)
     scheduler.step()
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
