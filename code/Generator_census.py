@@ -469,12 +469,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
     # mix data for positive and negative labels
-    generated_input_features=np.concatenate((generated_samples_pos, generated_samples_neg), axis=0)
-
-    for i in categorical_columns:
-        np.around(generated_input_features[1])
-
-
+    generated_input_features=np.around(np.concatenate((generated_samples_pos, generated_samples_neg), axis=0))
     corresponding_labels = np.concatenate((y_train_pos, y_train_neg))
 
     idx_shuffle = np.random.permutation(n_tot)
@@ -503,21 +498,21 @@ runs_num=5
 ## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
 
-#main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
-PRC_ours_arr=[]
-ROC_ours_arr=[]
-for i in range(runs_num):
-    print("\n i: {} \n".format(i))
-    if dataset=='census':
-        #main(2000, n, 100, 20* input_dim, 20 * input_dim, 200,     n, 10, 20* input_dim, 20 * input_dim, 200)
-        main(2000, n, 100, 20* input_dim, 20 * input_dim, 20,     n, 10, 20* input_dim, 20 * input_dim, 20)
-    else:
-        roc, prc=main(5000, n, 100, 20* input_dim, 20 * input_dim, 300,     n, 10, 20* input_dim, 20 * input_dim, 300)
-        ROC_ours_arr.append(roc); PRC_ours_arr.append(prc)
-print(ROC_ours_arr)
-print("roc: ", np.mean(ROC_ours_arr))
-print(PRC_ours_arr)
-print("prc: ", np.mean(PRC_ours_arr))
+main(20000, n, 100, 20* input_dim, 20 * input_dim, 40,     n, 100, 20* input_dim, 20 * input_dim, 40)
+# PRC_ours_arr=[]
+# ROC_ours_arr=[]
+# for i in range(runs_num):
+#     print("\n i: {} \n".format(i))
+#     if dataset=='census':
+#         #main(2000, n, 100, 20* input_dim, 20 * input_dim, 200,     n, 10, 20* input_dim, 20 * input_dim, 200)
+#         main(2000, n, 100, 20* input_dim, 20 * input_dim, 20,     n, 10, 20* input_dim, 20 * input_dim, 20)
+#     else:
+#         roc, prc=main(5000, n, 100, 20* input_dim, 20 * input_dim, 300,     n, 10, 20* input_dim, 20 * input_dim, 300)
+#         ROC_ours_arr.append(roc); PRC_ours_arr.append(prc)
+# print(ROC_ours_arr)
+# print("roc: ", np.mean(ROC_ours_arr))
+# print(PRC_ours_arr)
+# print("prc: ", np.mean(PRC_ours_arr))
 
 
 # """ specifics of generators are defined here, comment this later """
