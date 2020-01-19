@@ -75,16 +75,72 @@ print(device)
 
 seed_number=1000
 
-data, categorical_columns, ordinal_columns = load_dataset('adult')
+dataset="adult"
 
-numerical_columns=list(set(np.arange(data[:,:-1].shape[1]))-set(categorical_columns + ordinal_columns))
+if dataset=="news":
+    data, categorical_columns, ordinal_columns = load_dataset('news')
+    numerical_columns=list(set(np.arange(data[:,:-1].shape[1]))-set(categorical_columns + ordinal_columns))
+
+
+
+elif dataset=="adult": #last column is binary label
+    data, categorical_columns, ordinal_columns = load_dataset('adult')
+    numerical_columns=list(set(np.arange(data[:,:-1].shape[1]))-set(categorical_columns + ordinal_columns))
+
+    #numerical_input_data = data[:, numerical_columns]
+    #categorical_input_data = data[:,ordinal_columns+categorical_columns][:,:-1]
+
+elif dataset=="census":
+    print(socket.gethostname())
+    if 'g0' not in socket.gethostname():
+        data=np.load("../data/real/census/train.npy")
+    else:
+        data = np.load(
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+
+    numerical_columns= [0,5, 16, 17, 18, 29, 38]
+    ordinal_columns = []
+    categorical_columns = [1,2,3,4,6,7,8,9,10,11,12,13,14,15, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40]
+
+elif dataset=="intrusion":
+    print("intrusion dataset")
+    data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+    numerical_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
+    #df = pd.read_csv("data/raw/intrusion/kddcup.data_10_percent", dtype='str', header=-1)
+    #df = df.apply(lambda x: x.str.strip(' \t.'))
+
+elif dataset=="covtype":
+    print("covtype dataset")
+    print(socket.gethostname())
+    if 'g0' not in socket.gethostname():
+        data = np.load("../data/real/covtype/train.npy")
+    else:
+        data = np.load(
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+
+    numerical_columns = [0, 1,2,3,4,5,6,7,8,9]
+    ordinal_columns = []
+    categorical_columns = [10,11,12]
+
+# print(socket.gethostname())
+    # if 'g0' not in socket.gethostname():
+    #     data=np.load("../data/real/census/train.npy")
+    # else:
+    #     data = np.load(
+    #         "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+    #
+    # numerical_columns= [0,5, 16, 17, 18, 29, 38]
+    # ordinal_columns = []
+    # categorical_columns = [1,2,3,4,6,7,8,9,10,11,12,13,14,15, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40]
+
 
 print(data.shape)
 print(categorical_columns)
 print(ordinal_columns)
 
-#numerical_input_data = data[:, numerical_columns]
-#categorical_input_data = data[:,ordinal_columns+categorical_columns][:,:-1]
+
+np.set_printoptions(threshold=1000)
+np.set_printoptions(threshold=np.inf)
 
 data=data[:, numerical_columns+ordinal_columns+categorical_columns]
 
@@ -108,6 +164,9 @@ print('PRC on real test data from Logistic regression is', average_precision_sco
 
 
 ####################################################
+# n_features - random Fourier features
+# X - real/generated data
+# W - some random features (half of n_features)
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -274,13 +333,13 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         if datatype=='numerical_only':
             W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
-            """ computing mean embedding of true data """
+            #computing mean embedding of true data """
             emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
 
         elif datatype=='mixed':
             W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
 
-            """ computing mean embedding of true data """
+            #computing mean embedding of true data """
             numerical_input_data = data_samps[:, 0:num_numerical_inputs]
             emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
 
@@ -296,8 +355,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         # del emb1_input_features
 
         # plt.plot(mean_emb1, 'b')
-
-        ######################################33
+######################################33
         # start training
 
         model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
@@ -321,14 +379,32 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 input_to_model = torch.randn((mini_batch_size, input_size))
-                input_to_model=input_to_model.to(device)
-                outputs = model(input_to_model)
+                input_to_model=input_to_model.to(device) #[13164, 100]
+                outputs = model(input_to_model) #[13164, 14]
 
                 """ computing mean embedding of generated samples """
                 # emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
                 # mean_emb2 = torch.mean(emb2_input_features, 0)
 
                 """ write down the embeddings for two types of features """
+                ###########
+                # W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+                #
+                # # computing mean embedding of true data """
+                # sample = random.choices(np.arange(data_samps.shape[0]), k=500)
+                # numerical_input_data = data_samps[sample, 0:num_numerical_inputs]
+                # emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(
+                #     device)
+                #
+                # categorical_input_data = data_samps[:, num_numerical_inputs:]
+                # emb1_categorical = torch.Tensor(
+                #     np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
+                #
+                # # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
+                # # emb1_categorical =
+                #
+                # mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
+                ###############
 
                 numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
                 emb2_numerical = torch.mean(RFF_Gauss(n_features, numerical_samps, W_freq), 0) #W_freq [n_features/2,6], n_features=10000
@@ -336,7 +412,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                 categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
                 emb2_categorical = torch.mean(categorical_samps, 0) * torch.sqrt(1.0/torch.Tensor([num_categorical_inputs])).to(device) # 8
 
-                mean_emb2 = torch.cat((emb2_numerical, emb2_categorical))
+                mean_emb2 = torch.cat((emb2_numerical, emb2_categorical)) #[1008]
 
                 loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
 
@@ -346,11 +422,11 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                 # print statistics
                 running_loss += loss.item()
 
-            if epoch % 1 == 0:
+            if epoch % 10 == 0:
                 print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
-        #######################################################3
+#######################################################################3
         # generate samples
 
         """ now generated samples using the trained generator """
@@ -409,10 +485,27 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
 
+    return ROC_ours, PRC_ours
+
 # number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
 
-main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
+#main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
+PRC_ours_arr=[]
+ROC_ours_arr=[]
+for i in range(5):
+    print("\n i: {} \n".format(i))
+    if dataset=='census':
+
+        #main(2000, n, 100, 20* input_dim, 20 * input_dim, 200,     n, 10, 20* input_dim, 20 * input_dim, 200)
+        main(2000, n, 100, 20* input_dim, 20 * input_dim, 20,     n, 10, 20* input_dim, 20 * input_dim, 20)
+    else:
+        roc, prc=main(5000, n, 100, 20* input_dim, 20 * input_dim, 300,     n, 10, 20* input_dim, 20 * input_dim, 300)
+        ROC_ours_arr.append(roc); PRC_ours_arr.append(prc)
+print(ROC_ours_arr)
+print("roc: ", np.mean(ROC_ours_arr))
+print(PRC_ours_arr)
+print("prc: ", np.mean(PRC_ours_arr))
 
 # """ specifics of generators are defined here, comment this later """
 # features_num = 1000
