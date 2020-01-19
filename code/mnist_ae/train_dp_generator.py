@@ -3,69 +3,87 @@ import torch as pt
 from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
-from models_ae import FCEnc, FCDec
+from models_ae import FCEnc, FCDec, ConvEnc, ConvDec
 from models_gen import FCGen, FCLabelGen, FCCondGen
-from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, \
-  log_args, parse_n_hid, flat_data
+from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 
 
-def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, uniform_labels):
+def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, ae_conv, ae_label,
+          do_gen_labels, uniform_labels):
 
   gen.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
     # print(pt.max(data), pt.min(data))
-    data = flat_data(data.to(device), labels.to(device), device, n_labels=10, add_label=False)
+
+    if not ae_conv:
+      data = flat_data(data.to(device), labels.to(device), device, n_labels=10, add_label=ae_label)
 
     bs = labels.shape[0]
-    one_hots = pt.zeros(bs, 10, device=device)
-    one_hots.scatter_(1, labels.to(device)[:, None], 1)
-    if uniform_labels:
+
+    if not do_gen_labels:
+      loss = rff_mmd_loss(enc(data), gen(gen.get_code(bs, device)))
+
+    elif uniform_labels:
+      one_hots = pt.zeros(bs, 10, device=device)
+      one_hots.scatter_(1, labels.to(device)[:, None], 1)
       gen_code, gen_labels = gen.get_code(bs, device)
+      loss = rff_mmd_loss(enc(data), one_hots, gen(gen_code), gen_labels)
+
     else:
-      gen_code = gen.get_code(bs, device)
-      gen_labels = None
+      one_hots = pt.zeros(bs, 10, device=device)
+      one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      gen_enc, gen_labels = gen(gen.get_code(bs, device))
+      loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
 
     optimizer.zero_grad()
-    data_enc = enc(data)
-    gen_out = gen(gen_code)
-
-    if uniform_labels:
-      gen_out = (gen_out, gen_labels)
-
-
-    loss = rff_mmd_loss(data_enc, one_hots, gen_out)
     loss.backward()
     optimizer.step()
+
     if batch_idx % log_interval == 0:
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
         epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, uniform_labels):
+def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label,
+         do_gen_labels, uniform_labels, log_dir):
   gen.eval()
 
   test_loss = 0
   with pt.no_grad():
     for data, labels in test_loader:
       data = data.to(device)
+
+      if not ae_conv:
+        data = flat_data(data.to(device), labels.to(device), device, n_labels=10, add_label=ae_label)
+
       data_enc = enc(data)
       bs = labels.shape[0]
 
-      one_hots = pt.zeros(bs, 10, device=device)
-      one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      if not do_gen_labels:
+        gen_enc = gen(gen.get_code(bs, device))
+        gen_labels = None
+        loss = rff_mmd_loss(enc(data), gen(gen_enc))
 
-      if uniform_labels:
+      elif uniform_labels:
+        one_hots = pt.zeros(bs, 10, device=device)
+        one_hots.scatter_(1, labels.to(device)[:, None], 1)
         gen_code, gen_labels = gen.get_code(bs, device)
+        gen_enc = gen(gen_code)
+        loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+
       else:
-        gen_code = gen.get_code(bs, device)
+        one_hots = pt.zeros(bs, 10, device=device)
+        one_hots.scatter_(1, labels.to(device)[:, None], 1)
+        gen_enc, gen_labels = gen(gen.get_code(bs, device))
+        loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
 
-      gen_out = gen(gen_code)
-      gen_samples = dec(gen_out[0]) if isinstance(gen_out, tuple) else dec(gen_out)
+      # gen_out = gen(gen_code)
+      gen_samples = dec(gen_enc)
 
-      if uniform_labels:
-        gen_out = (gen_out, gen_labels)
+      # if uniform_labels:
+      #   gen_out = (gen_out, gen_labels)
 
-      test_loss += rff_mmd_loss(data_enc, one_hots, gen_out).item()  # sum up batch loss
+      test_loss += loss.item()  # sum up batch loss
   test_loss /= (len(test_loader.dataset) / batch_size)
 
   data_enc_batch = data_enc.cpu().numpy()
@@ -73,9 +91,11 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, un
   print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
 
   plot_samples = gen_samples[:100, ...].cpu().numpy()
-  plot_mnist_batch(plot_samples, 10, 10, f'samples/gen_samples_ep{epoch}.png')
-  if isinstance(gen_out, tuple):
-    save_gen_labels(gen_out[1][:100, ...].cpu().numpy(), 10, 10, f'samples/gen_labels_ep{epoch}')
+  if ae_label:
+    plot_samples = gen_samples[:, :784]
+  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}.png')
+  if gen_labels is not None:
+    save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
   # bs = plot_samples.shape[0]
   # lit_samples = plot_samples - np.min(np.reshape(plot_samples, (bs, -1)), axis=1)[:, None, None, None]
   # lit_samples = lit_samples / np.max(np.reshape(lit_samples, (bs, -1)), axis=1)[:, None, None, None]
@@ -95,7 +115,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
     def rff_mmd_loss(data_enc, gen_out):
       data_emb = mean_embedding(data_enc)
       gen_emb = mean_embedding(gen_out)
-      noise = pt.randn(d_rff, device=device) * (noise_factor / batch_size)
+      noise = pt.randn(d_rff, device=device) * (2 * noise_factor / batch_size)
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   else:
     def label_mean_embedding(data, labels):
@@ -104,7 +124,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
     def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
       data_emb = label_mean_embedding(data_enc, labels)  # (d_rff, n_labels)
       gen_emb = label_mean_embedding(gen_enc, gen_labels)
-      noise = pt.randn(d_rff, n_labels, device=device) * (noise_factor / batch_size)
+      noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   return rff_mmd_loss
 
@@ -124,7 +144,7 @@ def get_args():
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
-  parser.add_argument('--epochs', '-ep', type=int, default=20)
+  parser.add_argument('--epochs', '-ep', type=int, default=5)
   parser.add_argument('--lr', '-lr', type=float, default=0.001)
   parser.add_argument('--lr-decay', type=float, default=0.9)
 
@@ -132,26 +152,34 @@ def get_args():
   # parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--d-code', '-dcode', type=int, default=5)
-  parser.add_argument('--gen-hid', type=str, default='100,100')
+  parser.add_argument('--gen-hid', type=int, default=100)
   parser.add_argument('--gen-labels', action='store_true', default=False)
   parser.add_argument('--uniform-labels', action='store_true', default=False)
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=100)
-  parser.add_argument('--rff-sigma', '-rffsig', type=int, default=90.0)
+  parser.add_argument('--rff-sigma', '-rffsig', type=int, default=50.0)
   parser.add_argument('--noise-factor', '-noise', type=float, default=0.0)
 
   # AE info
-  # parser.add_argument('--conv-ae', action='store_true', default=False)
+  parser.add_argument('--ae-conv', action='store_true', default=False)
   parser.add_argument('--ae-label', action='store_true', default=False)
   parser.add_argument('--ae-ce-loss', action='store_true', default=False)
   parser.add_argument('--ae_clip', type=float, default=1e-5)
   parser.add_argument('--ae_noise', type=float, default=2.0)
-  parser.add_argument('--ae-enc-hid', type=str, default='300,100')
-  parser.add_argument('--ae-dec-hid', type=str, default='100,300')
+  parser.add_argument('--ae-enc-spec', type=str, default='300,100')
+  parser.add_argument('--ae-dec-spec', type=str, default='100,300')
   parser.add_argument('--ae-load-dir', type=str, default=None)
 
   ar = parser.parse_args()
+
+  # HACKS FOR QUICK ACCESS
+  # ar.ae_label = True
+  # ar.ae_ce_loss = True
+  # ar.ae_conv = True
+  ar.gen_labels = True
+  ar.uniform_labels = True
+
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
   if not os.path.exists(ar.log_dir):
@@ -167,9 +195,9 @@ def get_log_dir(ar):
   else:
     gen_type = f'{"uniform_" if ar.uniform_labels else ""}{"labeled_" if ar.gen_labels else "unlabeled_"}'
     gen_spec = f'd{ar.d_enc}_gen{ar.gen_hid}_sig{ar.noise_factor}_dcode{ar.d_code}_drff{ar.d_rff}_rffsig{ar.rff_sigma}'
-    ae_type = f'{"label_" if ar.label_ae else ""}{"ce_" if ar.label_ae else "mse_"}'
-    ae_spec = f'enc{ar.enc_hid}_dec{ar.dec_hid}_clip{ar.clip_norm}_sig{ar.noise_factor}'
-    log_dir = ar.base_log_dir + gen_type + gen_spec + '_AE:' + ae_type + ae_spec
+    ae_type = f'{"label_" if ar.ae_label else ""}{"ce_" if ar.ae_ce_loss else "mse_"}'
+    ae_spec = f'enc{ar.ae_enc_spec}_dec{ar.ae_dec_spec}_clip{ar.ae_clip}_sig{ar.ae_noise}'
+    log_dir = ar.base_log_dir + gen_type + gen_spec + '_AE:' + ae_type + ae_spec + '/'
   return log_dir
 
 
@@ -177,10 +205,12 @@ def preprocess_args(args):
   if args.seed is None:
     args.seed = np.random.randint(0, 1000)
 
+  assert args.gen_labels or not args.uniform_labels
+
   if args.ae_load_dir is None:
-    spec_str = f'd{args.d_enc}_enc{args.ae_enc_hid}_dec{args.ae_dec_hid}_clip{args.ae_clip}_sig{args.ae_noise}'
+    spec_str = f'd{args.d_enc}_enc{args.ae_enc_spec}_dec{args.ae_dec_spec}_clip{args.ae_clip}_sig{args.ae_noise}'
     type_str = f'{"label_" if args.ae_label else ""}{"ce_" if args.ae_ce_loss else "mse_"}'
-    args.ae_load_dir = 'logs/ae/' + type_str + spec_str
+    args.ae_load_dir = 'logs/ae/' + type_str + spec_str + '/'
 
 
 def main():
@@ -196,10 +226,22 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
 
   d_data = 28**2+ar.n_labels if ar.ae_label else 28**2
-  enc = FCEnc(d_data, parse_n_hid(ar.ae_enc_hid), ar.d_enc)
-  dec = FCDec(ar.d_enc, parse_n_hid(ar.ae_dec_hid), d_data, use_sigmoid=ar.ae_ce_loss)
-  enc.load_state_dict(pt.load(f'models/mnist_enc_fc_d_enc_{ar.d_enc}_clip_{ar.ae_clip}_noise_{ar.ae_noise}.pt'))
-  dec_extended_dict = pt.load(f'models/mnist_dec_fc_d_enc_{ar.d_enc}_clip_{ar.ae_clip}_noise_{ar.ae_noise}.pt')
+
+  enc_spec = tuple([int(k) for k in ar.ae_enc_spec.split(',')])
+  dec_spec = tuple([int(k) for k in ar.ae_dec_spec.split(',')])
+
+  if ar.ae_conv:
+    enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True)
+    dec = ConvDec(ar.d_enc, dec_spec, extra_conv=True, use_sigmoid=ar.ae_ce_loss)
+    # print(list(enc.layers[0].parameters()), list(enc.parameters()))
+  else:
+    enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc)
+    dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ae_ce_loss)
+
+  # enc = FCEnc(d_data, parse_n_hid(ar.ae_enc_hid), ar.d_enc)
+  # dec = FCDec(ar.d_enc, parse_n_hid(ar.ae_dec_hid), d_data, use_sigmoid=ar.ae_ce_loss)
+  enc.load_state_dict(pt.load(ar.ae_load_dir + 'enc.pt'))
+  dec_extended_dict = pt.load(ar.ae_load_dir + 'dec.pt')
   dec_reduced_dict = {k: dec_extended_dict[k] for k in dec.state_dict().keys()}
   dec.load_state_dict(dec_reduced_dict)
 
@@ -208,11 +250,11 @@ def main():
 
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, parse_n_hid(ar.gen_hid), ar.d_enc, ar.n_labels)
+      gen = FCCondGen(ar.d_code, ar.gen_hid, ar.d_enc, ar.n_labels)
     else:
-      gen = FCLabelGen(ar.d_code, parse_n_hid(ar.gen_hid), ar.d_enc, ar.n_labels)
+      gen = FCLabelGen(ar.d_code, ar.gen_hid, ar.d_enc, ar.n_labels)
   else:
-    gen = FCGen(ar.d_code, parse_n_hid(ar.gen_hid), ar.d_enc)
+    gen = FCGen(ar.d_code, ar.gen_hid, ar.d_enc)
   gen = gen.to(device)
 
   rff_mmd_loss = get_rff_mmd_loss(ar.d_enc, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
@@ -221,12 +263,13 @@ def main():
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
-    train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval, ar.uniform_labels)
-    test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size, ar.uniform_labels)
+    train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
+          ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels)
+    test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
+         ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels, ar.log_dir)
     scheduler.step()
 
-  if ar.save_model:
-    pt.save(gen.state_dict(), f'models/mnist_gen_fc_d_code_{ar.d_code}_d_enc_{ar.d_enc}_noise_{ar.noise_factor}.pt')
+  pt.save(gen.state_dict(), ar.log_dir + 'gen.pt')
 
 
 if __name__ == '__main__':

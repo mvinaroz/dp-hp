@@ -21,6 +21,22 @@ def rff_gauss(x, w):
   return z
 
 
+def expand_vector(v, tgt_vec):
+  tgt_dims = len(tgt_vec.shape)
+  if tgt_dims == 2:
+    return v[:, None]
+  elif tgt_dims == 3:
+    return v[:, None, None]
+  elif tgt_dims == 4:
+    return v[:, None, None, None]
+  elif tgt_dims == 5:
+    return v[:, None, None, None, None]
+  elif tgt_dims == 6:
+    return v[:, None, None, None, None, None]
+  else:
+    return ValueError
+
+
 def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True):
   transforms_list = [transforms.ToTensor()]
   if normalize:
@@ -126,6 +142,7 @@ def dist_matrix(x, y):
   d2[d2 < 0] = 0
   d = np.sqrt(d2)
   return d
+
 
 def log_args(log_dir, args):
   """ print and save all args """
