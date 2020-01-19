@@ -72,10 +72,15 @@ print(device)
 #os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
 ##################
-
+# parameters
 seed_number=1000
-
 dataset="adult"
+
+
+###################
+# datasets
+
+
 
 if dataset=="news":
     data, categorical_columns, ordinal_columns = load_dataset('news')
@@ -257,6 +262,7 @@ X_train_neg = X_train[y_labels == 0, :]
 y_train_neg = y_labels[y_labels == 0]
 
 n, input_dim = X_train_pos.shape
+
 #############################################3
 # train generators
 
@@ -386,24 +392,24 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                 # emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
                 # mean_emb2 = torch.mean(emb2_input_features, 0)
 
-                """ write down the embeddings for two types of features """
                 ###########
-                # W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
-                #
-                # # computing mean embedding of true data """
-                # sample = random.choices(np.arange(data_samps.shape[0]), k=500)
-                # numerical_input_data = data_samps[sample, 0:num_numerical_inputs]
-                # emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(
-                #     device)
-                #
-                # categorical_input_data = data_samps[:, num_numerical_inputs:]
-                # emb1_categorical = torch.Tensor(
-                #     np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
-                #
-                # # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
-                # # emb1_categorical =
-                #
-                # mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
+                if kernel_datasampling:
+                    W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+
+                    # computing mean embedding of true data """
+                    sample = random.choices(np.arange(data_samps.shape[0]), k=k_datasamples)
+                    numerical_input_data = data_samps[sample, 0:num_numerical_inputs]
+                    emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(
+                        device)
+
+                    categorical_input_data = data_samps[:, num_numerical_inputs:]
+                    emb1_categorical = torch.Tensor(
+                        np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
+
+                    # emb1_numerical = RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)
+                    # emb1_categorical =
+
+                    mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
                 ###############
 
                 numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
@@ -487,16 +493,22 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
 
     return ROC_ours, PRC_ours
 
-# number of (training) samples
+########################################################################################33
+#######################################################################3
+
+kernel_datasampling=True
+k_datasamples=1000
+runs_num=5
+
+## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
 
 #main(20000, n, 100, 20* input_dim, 20 * input_dim, 4000,     n, 100, 20* input_dim, 20 * input_dim, 4000)
 PRC_ours_arr=[]
 ROC_ours_arr=[]
-for i in range(5):
+for i in range(runs_num):
     print("\n i: {} \n".format(i))
     if dataset=='census':
-
         #main(2000, n, 100, 20* input_dim, 20 * input_dim, 200,     n, 10, 20* input_dim, 20 * input_dim, 200)
         main(2000, n, 100, 20* input_dim, 20 * input_dim, 20,     n, 10, 20* input_dim, 20 * input_dim, 20)
     else:
@@ -506,6 +518,7 @@ print(ROC_ours_arr)
 print("roc: ", np.mean(ROC_ours_arr))
 print(PRC_ours_arr)
 print("prc: ", np.mean(PRC_ours_arr))
+
 
 # """ specifics of generators are defined here, comment this later """
 # features_num = 1000
