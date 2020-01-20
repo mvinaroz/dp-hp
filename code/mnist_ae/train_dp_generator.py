@@ -93,7 +93,7 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
   plot_samples = gen_samples[:100, ...].cpu().numpy()
   if ae_label:
     plot_samples = gen_samples[:, :784]
-  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}.png')
+  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
   if gen_labels is not None:
     save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
   # bs = plot_samples.shape[0]

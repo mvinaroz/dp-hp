@@ -32,7 +32,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
     if dp_spec.clip is None:
       l_enc.backward()
-      param_norms, rec_loss, siam_loss = None, None, None
+      bp_global_norms, rec_loss, siam_loss = None, None, None
     else:
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
@@ -55,13 +55,27 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         l_dec.backward()
 
       # compute global gradient norm from parameter gradient norms
-      param_norms = pt.sqrt(pt.sum(pt.stack([p.batch_l2**2 for p in dec.parameters()]), dim=0))
+      bp_squared_param_norms = [p.batch_l2**2 for p in dec.parameters()]
+      bp_global_norms = pt.sqrt(pt.sum(pt.stack(bp_squared_param_norms), dim=0))
+      # manual_squared_param_norms = [pt.norm(pt.reshape(p.grad_batch, (p.grad_batch.shape[0], -1)), dim=1) ** 2
+      #                               for p in dec.parameters()]
+      # manual_global_norms = pt.sqrt(pt.sum(pt.stack(manual_squared_param_norms), dim=0))
+      # manual_squared_param_norms1 = [pt.sum(pt.reshape(p.grad_batch, (p.grad_batch.shape[0], -1))**2, dim=1)
+      #                               for p in dec.parameters()]
+      # manual_global_norms1 = pt.sqrt(pt.sum(pt.stack(manual_squared_param_norms1), dim=0))
+      # print(f'backpack_global_norm: {bp_global_norms[:3]}')
+      # print(f'manual_global_norm: {manual_global_norms[:3]}')
+      # print(f'manual_global_norm1: {manual_global_norms1[:3]}')
+      # for param in dec.parameters():
+      #     bp_norm = param.batch_l2
+      #     bp_grad = param.grad_batch
+      #     manual_norm_squared = pt.norm(pt.reshape(bp_grad, (bp_grad.shape[0], -1)), dim=1)**2
+      #     print(f'norm_comp: {bp_norm[0]}, {manual_norm_squared[0]}')
 
-
+      clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
       # aggregate samplewise grads, replace normal grad
       for param in dec.parameters():
         # print(param.batch_l2, param.grad_batch)
-        clips = pt.clamp_max(dp_spec.clip / param_norms, 1.)
         clipped_sample_grads = param.grad_batch * expand_vector(clips, param.grad_batch)
         clipped_grad = pt.mean(clipped_sample_grads, dim=0)
 
@@ -74,7 +88,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
     optimizer.step()
     if batch_idx % log_interval == 0:
       if dp_spec.clip is not None:
-        print(f'max_norm:{pt.max(param_norms).item()}, mean_norm:{pt.mean(param_norms).item()}')
+        print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
 
       n_done = batch_idx * len(data)
       n_data = len(train_loader.dataset)
@@ -120,7 +134,7 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_di
   else:
     reconstruction = reconstruction[:100, ...].cpu().numpy()
 
-  plot_mnist_batch(reconstruction, 10, 10, log_dir + f'rec_ep{epoch}.png', denorm=not losses.do_ce)
+  plot_mnist_batch(reconstruction, 10, 10, log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
 
   print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
 
@@ -200,17 +214,17 @@ def get_args():
 
   # DP SPEC
   parser.add_argument('--clip-norm', '-clip', type=float, default=1e-5)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=2.0)
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.0)
   parser.add_argument('--clip-per-layer', action='store_true', default=False)  # not used yet
 
   ar = parser.parse_args()
 
   # HACKS FOR QUICK ACCESS
-  ar.ce_loss = True
-  ar.conv_ae = True
+  # ar.ce_loss = True
+  # ar.conv_ae = True
   # ar.label_ae = True
-  ar.siam_loss_weight = 10.
-  ar.siam_loss_margin = 10.
+  # ar.siam_loss_weight = 10.
+  # ar.siam_loss_margin = 10.
 
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
