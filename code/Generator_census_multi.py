@@ -134,7 +134,7 @@ elif dataset=="covtype":
     categorical_columns = list(set(np.arange(data.shape[1])) - set(numerical_columns + ordinal_columns))
     #0 - 122979, 1- 164062, 2 - 20740, 3 - 1560, 4 - 5510, 5 - 10065, 6 - 11792
     n_classes=7
-    data=data[:50000, :]
+    data=data[:, :]
 
 # print(socket.gethostname())
     # if 'g0' not in socket.gethostname():
@@ -190,17 +190,17 @@ n, input_dim = X_train_arr[0].shape
 
 #####################################
 
-# LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-# LR_model.fit(X_train, y_train)  # training on synthetic data
-# pred = LR_model.predict(X_test)  # test on real data
-#
-# if n_classes > 2:
-#     print('F1-score', f1_score(y_test, pred, average='weighted'))
-# elif n_classes == 2:
-#     print('F1-score', f1_score(y_test, pred))
-#     print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
-#     print('PRC on real test data from Logistic regression is',
-#           average_precision_score(y_test, pred))  # 0.8955114054451803
+LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+LR_model.fit(X_train, y_train)  # training on synthetic data
+pred = LR_model.predict(X_test)  # test on real data
+
+if n_classes > 2:
+    print('F1-score', f1_score(y_test, pred, average='weighted'))
+elif n_classes == 2:
+    print('F1-score', f1_score(y_test, pred))
+    print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
+    print('PRC on real test data from Logistic regression is',
+          average_precision_score(y_test, pred))  # 0.8955114054451803
 
 
 ####################################################
