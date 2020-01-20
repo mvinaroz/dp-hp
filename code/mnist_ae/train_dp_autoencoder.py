@@ -55,7 +55,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         l_dec.backward()
 
       # compute global gradient norm from parameter gradient norms
-      bp_squared_param_norms = [p.batch_l2**2 for p in dec.parameters()]
+      bp_squared_param_norms = [p.batch_l2 for p in dec.parameters()]  # ERROR IN BACKPACK! grad norm^2 returned
       bp_global_norms = pt.sqrt(pt.sum(pt.stack(bp_squared_param_norms), dim=0))
       # manual_squared_param_norms = [pt.norm(pt.reshape(p.grad_batch, (p.grad_batch.shape[0], -1)), dim=1) ** 2
       #                               for p in dec.parameters()]
@@ -195,7 +195,7 @@ def get_args():
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=10)
-  parser.add_argument('--lr', type=float, default=0.001)
+  parser.add_argument('--lr', '-lr', type=float, default=0.001)
   parser.add_argument('--lr-decay', type=float, default=0.9)
   parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=0.)
   parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=1.)
@@ -205,20 +205,21 @@ def get_args():
   parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
-  # parser.add_argument('--enc-spec', type=str, default='300,100')
-  # parser.add_argument('--dec-spec', type=str, default='100,300')
+  parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
+  parser.add_argument('--dec-spec', '-s-dec', type=str, default='100,300')
   # parser.add_argument('--enc-spec', type=str, default='1,8,16,16')
   # parser.add_argument('--dec-spec', type=str, default='16,16,8,1')
-  parser.add_argument('--enc-spec', type=str, default='1,4,8,8')
-  parser.add_argument('--dec-spec', type=str, default='8,8,4,1')
+  # parser.add_argument('--enc-spec', type=str, default='1,4,8,8')
+  # parser.add_argument('--dec-spec', type=str, default='8,8,4,1')
 
   # DP SPEC
   parser.add_argument('--clip-norm', '-clip', type=float, default=1e-5)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.0)
+  parser.add_argument('--noise-factor', '-noise', type=float, default=None)
   parser.add_argument('--clip-per-layer', action='store_true', default=False)  # not used yet
 
   ar = parser.parse_args()
 
+  # python3 train_dp_autoencoder.py --log-name tb0_1 -bs 500 -ep 20 -lr 1e-3 --lr-decay 0.9 -denc 5 -s-enc 300,100 -s-dec 100,300 -clip 0.1 -noise 2.0
   # HACKS FOR QUICK ACCESS
   # ar.ce_loss = True
   # ar.conv_ae = True
