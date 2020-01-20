@@ -272,6 +272,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
 
     for which_class in range(n_classes):
 
+    ##############3
         if which_class == 1:
             """ First train for positive label """
             n, input_dim = X_train_pos.shape
@@ -283,6 +284,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
             data_samps = X_train_neg
             # del X_train_neg
             print('number of data samples for this class is', n)
+    #############
 
         # test how to use RFF for computing the kernel matrix
         idx_rp = np.random.permutation(np.min([n, 10000]))
@@ -294,14 +296,13 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         #########################################################3
         # generator
 
-
-
         """ end of comment """
 
         # random Fourier features
         n_features = features_num  # 20000
 
         """ training a Generator via minimizing MMD """
+    ##############
         if which_class == 1:
 
             mini_batch_size = batch_cl1  # 400
@@ -320,6 +321,7 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
 
             output_size = input_dim
             how_many_epochs = epochs_num_cl0  # 30
+        ##################3
 
         output_size = input_dim
 
@@ -498,7 +500,7 @@ runs_num=5
 ## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
 
-main(20000, n, 100, 20* input_dim, 20 * input_dim, 40,     n, 100, 20* input_dim, 20 * input_dim, 40)
+main(10000, n, 100, 20* input_dim, 20 * input_dim, 10,     n, 100, 20* input_dim, 20 * input_dim, 10)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):

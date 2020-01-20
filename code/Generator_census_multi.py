@@ -106,7 +106,7 @@ elif dataset=="census":
         data=np.load("../data/real/census/train.npy")
     else:
         data = np.load(
-            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/census/train.npy")
 
     numerical_columns= [0,5, 16, 17, 18, 29, 38]
     ordinal_columns = []
@@ -127,7 +127,7 @@ elif dataset=="covtype":
         data = np.load("../data/real/covtype/train.npy")
     else:
         data = np.load(
-            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
 
     numerical_columns = [0,1,2,3,4,5,6,7,8,9]
     ordinal_columns = []
@@ -524,11 +524,11 @@ batch_var=[n,]*7
 input_var=[100]*7
 hidden1_var=[20]*7
 hidden2_var=[20]*7
-epoch_var=[50]*7
+epoch_var=[2000]*7
 
 
 
-main(10000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
+main(20000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):
