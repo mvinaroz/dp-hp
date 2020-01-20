@@ -3,7 +3,7 @@ executable =/home/kadamczewski/miniconda3/bin/python
 
 arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/Generator_census_multi.py
 
-var=gen_intrusion_20000_2000_5cl_all_cor
+var=gen_intrusion_10000_1000_5cl_all_cor
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
 log = clust/clust_log/$(var).$(Process).log

@@ -522,11 +522,11 @@ batch_var=[n,]*n_classes
 input_var=[100]*n_classes
 hidden1_var=[20]*n_classes
 hidden2_var=[20]*n_classes
-epoch_var=[2000]*n_classes
+epoch_var=[1000]*n_classes
 
 
 
-main(20000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
+main(10000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):
