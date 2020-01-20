@@ -170,16 +170,37 @@ target = data[:,-1]
 X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.70, test_size=0.30,
                                                     random_state=seed_number)  # 60% training and 40% test
 
-LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-LR_model.fit(X_train, y_train)  # training on synthetic data
-pred = LR_model.predict(X_test)  # test on real data
 
-if n_classes>2:
-    print('F1-score', f1_score(y_test, pred, average='macro'))
-elif n_classes==2:
-    print('F1-score', f1_score(y_test, pred))
-    print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
-    print('PRC on real test data from Logistic regression is', average_precision_score(y_test, pred))  # 0.8955114054451803
+#y_labels = y_train.values.ravel()  # X_train_pos
+y_labels=y_train
+#X_train = X_train.values
+
+n_tot = X_train.shape[0]
+
+X_train_arr=[]
+y_train_arr=[]
+
+for i in range(n_classes):
+
+    X_train_arr.append(X_train[y_labels == i, :])
+    y_train_arr.append(y_labels[y_labels == i])
+
+n, input_dim = X_train_arr[0].shape
+
+
+#####################################
+
+# LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+# LR_model.fit(X_train, y_train)  # training on synthetic data
+# pred = LR_model.predict(X_test)  # test on real data
+#
+# if n_classes > 2:
+#     print('F1-score', f1_score(y_test, pred, average='weighted'))
+# elif n_classes == 2:
+#     print('F1-score', f1_score(y_test, pred))
+#     print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
+#     print('PRC on real test data from Logistic regression is',
+#           average_precision_score(y_test, pred))  # 0.8955114054451803
 
 
 ####################################################
@@ -256,32 +277,8 @@ class Generative_Model(nn.Module):
 
 
 
-###################################
 
 
-#y_labels = y_train.values.ravel()  # X_train_pos
-y_labels=y_train
-#X_train = X_train.values
-
-n_tot = X_train.shape[0]
-
-X_train_arr=[]
-y_train_arr=[]
-
-for i in range(n_classes):
-
-    X_train_arr.append(X_train[y_labels == i, :])
-    #X_train_pos=np.concatenate((X_train_pos, X_train_pos, X_train_pos))
-
-    y_train_arr.append(y_labels[y_labels == i])
-    #y_train_pos=np.concatenate((y_train_pos, y_train_pos, y_train_pos))
-
-
-    #X_train_neg = X_train[y_labels == 0, :]
-    #y_train_neg = y_labels[y_labels == 0]
-
-global input_dim
-n, input_dim = X_train_arr[0].shape
 
 #############################################3
 # train generators
@@ -302,7 +299,7 @@ def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, in
 
         # test how to use RFF for computing the kernel matrix
         idx_rp = np.random.permutation(np.min([n, 10000]))
-        med = util.meddistance(data_samps[idx_rp, :])
+        med = util.meddistance(data_samps[idx_rp, 1:10])
         del idx_rp
         sigma2 = med ** 2
         print('length scale from median heuristic is', sigma2)
@@ -402,7 +399,7 @@ def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, in
 
                 ###########
                 if kernel_datasampling:
-                    W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+                    #W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
 
                     # computing mean embedding of true data """
                     sample = random.choices(np.arange(data_samps.shape[0]), k=k_datasamples)
