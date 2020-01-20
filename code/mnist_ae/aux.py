@@ -52,7 +52,7 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True)
   return train_loader, test_loader
 
 
-def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True):
+def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw=True):
   bs = mnist_mat.shape[0]
   n_to_fill = n_rows * n_cols - bs
   mnist_mat = np.reshape(mnist_mat, (bs, 28, 28))
@@ -68,7 +68,9 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True):
   # print(mnist_mat_flat.shape)
   # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
   # print(mnist_mat_flat.dtype)
-  save_img(save_path, mnist_mat_flat)
+  save_img(save_path + '.png', mnist_mat_flat)
+  if save_raw:
+    np.save(save_path + '_raw.npy', mnist_mat_flat)
 
 
 def save_gen_labels(label_mat, n_rows, n_cols, save_path, save_raw=True):
