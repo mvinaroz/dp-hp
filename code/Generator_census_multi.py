@@ -65,6 +65,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+from sklearn.metrics import f1_score
 
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -74,7 +75,7 @@ print(device)
 ##################
 # parameters
 seed_number=1000
-dataset="adult"
+dataset="covtype"
 
 
 ###################
@@ -83,19 +84,23 @@ dataset="adult"
 
 
 if dataset=="news":
+    print("news dataset")
     data, categorical_columns, ordinal_columns = load_dataset('news')
     numerical_columns=list(set(np.arange(data[:,:-1].shape[1]))-set(categorical_columns + ordinal_columns))
 
 
 
 elif dataset=="adult": #last column is binary label
+    print("adult dataset")
     data, categorical_columns, ordinal_columns = load_dataset('adult')
     numerical_columns=list(set(np.arange(data[:,:-1].shape[1]))-set(categorical_columns + ordinal_columns))
+    n_classes = 2
 
     #numerical_input_data = data[:, numerical_columns]
     #categorical_input_data = data[:,ordinal_columns+categorical_columns][:,:-1]
 
 elif dataset=="census":
+    print("census dataset")
     print(socket.gethostname())
     if 'g0' not in socket.gethostname():
         data=np.load("../data/real/census/train.npy")
@@ -106,6 +111,7 @@ elif dataset=="census":
     numerical_columns= [0,5, 16, 17, 18, 29, 38]
     ordinal_columns = []
     categorical_columns = [1,2,3,4,6,7,8,9,10,11,12,13,14,15, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40]
+    n_classes = 2
 
 elif dataset=="intrusion":
     print("intrusion dataset")
@@ -123,9 +129,12 @@ elif dataset=="covtype":
         data = np.load(
             "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
 
-    numerical_columns = [0, 1,2,3,4,5,6,7,8,9]
+    numerical_columns = [0,1,2,3,4,5,6,7,8,9]
     ordinal_columns = []
-    categorical_columns = [10,11,12]
+    categorical_columns = list(set(np.arange(data.shape[1])) - set(numerical_columns + ordinal_columns))
+    #0 - 122979, 1- 164062, 2 - 20740, 3 - 1560, 4 - 5510, 5 - 10065, 6 - 11792
+    n_classes=7
+    data=data[:50000, :]
 
 # print(socket.gethostname())
     # if 'g0' not in socket.gethostname():
@@ -140,12 +149,13 @@ elif dataset=="covtype":
 
 
 print(data.shape)
+print(numerical_columns)
 print(categorical_columns)
 print(ordinal_columns)
 
 
-np.set_printoptions(threshold=1000)
-np.set_printoptions(threshold=np.inf)
+# np.set_printoptions(threshold=1000)
+# np.set_printoptions(threshold=np.inf)
 
 data=data[:, numerical_columns+ordinal_columns+categorical_columns]
 
@@ -157,15 +167,19 @@ inputs = data[:, :-1]
 target = data[:,-1]
 
 
-X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.80, test_size=0.20,
+X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.70, test_size=0.30,
                                                     random_state=seed_number)  # 60% training and 40% test
 
 LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
 LR_model.fit(X_train, y_train)  # training on synthetic data
 pred = LR_model.predict(X_test)  # test on real data
 
-print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
-print('PRC on real test data from Logistic regression is', average_precision_score(y_test, pred))  # 0.8955114054451803
+if n_classes>2:
+    print('F1-score', f1_score(y_test, pred, average='macro'))
+elif n_classes==2:
+    print('F1-score', f1_score(y_test, pred))
+    print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
+    print('PRC on real test data from Logistic regression is', average_precision_score(y_test, pred))  # 0.8955114054451803
 
 
 ####################################################
@@ -251,38 +265,40 @@ y_labels=y_train
 
 n_tot = X_train.shape[0]
 
-X_train_pos = X_train[y_labels == 1, :]
-X_train_pos=np.concatenate((X_train_pos, X_train_pos, X_train_pos))
+X_train_arr=[]
+y_train_arr=[]
 
-y_train_pos = y_labels[y_labels == 1]
-y_train_pos=np.concatenate((y_train_pos, y_train_pos, y_train_pos))
+for i in range(n_classes):
+
+    X_train_arr.append(X_train[y_labels == i, :])
+    #X_train_pos=np.concatenate((X_train_pos, X_train_pos, X_train_pos))
+
+    y_train_arr.append(y_labels[y_labels == i])
+    #y_train_pos=np.concatenate((y_train_pos, y_train_pos, y_train_pos))
 
 
-X_train_neg = X_train[y_labels == 0, :]
-y_train_neg = y_labels[y_labels == 0]
+    #X_train_neg = X_train[y_labels == 0, :]
+    #y_train_neg = y_labels[y_labels == 0]
 
-n, input_dim = X_train_pos.shape
+global input_dim
+n, input_dim = X_train_arr[0].shape
 
 #############################################3
 # train generators
 
-def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_num_cl1, batch_cl0, input_cl0, hidden1_cl0, hidden2_cl0, epochs_num_cl0):
+def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
 
-    n_classes = 2
+    generated_input_features = a=np.zeros(shape=(0,input_dim))
+    corresponding_labels = []
 
     for which_class in range(n_classes):
 
-        if which_class == 1:
-            """ First train for positive label """
-            n, input_dim = X_train_pos.shape
-            data_samps = X_train_pos
-            # del X_train_pos
-            print('number of data samples for this class is', n)
-        else:
-            n, input_dim = X_train_neg.shape
-            data_samps = X_train_neg
-            # del X_train_neg
-            print('number of data samples for this class is', n)
+    ##############3
+        n, input_dim = X_train_arr[which_class].shape
+        data_samps = X_train_arr[which_class]
+        print('number of data samples for this class is', n)
+
+    #############
 
         # test how to use RFF for computing the kernel matrix
         idx_rp = np.random.permutation(np.min([n, 10000]))
@@ -294,32 +310,21 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         #########################################################3
         # generator
 
-
-
         """ end of comment """
 
         # random Fourier features
         n_features = features_num  # 20000
 
         """ training a Generator via minimizing MMD """
-        if which_class == 1:
+    ##############
+        mini_batch_size = batch_size[which_class]  # 400
+        input_size = input_layer[which_class]  # 400
+        hidden_size_1 = hidden1[which_class]  # 100
+        hidden_size_2 = hidden2[which_class]  # 100
+        output_size = input_dim
+        how_many_epochs = epochs_num[which_class]  # 30
 
-            mini_batch_size = batch_cl1  # 400
-            input_size = input_cl1  # 400
-            hidden_size_1 = hidden1_cl1  # 100
-            hidden_size_2 = hidden2_cl1  # 100
-            output_size = input_dim
-            how_many_epochs = epochs_num_cl1  # 30
-
-        else:  # for extremely imbalanced dataset
-
-            mini_batch_size = batch_cl0  # 400
-            input_size = input_cl0  # 400
-            hidden_size_1 = hidden1_cl0  # 300
-            hidden_size_2 = hidden2_cl0  # 100
-
-            output_size = input_dim
-            how_many_epochs = epochs_num_cl0  # 30
+        ##################3
 
         output_size = input_dim
 
@@ -369,12 +374,15 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
                                  num_numerical_inputs=num_numerical_inputs).to(device)
 
         optimizer = optim.Adam(model.parameters(), lr=1e-2)
-        how_many_iter = np.int(n / mini_batch_size)
+        how_many_iter = 1 #np.int(n / mini_batch_size)
 
         training_loss_per_epoch = np.zeros(how_many_epochs)
 
 
         print('Starting Training')
+
+
+
 
         for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
@@ -441,23 +449,23 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         outputs = model(input_to_model)
         samp_input_features = outputs
 
-        if which_class == 1:
-            generated_samples_pos = samp_input_features.cpu().detach().numpy()
-
-            # save results
-            # method = os.path.join(Results_PATH, 'Cervical_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-            #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-            # np.save(method + '_loss.npy', training_loss_per_epoch)
-            # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
-
-        else:
-            generated_samples_neg = samp_input_features.cpu().detach().numpy()
-
-            # save results
-            # method = os.path.join(Results_PATH, 'Cervical_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
-            #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
-            # np.save(method + '_loss.npy', training_loss_per_epoch)
-            # np.save(method + '_input_feature_samps.npy', generated_samples_neg)
+        # if which_class == 1:
+        #     generated_samples_pos = samp_input_features.cpu().detach().numpy()
+        #
+        #     # save results
+        #     # method = os.path.join(Results_PATH, 'Cervical_pos_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
+        #     #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+        #     # np.save(method + '_loss.npy', training_loss_per_epoch)
+        #     # np.save(method + '_input_feature_samps.npy', generated_samples_pos)
+        #
+        # else:
+        #     generated_samples_neg = samp_input_features.cpu().detach().numpy()
+        #
+        #     # save results
+        #     # method = os.path.join(Results_PATH, 'Cervical_neg_samps_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s' % (
+        #     #     mini_batch_size, input_size, hidden_size_1, hidden_size_2))
+        #     # np.save(method + '_loss.npy', training_loss_per_epoch)
+        #     # np.save(method + '_input_feature_samps.npy', generated_samples_neg)
 
         # plt.figure(3)
         # plt.plot(training_loss_per_epoch)
@@ -468,9 +476,11 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
         # plt.plot(mean_emb1, 'b')
         # plt.plot(mean_emb2.detach().numpy(), 'r--')
 
-    # mix data for positive and negative labels
-    generated_input_features=np.around(np.concatenate((generated_samples_pos, generated_samples_neg), axis=0))
-    corresponding_labels = np.concatenate((y_train_pos, y_train_neg))
+        # mix data for positive and negative labels
+        generated_input_features=np.concatenate((generated_input_features, np.around(samp_input_features.cpu().detach().numpy())))
+
+        #we generated the number of samples equal to the the number of real data instances so we just add y_train which is the same both for real and generated
+        corresponding_labels = np.concatenate((corresponding_labels,y_train_arr[which_class]))
 
     idx_shuffle = np.random.permutation(n_tot)
     shuffled_x_train = generated_input_features[idx_shuffle, :]
@@ -480,25 +490,45 @@ def main(features_num, batch_cl1, input_cl1, hidden1_cl1, hidden2_cl1, epochs_nu
     LR_model_ours.fit(shuffled_x_train, shuffled_y_train)  # training on synthetic data
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-    ROC_ours = roc_auc_score(y_test, pred_ours)
-    PRC_ours = average_precision_score(y_test, pred_ours)
 
-    print('ROC on generated samples using Logistic regression is', ROC_ours)
-    print('PRC on generated samples using Logistic regression is', PRC_ours)
+    if n_classes > 2:
+        f1score = f1_score(y_test, pred_ours, average='weighted')
+        print('F1-score', f1score)
+    elif n_classes == 2:
+        f1score = f1_score(y_test, pred_ours)
+        print('F1-score', f1score)
+        print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
+        print('PRC on real test data from Logistic regression is',
+              average_precision_score(y_test, pred))  # 0.8955114054451803
 
-    return ROC_ours, PRC_ours
+
+
+    # ROC_ours = roc_auc_score(y_test, pred_ours)
+    # PRC_ours = average_precision_score(y_test, pred_ours)
+    #
+    # print('ROC on generated samples using Logistic regression is', ROC_ours)
+    # print('PRC on generated samples using Logistic regression is', PRC_ours)
+
+    return f1score
 
 ########################################################################################33
 #######################################################################3
 
-kernel_datasampling=True
+kernel_datasampling=False
 k_datasamples=1000
 runs_num=5
 
 ## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
+batch_var=[n,]*7
+input_var=[100]*7
+hidden1_var=[20]*7
+hidden2_var=[20]*7
+epoch_var=[50]*7
 
-main(20000, n, 100, 20* input_dim, 20 * input_dim, 40,     n, 100, 20* input_dim, 20 * input_dim, 40)
+
+
+main(10000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):
