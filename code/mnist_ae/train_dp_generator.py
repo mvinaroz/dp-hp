@@ -170,6 +170,8 @@ def get_args():
   parser.add_argument('--ae-enc-spec', type=str, default='300,100')
   parser.add_argument('--ae-dec-spec', type=str, default='100,300')
   parser.add_argument('--ae-load-dir', type=str, default=None)
+  parser.add_argument('--ae_siam-weight', '-wsiam', type=float, default=0.)
+  parser.add_argument('--ae_siam-margin', '-msiam', type=float, default=1.)
 
   ar = parser.parse_args()
 
@@ -197,7 +199,8 @@ def get_log_dir(ar):
     gen_spec = f'd{ar.d_enc}_gen{ar.gen_hid}_sig{ar.noise_factor}_dcode{ar.d_code}_drff{ar.d_rff}_rffsig{ar.rff_sigma}'
     ae_type = f'{"label_" if ar.ae_label else ""}{"ce_" if ar.ae_ce_loss else "mse_"}'
     ae_spec = f'enc{ar.ae_enc_spec}_dec{ar.ae_dec_spec}_clip{ar.ae_clip}_sig{ar.ae_noise}'
-    log_dir = ar.base_log_dir + gen_type + gen_spec + '_AE:' + ae_type + ae_spec + '/'
+    ae_siam = f'_siam_w{ar.ae_siam_weight}_m{ar.ae_siam_margin}' if ar.ae_siam_weight > 0. else ''
+    log_dir = ar.base_log_dir + gen_type + gen_spec + '_AE:' + ae_type + ae_spec + ae_siam + '/'
   return log_dir
 
 
