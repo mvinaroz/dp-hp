@@ -1,6 +1,4 @@
-import torch as pt
 import torch.nn as nn
-import backpack
 
 
 class FCEnc(nn.Module):
@@ -29,6 +27,7 @@ class FCDec(nn.Module):
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
+
 
   def forward(self, x):
     x = self.relu(self.fc1(x))
@@ -118,6 +117,11 @@ class ConvDec(nn.Module):
     self.sigmoid = nn.Sigmoid()
     self.nc = nc
     self.use_sigmoid = use_sigmoid
+    # N Params:
+    # 2, 4, 2, 1 -> 5x49x2 + 4x4x9 + 4x2x9 + 2x2x9 + 2x1x9 + =  10*49 + (16 + 8 + 4 + 2)*9  = 490 + 270 = 780
+    # 4, 4, 2, 1 -> 5x49x4 + 4x4x9 + 4x2x9 + 2x2x9 + 2x1x9 + =  20*49 + (16 + 8 + 4 + 2)*9  = 980 + 270 = 1250
+    # 8, 8, 4, 1 -> 5x49x8 + 8x8x9 + 8x4x9 + 4x4x9 + 4x1x9 = 40*49 + (64 + 32 + 16 + 4)*9 = 1960 + 1044 = 4004
+    # 16, 16, 8, 1 -> 5x49x16 + 16x16x9 + 16x8x9 + 8x8x9 + 8x1x9 = 80*49 + (256 + 128 + 64 + 4)*9 = 3820 + 4068 = 7888
 
   def forward(self, x):
     x = self.relu(self.fc(x))
@@ -128,6 +132,41 @@ class ConvDec(nn.Module):
     x = self.relu(self.conv3(x)) if self.conv3 is not None else x
     x = self.upsamp(x)
     x = self.conv4(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
+    return x
+
+
+class ConvDecThin(nn.Module):
+
+  def __init__(self, d_enc, nc=(4, 4, 2, 1), use_sigmoid=False):
+    super(ConvDecThin, self).__init__()
+    self.fc = nn.Linear(d_enc, 4*4*nc[0])
+    self.conv1 = nn.Conv2d(nc[0], nc[1], kernel_size=3, stride=1, padding=1)
+    self.conv2 = nn.Conv2d(nc[1], nc[1], kernel_size=3, stride=1, padding=1)
+    self.conv3 = nn.Conv2d(nc[1], nc[2], kernel_size=3, stride=1, padding=1)
+    self.conv4 = nn.Conv2d(nc[2], nc[2], kernel_size=3, stride=1)
+    self.conv5 = nn.Conv2d(nc[2], nc[3], kernel_size=3, stride=1)
+    self.upsamp = nn.UpsamplingBilinear2d(scale_factor=2)
+    self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.nc = nc
+    self.use_sigmoid = use_sigmoid
+    # N Params:
+    # 2, 4, 2, 1 -> 5x16x2 +  2x4x9 + 4x4x9 + 4x2x9 + 2x2x1 + 2x1x9 + =  20*16 + (16 + 2*8 + 4 + 2)*9  = 160 + 342 = 502
+    # 4, 4, 2, 1 -> 5x16x4 + 2 * 4x4x9 + 4x2x9 + 2x2x1 + 2x1x9 + =  20*16 + (2*16 + 8 + 4 + 2)*9  = 320 + 414 = 734
+
+  def forward(self, x):
+    x = self.relu(self.fc(x))
+    x = x.reshape(x.shape[0], self.nc[0], 7, 7)
+    x = self.relu(self.conv1(x))  # 4x4
+    x = self.upsamp(x)  # 8x8
+    x = self.relu(self.conv2(x))  # 8x8
+    x = self.upsamp(x)  # 16x16
+    x = self.relu(self.conv3(x))  # 16x16
+    x = self.upsamp(x)  # 32x32
+    x = self.conv4(x)  # 30x30
+    x = self.conv5(x)  # 28x28
     if self.use_sigmoid:
       x = self.sigmoid(x)
     return x
