@@ -238,7 +238,7 @@ def get_args():
 
 def get_log_dir(args):
   if args.log_name is not None:
-    log_dir = args.base_log_dir + args.log_name
+    log_dir = args.base_log_dir + args.log_name + '/'
   else:
     type_str = f'{"label_" if args.label_ae else ""}{"ce" if args.ce_loss else "mse"}_'
     spec_str = f'd{args.d_enc}_enc{args.enc_spec}_dec{args.dec_spec}_clip{args.clip_norm}_sig{args.noise_factor}'
