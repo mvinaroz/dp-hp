@@ -500,7 +500,7 @@ runs_num=5
 ## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
 
-main(1000, n, 100, 20* input_dim, 20 * input_dim, 10,     n, 100, 20* input_dim, 20 * input_dim, 10)
+main(10000, n, 100, 20* input_dim, 20 * input_dim, 10,     n, 100, 20* input_dim, 20 * input_dim, 10)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):

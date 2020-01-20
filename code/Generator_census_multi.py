@@ -524,7 +524,7 @@ batch_var=[n,]*7
 input_var=[100]*7
 hidden1_var=[20]*7
 hidden2_var=[20]*7
-epoch_var=[50]*7
+epoch_var=[1000]*7
 
 
 
