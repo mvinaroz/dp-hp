@@ -83,24 +83,35 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         loss_str = 'Loss: {:.6f}'.format(l_enc.item())
       else:
         l_s, l_r = pt.mean(siam_loss).item(), pt.mean(rec_loss).item()
-        loss_str = 'Loss: full {:.6f}, siam {:.6f}, rec {:.6f}'.format(l_enc.item(), l_s, l_r)
+        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_enc.item(), l_r, l_s)
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
 def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_dir):
   enc.eval()
   dec.eval()
-  test_loss = 0
+
+  rec_loss_agg = 0
+  siam_loss_agg = 0
   with pt.no_grad():
     for data, labels in test_loader:
       data = data.to(device)
+      labels = labels.to(device)
       if not conv_ae:
-        data = flat_data(data, labels.to(device), device, add_label=label_ae)
+        data = flat_data(data, labels, device, add_label=label_ae)
 
-      reconstruction = dec(enc(data))
+      data_enc = enc(data)
+      reconstruction = dec(data_enc)
+      rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
+      rec_loss_agg += pt.sum(rec_loss).item()
+      if losses.wsiam > 0.:
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, per_sample=True)
+        siam_loss_agg += pt.sum(siam_loss).item()
 
-      test_loss += nnf.mse_loss(reconstruction, data, reduction='sum').item()  # sum up batch loss
-  test_loss /= len(test_loader.dataset)
+  n_data = len(test_loader.dataset)
+  rec_loss_agg /= n_data
+  siam_loss_agg /= n_data
+  full_loss = rec_loss_agg + siam_loss_agg
 
   if label_ae:
     rec_labels = reconstruction[:100, 784:].cpu().numpy()
@@ -111,10 +122,10 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_di
 
   plot_mnist_batch(reconstruction, 10, 10, log_dir + f'rec_ep{epoch}.png', denorm=not losses.do_ce)
 
-  print('Test set: Average loss: {:.4f}'.format(test_loss))
+  print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
 
 
-def mse_loss(reconstruction, data):
+def mse_loss(reconstruction, data):  # this could be done directly with backpack but this way is more consistent
   mse = (reconstruction - data)**2
   return pt.sum(pt.reshape(mse, (mse.shape[0], -1)), dim=1, keepdim=True)
 
@@ -198,7 +209,7 @@ def get_args():
   ar.ce_loss = True
   ar.conv_ae = True
   # ar.label_ae = True
-  ar.siam_loss_weight = 100.
+  ar.siam_loss_weight = 10.
   ar.siam_loss_margin = 10.
 
   if ar.log_dir is None:
