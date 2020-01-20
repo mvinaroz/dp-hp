@@ -158,7 +158,7 @@ class ConvDecThin(nn.Module):
 
   def forward(self, x):
     x = self.relu(self.fc(x))
-    x = x.reshape(x.shape[0], self.nc[0], 7, 7)
+    x = x.reshape(x.shape[0], self.nc[0], 4, 4)
     x = self.relu(self.conv1(x))  # 4x4
     x = self.upsamp(x)  # 8x8
     x = self.relu(self.conv2(x))  # 8x8
