@@ -106,7 +106,7 @@ elif dataset=="census":
         data=np.load("../data/real/census/train.npy")
     else:
         data = np.load(
-            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/census/train.npy")
 
     numerical_columns= [0,5, 16, 17, 18, 29, 38]
     ordinal_columns = []
@@ -127,7 +127,7 @@ elif dataset=="covtype":
         data = np.load("../data/real/covtype/train.npy")
     else:
         data = np.load(
-            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+            "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
 
     numerical_columns = [0,1,2,3,4,5,6,7,8,9]
     ordinal_columns = []
