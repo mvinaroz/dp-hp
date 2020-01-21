@@ -119,6 +119,8 @@ elif dataset=="intrusion":
     numerical_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
     #df = pd.read_csv("data/raw/intrusion/kddcup.data_10_percent", dtype='str', header=-1)
     #df = df.apply(lambda x: x.str.strip(' \t.'))
+    n_classes=5
+
 
 elif dataset=="covtype":
     print("covtype dataset")
@@ -134,7 +136,6 @@ elif dataset=="covtype":
     categorical_columns = list(set(np.arange(data.shape[1])) - set(numerical_columns + ordinal_columns))
     #0 - 122979, 1- 164062, 2 - 20740, 3 - 1560, 4 - 5510, 5 - 10065, 6 - 11792
     n_classes=7
-    data=data[:, :]
 
 # print(socket.gethostname())
     # if 'g0' not in socket.gethostname():
@@ -147,7 +148,7 @@ elif dataset=="covtype":
     # ordinal_columns = []
     # categorical_columns = [1,2,3,4,6,7,8,9,10,11,12,13,14,15, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 34, 35, 36, 37, 38, 40]
 
-
+#data=data[:50000, :]
 print(data.shape)
 print(numerical_columns)
 print(categorical_columns)
@@ -517,15 +518,15 @@ runs_num=5
 
 ## number of (training) samples
 #input_dim - dimension of the input/number of features of the real data input
-batch_var=[n,]*7
-input_var=[100]*7
-hidden1_var=[20]*7
-hidden2_var=[20]*7
-epoch_var=[1000]*7
+batch_var=[n,]*n_classes
+input_var=[100]*n_classes
+hidden1_var=[20]*n_classes
+hidden2_var=[20]*n_classes
+epoch_var=[2000]*n_classes
 
 
 
-main(10000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
+main(20000, batch_var, input_var, hidden1_var, hidden2_var, epoch_var, input_dim)
 # PRC_ours_arr=[]
 # ROC_ours_arr=[]
 # for i in range(runs_num):

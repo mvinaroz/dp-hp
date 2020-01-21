@@ -7,7 +7,7 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec, ConvEnc, ConvDec
+from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecThin
 from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
 
 
@@ -203,6 +203,7 @@ def get_args():
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--conv-ae', action='store_true', default=False)
+  parser.add_argument('--thin-dec', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
@@ -274,7 +275,11 @@ def main():
 
   if ar.conv_ae:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)
-    dec = extend(ConvDec(ar.d_enc, dec_spec, extra_conv=True, use_sigmoid=ar.ce_loss)).to(device)
+    if ar.thin_dec:
+      dec = extend(ConvDecThin(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss)).to(device)
+    else:
+      dec = extend(ConvDec(ar.d_enc, dec_spec, extra_conv=True, use_sigmoid=ar.ce_loss)).to(device)
+
     # print(list(enc.layers[0].parameters()), list(enc.parameters()))
   else:
     enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc).to(device)
