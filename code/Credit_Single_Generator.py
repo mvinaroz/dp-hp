@@ -121,7 +121,11 @@ def main():
         else:
             idx_rp = np.random.permutation(10000)
 
-        med = util.meddistance(data_samps[idx_rp,:])
+        # I observed that the first coordinate of the data has a lot larger values than others.
+        data_samps_coord_0 = np.expand_dims(data_samps[idx_rp, 0], axis=1)
+        med_coord_0 = util.meddistance(data_samps_coord_0)
+
+        med = util.meddistance(data_samps[idx_rp,1:])
         del idx_rp
         sigma2 = med**2
         print('length scale from median heuristic is', sigma2)

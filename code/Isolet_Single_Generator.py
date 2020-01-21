@@ -251,25 +251,34 @@ def main():
         # output_size = input_dim
 
 
-        # n_features = 60000
+        n_features = 60000
+        mini_batch_size = n
+        input_size = 10 + 1
+        hidden_size_1 = 4*input_dim
+        hidden_size_2 = 2* input_dim
+        output_size = input_dim
+
+        # ROC is 0.8984067720115552
+        # PRC is 0.6593494400475596
+        #
+        # Private
+        # ROC is 0.8453610266184516
+        # PRC is 0.5187259706977911
+
+
+        # n_features = 80000
         # mini_batch_size = n
         # input_size = 10 + 1
         # hidden_size_1 = 4*input_dim
         # hidden_size_2 = 2* input_dim
         # output_size = input_dim
         #
-        # ROC is 0.8984067720115552
-        # PRC is 0.6593494400475596
-
-        n_features = 80000
-        mini_batch_size = n
-        input_size = 10 + 1
-        hidden_size_1 = 4*input_dim
-        hidden_size_2 = 2* input_dim
-        output_size = input_dim
-        #
         # ROC is 0.9096384418703971
         # PRC is 0.6801363555293651
+        #
+        # Private
+        # ROC is 0.8613007663085338
+        # PRC is 0.5478228407917722
 
         # n_features = 100000
         # mini_batch_size = n
@@ -281,13 +290,9 @@ def main():
         # ROC is 0.9119127501132959
         # PRC is 0.677248891443724
         #
+        # Private
         # ROC is 0.8484531160540612
         # PRC is 0.5333513241319746
-        # Private_Isolet_separate_generators_batch_size = 847
-        # _input_size = 11
-        # _hidden1 = 2468
-        # _hidden2 = 1234
-        # _nfeat = 100000
 
         # n_features = 120000
         # mini_batch_size = n
