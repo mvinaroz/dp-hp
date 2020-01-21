@@ -105,13 +105,13 @@ class ConvEnc(nn.Module):
 
 class ConvDec(nn.Module):
 
-  def __init__(self, d_enc, nc=(4, 4, 2, 1), extra_conv=False, use_sigmoid=False):
+  def __init__(self, d_enc, nc=(4, 4, 2, 1), extra_conv=False, use_sigmoid=False, use_bias=True):
     super(ConvDec, self).__init__()
-    self.fc = nn.Linear(d_enc, 7*7*nc[0])
-    self.conv1 = nn.Conv2d(nc[0], nc[1], kernel_size=3, stride=1, padding=1)
-    self.conv2 = nn.Conv2d(nc[1], nc[2], kernel_size=3, stride=1, padding=1)  # up to 14x14
-    self.conv3 = nn.Conv2d(nc[2], nc[2], kernel_size=3, stride=1, padding=1) if extra_conv else None
-    self.conv4 = nn.Conv2d(nc[2], nc[3], kernel_size=3, stride=1, padding=1)  # up to 28x28
+    self.fc = nn.Linear(d_enc, 7*7*nc[0], bias=use_bias)
+    self.conv1 = nn.Conv2d(nc[0], nc[1], kernel_size=3, stride=1, padding=1, bias=use_bias)
+    self.conv2 = nn.Conv2d(nc[1], nc[2], kernel_size=3, stride=1, padding=1, bias=use_bias)  # up to 14x14
+    self.conv3 = nn.Conv2d(nc[2], nc[2], kernel_size=3, stride=1, padding=1, bias=use_bias) if extra_conv else None
+    self.conv4 = nn.Conv2d(nc[2], nc[3], kernel_size=3, stride=1, padding=1, bias=use_bias)  # up to 28x28
     self.upsamp = nn.UpsamplingBilinear2d(scale_factor=2)
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
