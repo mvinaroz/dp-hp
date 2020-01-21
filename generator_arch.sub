@@ -1,13 +1,16 @@
 #executable = /home/kadamczewski/miniconda3/envs/BayesianNeuralNetwork/bin/python
 executable =/home/kadamczewski/miniconda3/bin/python
 
-arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/Generator_census_multi.py
+#arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/Generator_census_multi.py
+arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Isolet.py
 
-var=gen_covtype_20000_2000_7cl_all_cor
+
+#var=gen_covtype_20000_2000_7cl_all_cor
+var=isolet_mijung
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
 log = clust/clust_log/$(var).$(Process).log
-requirements = TARGET.CUDAGlobalMemoryMb > 35000
+requirements = TARGET.CUDAGlobalMemoryMb > 15000
 request_memory = 4040
 request_cpus = 1
 request_gpus = 1

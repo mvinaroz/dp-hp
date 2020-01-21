@@ -55,28 +55,17 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         l_dec.backward()
 
       # compute global gradient norm from parameter gradient norms
-      bp_squared_param_norms = [p.batch_l2 for p in dec.parameters()]  # ERROR IN BACKPACK! grad norm^2 returned
+      bp_squared_param_norms = [p.batch_l2 for p in dec.parameters()]
       bp_global_norms = pt.sqrt(pt.sum(pt.stack(bp_squared_param_norms), dim=0))
-      # manual_squared_param_norms = [pt.norm(pt.reshape(p.grad_batch, (p.grad_batch.shape[0], -1)), dim=1) ** 2
-      #                               for p in dec.parameters()]
-      # manual_global_norms = pt.sqrt(pt.sum(pt.stack(manual_squared_param_norms), dim=0))
-      # manual_squared_param_norms1 = [pt.sum(pt.reshape(p.grad_batch, (p.grad_batch.shape[0], -1))**2, dim=1)
-      #                               for p in dec.parameters()]
-      # manual_global_norms1 = pt.sqrt(pt.sum(pt.stack(manual_squared_param_norms1), dim=0))
-      # print(f'backpack_global_norm: {bp_global_norms[:3]}')
-      # print(f'manual_global_norm: {manual_global_norms[:3]}')
-      # print(f'manual_global_norm1: {manual_global_norms1[:3]}')
-      # for param in dec.parameters():
-      #     bp_norm = param.batch_l2
-      #     bp_grad = param.grad_batch
-      #     manual_norm_squared = pt.norm(pt.reshape(bp_grad, (bp_grad.shape[0], -1)), dim=1)**2
-      #     print(f'norm_comp: {bp_norm[0]}, {manual_norm_squared[0]}')
-
-      clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
+      global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
       # aggregate samplewise grads, replace normal grad
       for param in dec.parameters():
-        # print(param.batch_l2, param.grad_batch)
-        clipped_sample_grads = param.grad_batch * expand_vector(clips, param.grad_batch)
+        if dp_spec.per_layer:
+          # clip each param by C/sqrt(m), then total sensitivity is still C
+          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(bp_squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
+          clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
+        else:
+          clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
         clipped_grad = pt.mean(clipped_sample_grads, dim=0)
 
         if dp_spec.noise is not None:
@@ -101,7 +90,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
-def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_dir):
+def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_spec, last_epoch):
   enc.eval()
   dec.eval()
 
@@ -129,12 +118,18 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_di
 
   if label_ae:
     rec_labels = reconstruction[:100, 784:].cpu().numpy()
-    save_gen_labels(rec_labels, 10, 10, log_dir + f'rec_ep{epoch}_labels', save_raw=False)
+    save_gen_labels(rec_labels, 10, 10, log_spec.log_dir + f'rec_ep{epoch}_labels', save_raw=False)
     reconstruction = reconstruction[:100, :784].reshape(100, 28, 28).cpu().numpy()
   else:
     reconstruction = reconstruction[:100, ...].cpu().numpy()
 
-  plot_mnist_batch(reconstruction, 10, 10, log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
+  plot_mnist_batch(reconstruction, 10, 10, log_spec.log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
+  if last_epoch:
+    save_dir = log_spec.base_dir + '/overview/'
+    if not os.path.exists(save_dir):
+      os.makedirs(save_dir)
+    save_path = save_dir + log_spec.log_name + f'_rec_ep{epoch}'
+    plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=not losses.do_ce, save_raw=False)
 
   print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
 
@@ -216,7 +211,7 @@ def get_args():
   # DP SPEC
   parser.add_argument('--clip-norm', '-clip', type=float, default=1e-5)
   parser.add_argument('--noise-factor', '-noise', type=float, default=None)
-  parser.add_argument('--clip-per-layer', action='store_true', default=False)  # not used yet
+  parser.add_argument('--clip-per-layer', action='store_true', default=False)
 
   ar = parser.parse_args()
 
@@ -238,13 +233,12 @@ def get_args():
 
 
 def get_log_dir(args):
-  if args.log_name is not None:
-    log_dir = args.base_log_dir + args.log_name + '/'
-  else:
+  if args.log_name is None:
     type_str = f'{"label_" if args.label_ae else ""}{"ce" if args.ce_loss else "mse"}_'
     spec_str = f'd{args.d_enc}_enc{args.enc_spec}_dec{args.dec_spec}_clip{args.clip_norm}_sig{args.noise_factor}'
     siam_str = f'_siam_w{args.siam_loss_weight}_m{args.siam_loss_margin}' if args.siam_loss_weight > 0. else ''
-    log_dir = args.base_log_dir + type_str + spec_str + siam_str + '/'
+    args.log_name = type_str + spec_str + siam_str
+  log_dir = args.base_log_dir + args.log_name + '/'
   return log_dir
 
 
@@ -258,10 +252,10 @@ def preprocess_args(args):
 def main():
   # Training settings
   ar = get_args()
-  assert not ar.clip_per_layer  # not implemented yet
   pt.manual_seed(ar.seed)
 
   dp_spec = namedtuple('dp_spec', ['clip', 'noise', 'per_layer'])(ar.clip_norm, ar.noise_factor, ar.clip_per_layer)
+  log_spec = namedtuple('log_spec', ['log_dir', 'base_dir', 'log_name'])(ar.log_dir, ar.base_log_dir, ar.log_name)
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size,
@@ -292,7 +286,7 @@ def main():
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
     train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval)
-    test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, ar.log_dir)
+    test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')

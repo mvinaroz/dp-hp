@@ -9,6 +9,7 @@ import torch.nn as nn
 import torch.optim as optim
 import util
 import random
+import socket
 
 import pandas as pd
 import seaborn as sns
@@ -23,7 +24,7 @@ from sklearn.metrics import average_precision_score
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+#Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -87,9 +88,16 @@ def main():
 
     random.seed(0)
 
-    # (1) load data
-    data_features_npy = np.load('../data/Isolet/isolet_data.npy')
-    data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
+    print("census dataset")
+    print(socket.gethostname())
+    if 'g0' not in socket.gethostname():
+        data_features_npy = np.load('../data/Isolet/isolet_data.npy')
+        data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
+    else:
+        # (1) load data
+        data_features_npy = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Isolet/isolet_data.npy')
+        data_target_npy = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/Isolet/isolet_labels.npy')
+
 
     # dtype = [('Col1', 'int32'), ('Col2', 'float32'), ('Col3', 'float32')]
     values = data_features_npy
@@ -148,7 +156,11 @@ def main():
 
 
     # random Fourier features
+<<<<<<< HEAD
     n_features = 40000
+=======
+    n_features = 100000
+>>>>>>> 732c6300efcddfa9b9c2e98c9f5ee8c7e3e752fc
 
     """ training a Generator via minimizing MMD """
 
@@ -274,6 +286,7 @@ def main():
     print('n_features are ', n_features)
 
     # save results
+<<<<<<< HEAD
     n_0 = weights[0]
     n_1 = weights[1]
 
@@ -285,6 +298,16 @@ def main():
     np.save(method + '_loss.npy', training_loss_per_epoch)
     np.save(method + '_input_feature_samps.npy', generated_samples)
     np.save(method + '_output_label_samps.npy', generated_labels)
+=======
+    # method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
+    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
+    #
+    # print('model specifics are', method)
+    #
+    # np.save(method + '_loss.npy', training_loss_per_epoch)
+    # np.save(method + '_input_feature_samps.npy', generated_samples)
+    # np.save(method + '_output_label_samps.npy', generated_labels)
+>>>>>>> 732c6300efcddfa9b9c2e98c9f5ee8c7e3e752fc
 
 
 if __name__ == '__main__':
