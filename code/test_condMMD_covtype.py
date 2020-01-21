@@ -141,8 +141,8 @@ def main():
         data = np.concatenate((train_data, test_data))
     else:
         # I don't know why cervical data is loaded here. Probablby you need to change it to covtype dataset?
-        train_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/real/covtype/train.npy")
-        test_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/real/covtype/test.npy")
+        train_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
+        test_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/test.npy")
 
     """ some specifics on this dataset """
     numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
