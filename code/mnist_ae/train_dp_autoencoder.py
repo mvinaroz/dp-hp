@@ -62,7 +62,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
       for param in dec.parameters():
         if dp_spec.per_layer:
           # clip each param by C/sqrt(m), then total sensitivity is still C
-          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(dec.parameters())) / pt.sqrt(param.batch_l2), 1.)
+          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(bp_squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
           clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
         else:
           clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
