@@ -24,7 +24,7 @@ from sklearn.metrics import average_precision_score
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+#Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
