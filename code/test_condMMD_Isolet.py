@@ -20,11 +20,12 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+from sklearn.model_selection import ParameterGrid
 
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+#Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -84,7 +85,9 @@ class Generative_Model(nn.Module):
 
             return output
 
-def main():
+#####################################################
+
+def main(n_features_arg, mini_batch_size_arg):
 
     random.seed(0)
 
@@ -115,6 +118,8 @@ def main():
     data_samps = X_train.values
     y_labels = y_train.values.ravel()
 
+    ##########################################################
+
     # test logistic regression on the real data
     LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
     LR_model.fit(X_train, y_labels) # training on synthetic data
@@ -126,6 +131,7 @@ def main():
     # ROC on real test data is 0.939003966752
     # PRC on real test data is 0.823399229853
 
+    ################################################################
 
     n_classes = 2
     n, input_dim = data_samps.shape
@@ -148,6 +154,8 @@ def main():
     data_samps = data_samps[idx_to_keep,:]
     n = idx_to_keep.shape[0]
 
+    #######################################################
+
     true_labels = np.zeros((n, n_classes))
     idx_1 = y_labels[idx_to_keep] == 1
     idx_0 = y_labels[idx_to_keep] == 0
@@ -157,11 +165,11 @@ def main():
 
     # random Fourier features
     # n_features = 40000
-    n_features = 100000
+    n_features = n_features_arg
 
     """ training a Generator via minimizing MMD """
 
-    mini_batch_size =  2000
+    mini_batch_size =  mini_batch_size_arg
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 =  2* input_dim
@@ -184,6 +192,8 @@ def main():
     positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
 
     weights = unnormalized_weights/np.sum(unnormalized_weights)
+
+    ######################################################
 
     print('Starting Training')
 
@@ -286,16 +296,23 @@ def main():
 
     n_0 = weights[0]
     n_1 = weights[1]
+    #
+    # method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
+    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, n_features))
+    #
+    # print('model specifics are', method)
 
-    method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
-    mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, n_features))
-
-    print('model specifics are', method)
-
-    np.save(method + '_loss.npy', training_loss_per_epoch)
-    np.save(method + '_input_feature_samps.npy', generated_samples)
-    np.save(method + '_output_label_samps.npy', generated_labels)
+    # np.save(method + '_loss.npy', training_loss_per_epoch)
+    # np.save(method + '_input_feature_samps.npy', generated_samples)
+    # np.save(method + '_output_label_samps.npy', generated_labels)
 
 if __name__ == '__main__':
-    main()
+
+    n_features_arg=[10000, 50000, 80000, 100000, 130000, 150000]
+    mini_batch_arg=[200, 500,1000,2000]
+    grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
+    for elem in grid:
+        print (elem)
+
+        main(elem["n_features_arg"], elem["mini_batch_arg"])
 
