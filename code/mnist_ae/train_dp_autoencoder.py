@@ -252,7 +252,6 @@ def preprocess_args(args):
 def main():
   # Training settings
   ar = get_args()
-  assert not ar.clip_per_layer  # not implemented yet
   pt.manual_seed(ar.seed)
 
   dp_spec = namedtuple('dp_spec', ['clip', 'noise', 'per_layer'])(ar.clip_norm, ar.noise_factor, ar.clip_per_layer)
