@@ -74,13 +74,12 @@ def RFF_Gauss(n_features, X, W):
 
 def Feature_labels(labels, weights):
 
-    n_0 = torch.Tensor([weights[0]])
-    n_1 = torch.Tensor([weights[1]])
+    weights = torch.Tensor(weights)
+    weights = weights.to(device)
 
-    weighted_label_0 = 1/n_0*labels[:,0]
-    weighted_label_1 = 1/n_1*labels[:,1]
+    labels = labels.to(device)
 
-    weighted_labels_feature = torch.cat((weighted_label_0[:,None], weighted_label_1[:,None]), 1)
+    weighted_labels_feature = labels/weights
 
     return weighted_labels_feature
 
@@ -168,6 +167,8 @@ def main():
     X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.70, test_size=0.30,
                                                         random_state=seed_number)  # 60% training and 40% test
 
+    # This takes way too long for this dataset. So I will comment this out for now. We know F1-score is 0.44ish
+
     # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
     # LR_model.fit(X_train, y_train)  # training on synthetic data
     # pred = LR_model.predict(X_test)  # test on real data
@@ -179,8 +180,6 @@ def main():
     #     print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
     #     print('PRC on real test data from Logistic regression is',
     #           average_precision_score(y_test, pred))  # 0.8955114054451803
-
-
 
 
     # one-hot encoding of labels.
@@ -196,8 +195,8 @@ def main():
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    sigma_array = np.zeros(input_dim)
-    for i in np.arange(0,input_dim):
+    sigma_array = np.zeros(num_numerical_inputs)
+    for i in np.arange(0,num_numerical_inputs):
         med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
         sigma_array[i] = med
     if np.var(sigma_array)>100:
@@ -223,7 +222,7 @@ def main():
     weights = unnormalized_weights/np.sum(unnormalized_weights)
 
     """ specifying the model """
-    mini_batch_size = np.int(np.round(0.1*n))
+    mini_batch_size = np.int(np.round(0.01*n))
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
@@ -249,12 +248,12 @@ def main():
             """ computing mean embedding of subsampled true data """
             sample_idx = random.choices(np.arange(n), k=mini_batch_size)
             numerical_input_data = X_train[sample_idx, 0:num_numerical_inputs]
-            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
+            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
 
-            categorical_input_data = X_train[:, num_numerical_inputs:]
+            categorical_input_data = X_train[sample_idx, num_numerical_inputs:]
             emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
 
-            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical))
+            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical),1)
 
             sampled_labels = true_labels[sample_idx,:]
             emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
@@ -264,17 +263,30 @@ def main():
             """ computing mean embedding of generated data """
             # zero the parameter gradients
             optimizer.zero_grad()
-            input_to_model = torch.randn((mini_batch_size, input_size))
-            input_to_model=input_to_model.to(device) #[13164, 100]
-            outputs = model(input_to_model) #[13164, 14]
 
+            # (1) generate labels
+            label_input = torch.multinomial(torch.Tensor([weights]), mini_batch_size, replacement=True).type(torch.FloatTensor)
+            label_input = label_input.transpose_(0,1)
+            label_input = label_input.to(device)
+
+            # (2) generate corresponding features
+            feature_input = torch.randn((mini_batch_size, input_size-1)).to(device)
+            input_to_model = torch.cat((feature_input, label_input), 1)
+            outputs = model(input_to_model)
+
+            # (3) compute the embeddings of those
             numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
-            emb2_numerical = torch.mean(RFF_Gauss(n_features, numerical_samps, W_freq), 0) #W_freq [n_features/2,6], n_features=10000
+            emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq) #W_freq [n_features/2,6], n_features=10000
 
             categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
-            emb2_categorical = torch.mean(categorical_samps, 0) * torch.sqrt(1.0/torch.Tensor([num_categorical_inputs])).to(device) # 8
+            emb2_categorical = categorical_samps /(torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(device) # 8
 
-            mean_emb2 = torch.cat((emb2_numerical, emb2_categorical)) #[1008]
+            emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
+
+            generated_labels = onehot_encoder.fit_transform(label_input.cpu().detach().numpy()) #[1008]
+            emb2_labels = Feature_labels(torch.Tensor(generated_labels), weights)
+            outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+            mean_emb2 = torch.mean(outer_emb2, 0)
 
             loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
 
@@ -287,22 +299,32 @@ def main():
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
-    #
-    # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
-    # LR_model_ours.fit(shuffled_x_train, shuffled_y_train)  # training on synthetic data
-    # pred_ours = LR_model_ours.predict(X_test)  # test on real data
-    #
-    #
-    # if n_classes > 2:
-    #     f1score = f1_score(y_test, pred_ours, average='weighted')
-    #     print('F1-score', f1score)
-    # elif n_classes == 2:
-    #     f1score = f1_score(y_test, pred_ours)
-    #     print('F1-score', f1score)
-    #     print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
-    #     print('PRC on real test data from Logistic regression is',
-    #           average_precision_score(y_test, pred))  # 0.8955114054451803
 
+
+    #######################################################################33
+
+    """ draw final data samples """
+
+    label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
+    label_input = label_input.transpose_(0, 1)
+    label_input = label_input.to(device)
+
+    # (2) generate corresponding features
+    feature_input = torch.randn((n, input_size - 1)).to(device)
+    input_to_model = torch.cat((feature_input, label_input), 1)
+    outputs = model(input_to_model)
+
+    # (3) compute the embeddings of those
+    generated_input_features_final = outputs.cpu().detach().numpy()
+    generated_labels_final = label_input.cpu().detach().numpy()
+
+
+    LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
+    pred_ours = LR_model_ours.predict(X_test)  # test on real data
+
+    f1score = f1_score(y_test, pred_ours, average='weighted')
+    print('F1-score', f1score)
 
 if __name__ == '__main__':
     main()
