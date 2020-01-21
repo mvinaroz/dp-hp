@@ -156,11 +156,8 @@ def main():
 
 
     # random Fourier features
-<<<<<<< HEAD
-    n_features = 40000
-=======
+    # n_features = 40000
     n_features = 100000
->>>>>>> 732c6300efcddfa9b9c2e98c9f5ee8c7e3e752fc
 
     """ training a Generator via minimizing MMD """
 
