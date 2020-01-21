@@ -7,13 +7,13 @@ arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/te
 
 
 
-var=gen_covtype_10000_2000_mb1000_fin
-#var=covtype_mijung_all
+#var=gen_covtype_10000_2000_mb1000_fin
+var=covtype_mijung_all_fin
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
 log = clust/clust_log/$(var).$(Process).log
 requirements = TARGET.CUDAGlobalMemoryMb > 20000
-request_memory = 4040
+request_memory = 8040
 request_cpus = 1
 request_gpus = 1
 queue 1
