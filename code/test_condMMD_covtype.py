@@ -10,6 +10,8 @@ import random
 import socket
 
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import ParameterGrid
+
 
 import seaborn as sns
 sns.set()
@@ -125,7 +127,7 @@ class Generative_Model(nn.Module):
 
 
 # def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
-def main():
+def main(n_features_arg, mini_batch_arg, how_many_epochs_arg):
 
     ##################
     # parameters
@@ -214,7 +216,7 @@ def main():
     true_labels = true_labels[idx_to_keep,:]
     n = X_train.shape[0]
 
-    n_features = 4000
+    n_features = n_features_arg
     draws = n_features // 2
 
     # random fourier features for numerical inputs only
@@ -225,12 +227,12 @@ def main():
     weights = unnormalized_weights/np.sum(unnormalized_weights)
 
     """ specifying the model """
-    mini_batch_size = np.int(np.round(0.01*n))
+    mini_batch_size = mini_batch_arg #np.int(np.round(0.01*n))
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
-    how_many_epochs = 100
+    how_many_epochs = how_many_epochs_arg
 
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size, num_categorical_inputs=num_categorical_inputs,
@@ -330,4 +332,12 @@ def main():
     print('F1-score', f1score)
 
 if __name__ == '__main__':
-    main()
+
+    how_many_epochs_arg=[1000]
+    n_features_arg = [5000, 10000, 15000]
+    mini_batch_arg = [500, 1000]
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+
+        main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
