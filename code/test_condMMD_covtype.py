@@ -334,8 +334,8 @@ def main(n_features_arg, mini_batch_arg, how_many_epochs_arg):
 if __name__ == '__main__':
     print("covtype")
     how_many_epochs_arg=[2000]
-    n_features_arg = [20000, 15000]
-    mini_batch_arg = [1000, 500]
+    n_features_arg = [10000]
+    mini_batch_arg = [1000]
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print(elem)

@@ -7,7 +7,7 @@ arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/te
 
 
 
-var=gen_covtype_20000_2000_7cl_all_fin
+var=gen_covtype_10000_2000_mb1000_fin
 #var=covtype_mijung_all
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
