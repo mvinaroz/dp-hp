@@ -141,7 +141,8 @@ def main():
         data = np.concatenate((train_data, test_data))
     else:
         # I don't know why cervical data is loaded here. Probablby you need to change it to covtype dataset?
-        data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+        train_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/real/covtype/train.npy")
+        test_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/real/covtype/test.npy")
 
     """ some specifics on this dataset """
     numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -211,7 +212,7 @@ def main():
     true_labels = true_labels[idx_to_keep,:]
     n = X_train.shape[0]
 
-    n_features = 500
+    n_features = 4000
     draws = n_features // 2
 
     # random fourier features for numerical inputs only
