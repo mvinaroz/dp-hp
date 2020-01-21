@@ -20,6 +20,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
+from sklearn.model_selection import ParameterGrid
 
 
 import os
@@ -84,7 +85,9 @@ class Generative_Model(nn.Module):
 
             return output
 
-def main():
+#####################################################
+
+def main(n_features_arg, mini_batch_size_arg):
 
     random.seed(0)
 
@@ -115,6 +118,8 @@ def main():
     data_samps = X_train.values
     y_labels = y_train.values.ravel()
 
+    ##########################################################
+
     # test logistic regression on the real data
     LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
     LR_model.fit(X_train, y_labels) # training on synthetic data
@@ -126,6 +131,7 @@ def main():
     # ROC on real test data is 0.939003966752
     # PRC on real test data is 0.823399229853
 
+    ################################################################
 
     n_classes = 2
     n, input_dim = data_samps.shape
@@ -148,6 +154,8 @@ def main():
     data_samps = data_samps[idx_to_keep,:]
     n = idx_to_keep.shape[0]
 
+    #######################################################
+
     true_labels = np.zeros((n, n_classes))
     idx_1 = y_labels[idx_to_keep] == 1
     idx_0 = y_labels[idx_to_keep] == 0
@@ -156,11 +164,12 @@ def main():
 
 
     # random Fourier features
-    n_features = 100000
+    # n_features = 40000
+    n_features = n_features_arg
 
     """ training a Generator via minimizing MMD """
 
-    mini_batch_size =  2000
+    mini_batch_size =  mini_batch_size_arg
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 =  2* input_dim
@@ -179,21 +188,14 @@ def main():
     W_freq =  np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
     # kernel for labels with weights
-    n_0, n_1 = np.sum(true_labels, 0)
-    positive_label_ratio = n_1/n_0
-    max_ratio = np.max([n_0, n_1])
+    unnormalized_weights = np.sum(true_labels,0)
+    positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
 
-    n_0 = n_0/max_ratio
-    n_1 = n_1/max_ratio
+    weights = unnormalized_weights/np.sum(unnormalized_weights)
 
-    weights = [n_0, n_1]
-
+    ######################################################
 
     print('Starting Training')
-
-    ns_0 = weights[0]
-    ns_1 = weights[1]
-
 
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
@@ -214,7 +216,7 @@ def main():
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            label_input = (1 * (torch.rand((mini_batch_size)) < positive_label_ratio)).type(torch.FloatTensor)
+            label_input = (1 * (torch.rand((mini_batch_size)) < weights[1])).type(torch.FloatTensor)
             label_input = label_input.to(device)
             feature_input = torch.randn((mini_batch_size, input_size-1)).to(device)
             input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
@@ -230,7 +232,6 @@ def main():
             label_input_t[idx_1, 1] = 1.
             label_input_t[idx_0, 0] = 1.
 
-            weights = [ns_0, ns_1]
             emb2_labels = Feature_labels(label_input_t, weights)
             outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
             mean_emb2 = torch.mean(outer_emb2, 0)
@@ -292,16 +293,26 @@ def main():
     print('n_features are ', n_features)
 
     # save results
-    # method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_ns0=%s_ns1=%s_nfeatures=%s' % (
-    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, ns_0, ns_1, n_features))
+
+    n_0 = weights[0]
+    n_1 = weights[1]
+    #
+    # method = os.path.join(Results_PATH, 'Isolet_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
+    # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, n_features))
     #
     # print('model specifics are', method)
-    #
+
     # np.save(method + '_loss.npy', training_loss_per_epoch)
     # np.save(method + '_input_feature_samps.npy', generated_samples)
     # np.save(method + '_output_label_samps.npy', generated_labels)
 
-
 if __name__ == '__main__':
-    main()
+
+    n_features_arg=[10000, 50000, 80000, 100000, 130000, 150000]
+    mini_batch_arg=[200, 500,1000,2000]
+    grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
+    for elem in grid:
+        print (elem)
+
+        main(elem["n_features_arg"], elem["mini_batch_arg"])
 
