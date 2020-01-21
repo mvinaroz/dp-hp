@@ -180,6 +180,9 @@ def main():
     #     print('PRC on real test data from Logistic regression is',
     #           average_precision_score(y_test, pred))  # 0.8955114054451803
 
+
+
+
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
     onehot_encoder = OneHotEncoder(sparse=False)
@@ -187,12 +190,30 @@ def main():
     true_labels = onehot_encoder.fit_transform(y_train)
 
     """ specifying random fourier features """
+
+    idx_rp = np.random.permutation(n)
+    num_data_pt_to_discard = 10
+    idx_to_discard = idx_rp[0:num_data_pt_to_discard]
+    idx_to_keep = idx_rp[num_data_pt_to_discard:]
+
+    sigma_array = np.zeros(input_dim)
+    for i in np.arange(0,input_dim):
+        med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
+        sigma_array[i] = med
+    if np.var(sigma_array)>100:
+        print('we will use separate frequencies for each column of numerical features')
+        sigma2 = sigma_array**2
+    else:
+        # median heuristic to choose the frequency range
+        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+        sigma2 = med ** 2
+
+    X_train = X_train[idx_to_keep,:]
+    true_labels = true_labels[idx_to_keep,:]
+    n = X_train.shape[0]
+
     n_features = 500
     draws = n_features // 2
-
-    # median heuristic to choose the frequency range
-    med = util.meddistance(X_train[:, 0:num_numerical_inputs], subsample = 1000)
-    sigma2 = med ** 2
 
     # random fourier features for numerical inputs only
     W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
@@ -200,19 +221,9 @@ def main():
     """ specifying ratios of data to generate depending on the class lables """
     unnormalized_weights = np.sum(true_labels,0)
     weights = unnormalized_weights/np.sum(unnormalized_weights)
-    # n_0, n_1 = np.histogram(true_labels, 0)
-    # positive_label_ratio = n_1/n_0
-    # max_ratio = np.max([n_0, n_1])
-    #
-    # n_0 = n_0/max_ratio
-    # n_1 = n_1/max_ratio
-    # # n_0 = 1.0
-    # # n_1 = 1.0
-    #
-    # weights = [n_0, n_1]
 
     """ specifying the model """
-    mini_batch_size = np.round(0.1*n)
+    mini_batch_size = np.int(np.round(0.1*n))
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
@@ -236,14 +247,19 @@ def main():
         for i in range(how_many_iter):
 
             """ computing mean embedding of subsampled true data """
-            sample = random.choices(np.arange(n), k=mini_batch_size)
-            numerical_input_data = X_train[sample, 0:num_numerical_inputs]
-            emb1_numerical = torch.mean(RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
+            sample_idx = random.choices(np.arange(n), k=mini_batch_size)
+            numerical_input_data = X_train[sample_idx, 0:num_numerical_inputs]
+            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq), 0).to(device)
 
             categorical_input_data = X_train[:, num_numerical_inputs:]
-            emb1_categorical = torch.Tensor(np.mean(categorical_input_data, 0) / np.sqrt(num_categorical_inputs)).to(device)
+            emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
 
-            mean_emb1 = torch.cat((emb1_numerical, emb1_categorical))
+            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical))
+
+            sampled_labels = true_labels[sample_idx,:]
+            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
+            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+            mean_emb1 = torch.mean(outer_emb1, 0)
 
             """ computing mean embedding of generated data """
             # zero the parameter gradients
