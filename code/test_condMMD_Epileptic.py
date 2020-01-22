@@ -107,7 +107,7 @@ def main(n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         data = pd.read_csv("../data/Epileptic/data.csv")
     else:
         # (1) load data
-        data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
+        data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
 
     feature_names = data.iloc[:, 1:-1].columns
     target = data.iloc[:, -1:].columns
