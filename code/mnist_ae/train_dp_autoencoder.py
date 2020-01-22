@@ -7,7 +7,7 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecFlat
+from models_ae import FCEnc, FCDec, FCDecFlat, ConvEnc, ConvDec, ConvDecFlat
 from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
 from tensorboardX import SummaryWriter
 
@@ -285,8 +285,11 @@ def main():
     else:
       dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
   else:
-    enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc).to(device)
-    dec = extend(FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ce_loss).to(device))
+    enc = FCEnc(d_data, enc_spec, ar.d_enc).to(device)
+    if ar.flat_dec:
+      dec = extend(FCDecFlat(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
+    else:
+      dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias).to(device))
 
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss, ar.siam_loss_weight, ar.siam_loss_margin)
@@ -298,6 +301,7 @@ def main():
           summary_writer)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
+    print('new lr:', scheduler.get_lr())
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')

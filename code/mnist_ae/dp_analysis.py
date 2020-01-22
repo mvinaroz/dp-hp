@@ -11,16 +11,16 @@ def main():
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 2.
+    sigma = 0.1
 
     # (2) desired delta level
     delta = 1e-5
 
     # (5) number of training steps
     batch_size = 500
-    n_epochs = 10
+    n_epochs = 20
     n_data = 60000
-    steps_per_epoch = n_data / n_data
+    steps_per_epoch = n_data // n_data
     n_steps = steps_per_epoch * n_epochs
 
     # (6) sampling rate

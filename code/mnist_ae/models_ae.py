@@ -18,21 +18,38 @@ class FCEnc(nn.Module):
 
 
 class FCDec(nn.Module):
-  def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False):
+  def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False, use_bias=True):
     super(FCDec, self).__init__()
-    self.fc1 = nn.Linear(d_enc, d_hid[0])
-    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
-    self.fc3 = nn.Linear(d_hid[1], d_out)
+    self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
+    self.fc2 = nn.Linear(d_hid[0], d_hid[1], bias=use_bias)
+    self.fc3 = nn.Linear(d_hid[1], d_out, bias=use_bias)
 
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
 
-
   def forward(self, x):
     x = self.relu(self.fc1(x))
     x = self.relu(self.fc2(x))
     x = self.fc3(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
+    return x
+
+
+class FCDecFlat(nn.Module):
+  def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False, use_bias=True):
+    super(FCDecFlat, self).__init__()
+    self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
+    self.fc2 = nn.Linear(d_hid[0], d_out, bias=use_bias)
+
+    self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
+
+  def forward(self, x):
+    x = self.relu(self.fc1(x))
+    x = self.fc2(x)
     if self.use_sigmoid:
       x = self.sigmoid(x)
     return x
