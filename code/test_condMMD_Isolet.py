@@ -308,11 +308,12 @@ def main(n_features_arg, mini_batch_size_arg):
 
 if __name__ == '__main__':
 
-    n_features_arg=[10000, 50000, 80000, 100000, 130000, 150000]
-    mini_batch_arg=[200, 500,1000,2000]
+    n_features_arg=[50000, 80000, 100000]
+    mini_batch_arg=[500,1000]
     grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
     for elem in grid:
         print (elem)
 
         main(elem["n_features_arg"], elem["mini_batch_arg"])
+
 

@@ -7,11 +7,13 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecThin
+from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecFlat
 from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
+from tensorboardX import SummaryWriter
 
 
-def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval):
+def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
+          summary_writer):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -32,7 +34,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
     if dp_spec.clip is None:
       l_enc.backward()
-      bp_global_norms, rec_loss, siam_loss = None, None, None
+      bp_squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
     else:
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
@@ -76,12 +78,18 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
     optimizer.step()
     if batch_idx % log_interval == 0:
+      n_data = len(train_loader.dataset)
+      n_done = batch_idx * len(data)
+      frac_done = 100. * batch_idx / len(train_loader)
+      iter_idx = batch_idx + epoch * (n_data / len(data))
+
       if dp_spec.clip is not None:
         print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
 
-      n_done = batch_idx * len(data)
-      n_data = len(train_loader.dataset)
-      frac_done = 100. * batch_idx / len(train_loader)
+        summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
+        for idx, sq_norm in enumerate(bp_squared_param_norms):
+          summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
+
       if siam_loss is None:
         loss_str = 'Loss: {:.6f}'.format(l_enc.item())
       else:
@@ -198,11 +206,12 @@ def get_args():
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--thin-dec', action='store_true', default=False)
+  parser.add_argument('--flat-dec', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
   parser.add_argument('--dec-spec', '-s-dec', type=str, default='100,300')
+  parser.add_argument('--no-bias', action='store_true', default=False)
   # parser.add_argument('--enc-spec', type=str, default='1,8,16,16')
   # parser.add_argument('--dec-spec', type=str, default='16,16,8,1')
   # parser.add_argument('--enc-spec', type=str, default='1,4,8,8')
@@ -264,17 +273,17 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
   d_data = 28**2+ar.n_labels if ar.label_ae else 28**2
 
+  summary_writer = SummaryWriter(ar.log_dir)
+
   enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')])
   dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')])
 
   if ar.conv_ae:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)
-    if ar.thin_dec:
-      dec = extend(ConvDecThin(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss)).to(device)
+    if ar.flat_dec:
+      dec = extend(ConvDecFlat(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
     else:
-      dec = extend(ConvDec(ar.d_enc, dec_spec, extra_conv=True, use_sigmoid=ar.ce_loss)).to(device)
-
-    # print(list(enc.layers[0].parameters()), list(enc.parameters()))
+      dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
   else:
     enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc).to(device)
     dec = extend(FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ce_loss).to(device))
@@ -285,12 +294,15 @@ def main():
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
-    train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval)
+    train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
+          summary_writer)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')
+  # summary_writer.export_scalars_to_json()
+  summary_writer.close()
 
 
 if __name__ == '__main__':
