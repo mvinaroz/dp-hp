@@ -177,10 +177,10 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     # This takes way too long for this dataset. So I will comment this out for now. We know F1-score is 0.44ish
 
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-    print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # LR_model.fit(X_train, y_train)  # training on synthetic data
+    # pred = LR_model.predict(X_test)  # test on real data
+    # print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
 
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
@@ -341,10 +341,10 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 if __name__ == '__main__':
     print("covtype")
     how_many_epochs_arg=[1000, 2000]
-    n_features_arg = [50, 100, 300, 500, 1000, 2000]
-    mini_batch_arg = [0.005, 0.01, 0.05, 0.1, 0.2]
+    n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
+    mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print(elem)
-        for ii in range(5):
+        for ii in range(1):
             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
