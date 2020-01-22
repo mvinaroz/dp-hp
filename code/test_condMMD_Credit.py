@@ -102,12 +102,13 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
         data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
 
 
+
     feature_names = data.iloc[:, 1:30].columns
     target = data.iloc[:1, 30:].columns
 
     data_features = data[feature_names]
     data_target = data[target]
-
+    print(data_features.shape)
 
     """ we take a pre-processing step such that the dataset is a bit more balanced """
     raw_input_features = data_features.values
