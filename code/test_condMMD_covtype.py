@@ -312,6 +312,7 @@ def main():
     input_to_model = torch.cat((feature_input, label_input), 1)
     outputs = model(input_to_model)
 
+
     # (3) round the categorial features
     output_numerical = outputs[:, 0:num_numerical_inputs]
     output_categorical = outputs[:, num_numerical_inputs:]
