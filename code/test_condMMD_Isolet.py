@@ -313,7 +313,7 @@ if __name__ == '__main__':
     grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print (elem)
-
-        main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+        for i in range(5):
+            main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
 
 
