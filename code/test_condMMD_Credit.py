@@ -25,7 +25,7 @@ from sklearn.model_selection import ParameterGrid
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+#Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -87,8 +87,7 @@ class Generative_Model(nn.Module):
 
 #####################################################
 
-def main():
-# def main(n_features_arg, mini_batch_size_arg):
+def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
 
     random.seed(0)
@@ -157,11 +156,11 @@ def main():
     n_classes = 2
     n, input_dim = data_samps.shape
 
-    n_features_arg = 350
-    mini_batch_size_arg = np.int(np.round(n*0.5))
+    #n_features_arg = 350
+    mini_batch_size_arg = np.int(np.round(n*mini_batch_size_frac))
     print('mini batch size is', mini_batch_size_arg)
 
-    how_many_epochs = 1000
+    how_many_epochs = how_many_epochs_arg
 
     """ we use 10 datapoints to compute the median heuristic (then discard), and use the rest for training """
     idx_rp = np.random.permutation(n)
@@ -325,4 +324,16 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+
+    how_many_epochs_arg=[1000, 2000]
+    n_features_arg=[50, 300, 500, 1000, 5000, 50000, 80000, 100000]
+    mini_batch_arg=[0.2, 0.5]
+
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                          "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+        for i in range(3):
+            print(i)
+            main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+        print('*'*30)
