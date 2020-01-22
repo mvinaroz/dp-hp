@@ -273,7 +273,7 @@ def main():
 
     """ now generate samples from the trained network """
 
-    label_input = (1 * (torch.rand((n)) < positive_label_ratio)).type(torch.FloatTensor)
+    label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
     label_input = label_input.to(device)
     feature_input = torch.randn((n, input_size - 1)).to(device)
     input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
