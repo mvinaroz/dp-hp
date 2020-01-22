@@ -90,8 +90,6 @@ class Generative_Model(nn.Module):
 def main():
 # def main(n_features_arg, mini_batch_size_arg):
 
-    n_features_arg = 500
-    mini_batch_size_arg = 10000
 
     random.seed(0)
 
@@ -111,11 +109,35 @@ def main():
     data_features = data[feature_names]
     data_target = data[target]
 
-    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.90, test_size=0.10, random_state=0)
 
-    # unpack data
-    data_samps = X_train.values
-    y_labels = y_train.values.ravel()
+    """ we take a pre-processing step such that the dataset is a bit more balanced """
+    raw_input_features = data_features.values
+    raw_labels = data_target.values.ravel()
+
+    idx_negative_label = raw_labels==0
+    idx_positive_label = raw_labels==1
+
+    pos_samps_input = raw_input_features[idx_positive_label,:]
+    pos_samps_label = raw_labels[idx_positive_label]
+    neg_samps_input = raw_input_features[idx_negative_label,:]
+    neg_samps_label = raw_labels[idx_negative_label]
+
+    # take random 10 percent of the negative labelled data
+    in_keep = np.random.permutation(np.sum(idx_negative_label))
+    under_sampling_rate = 0.025
+    in_keep = in_keep[0:np.int(np.sum(idx_negative_label)*under_sampling_rate)]
+
+    neg_samps_input = neg_samps_input[in_keep,:]
+    neg_samps_label = neg_samps_label[in_keep]
+
+    feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+    label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+
+    X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90, test_size=0.10, random_state=0)
+
+    data_samps = X_train
+    y_labels = y_train
 
     ##########################################################
 
@@ -127,13 +149,19 @@ def main():
     print('ROC on real test data is', roc_auc_score(y_test, pred))
     print('PRC on real test data is', average_precision_score(y_test, pred))
 
-    # ROC on real test data is 0.827202369149882
-    # PRC on real test data is 0.5897580204985142
+    # ROC on real test data is 0.9365079365079365
+    # PRC on real test data is 0.8835421888053467
 
     ################################################################
 
     n_classes = 2
     n, input_dim = data_samps.shape
+
+    n_features_arg = 350
+    mini_batch_size_arg = np.int(np.round(n*0.5))
+    print('mini batch size is', mini_batch_size_arg)
+
+    how_many_epochs = 1000
 
     """ we use 10 datapoints to compute the median heuristic (then discard), and use the rest for training """
     idx_rp = np.random.permutation(n)
@@ -141,16 +169,9 @@ def main():
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    # sigma_array = np.zeros(input_dim)
-    # for i in np.arange(0,input_dim):
-    #     med = util.meddistance(np.expand_dims(data_samps[idx_to_discard,i],1))
-    #     sigma_array[i] = med
-    # sigma2 = sigma_array**2
 
     med = util.meddistance(data_samps[idx_to_discard, :])
     sigma2 = med**2
-
-    # print('length scale from median heuristic is', sigma2)
 
     data_samps = data_samps[idx_to_keep,:]
     n = idx_to_keep.shape[0]
@@ -178,7 +199,6 @@ def main():
                              output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    how_many_epochs = 1000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -188,9 +208,8 @@ def main():
 
     # kernel for labels with weights
     unnormalized_weights = np.sum(true_labels,0)
-    # positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
-
     weights = unnormalized_weights/np.sum(unnormalized_weights)
+    print('weights for label proportion is', weights)
 
     ######################################################
 
@@ -243,7 +262,7 @@ def main():
             # print statistics
             running_loss += loss.item()
 
-        if epoch%10==0:
+        if epoch%100==0:
             print('epoch # and running loss are ', [epoch, running_loss])
         training_loss_per_epoch[epoch] = running_loss
 
@@ -295,7 +314,7 @@ def main():
     # n_0 = weights[0]
     # n_1 = weights[1]
 
-    # method = os.path.join(Results_PATH, 'Epileptic_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
+    # method = os.path.join(Results_PATH, 'Credit_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
     # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, n_features))
     #
     # print('model specifics are', method)
