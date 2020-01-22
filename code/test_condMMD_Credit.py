@@ -99,7 +99,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
         data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
     else:
         # (1) load data
-        data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
+        data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
 
 
 
