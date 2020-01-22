@@ -10,6 +10,8 @@ import random
 import socket
 
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import ParameterGrid
+
 
 import seaborn as sns
 sns.set()
@@ -125,7 +127,7 @@ class Generative_Model(nn.Module):
 
 
 # def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
-def main():
+def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     ##################
     # parameters
@@ -139,6 +141,9 @@ def main():
         test_data = np.load("../data/real/covtype/test.npy")
         # we put them together and make a new train/test split in the following
         data = np.concatenate((train_data, test_data))
+        # """ comment this out later """
+        # data = data[0:50000,:] # use only 50,000 samples for fast training
+        # """ end of comment this out later """
     else:
         # I don't know why cervical data is loaded here. Probablby you need to change it to covtype dataset?
         train_data = np.load("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
@@ -175,15 +180,7 @@ def main():
     # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
     # LR_model.fit(X_train, y_train)  # training on synthetic data
     # pred = LR_model.predict(X_test)  # test on real data
-    #
-    # if n_classes > 2:
-    #     print('F1-score', f1_score(y_test, pred, average='macro'))
-    # elif n_classes == 2:
-    #     print('F1-score', f1_score(y_test, pred))
-    #     print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred))  # 0.9444444444444444
-    #     print('PRC on real test data from Logistic regression is',
-    #           average_precision_score(y_test, pred))  # 0.8955114054451803
-
+    # print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
 
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
@@ -198,23 +195,26 @@ def main():
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    sigma_array = np.zeros(num_numerical_inputs)
-    for i in np.arange(0,num_numerical_inputs):
-        med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
-        sigma_array[i] = med
-    if np.var(sigma_array)>100:
-        print('we will use separate frequencies for each column of numerical features')
-        sigma2 = sigma_array**2
-    else:
-        # median heuristic to choose the frequency range
-        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-        sigma2 = med ** 2
+    # sigma_array = np.zeros(num_numerical_inputs)
+    # for i in np.arange(0,num_numerical_inputs):
+    #     med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
+    #     sigma_array[i] = med
+    # if np.var(sigma_array)>100:
+    #     print('we will use separate frequencies for each column of numerical features')
+    #     sigma2 = sigma_array**2
+    # else:
+    #     # median heuristic to choose the frequency range
+    #     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+    #     sigma2 = med ** 2
+
+    med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+    sigma2 = med ** 2
 
     X_train = X_train[idx_to_keep,:]
     true_labels = true_labels[idx_to_keep,:]
     n = X_train.shape[0]
 
-    n_features = 4000
+    n_features = n_features_arg2
     draws = n_features // 2
 
     # random fourier features for numerical inputs only
@@ -225,12 +225,13 @@ def main():
     weights = unnormalized_weights/np.sum(unnormalized_weights)
 
     """ specifying the model """
-    mini_batch_size = np.int(np.round(0.01*n))
+    mini_batch_size = np.int(np.round(mini_batch_arg2*n)); print("minibatch: ", mini_batch_size)
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
-    how_many_epochs = 100
+    how_many_epochs = how_many_epochs_arg2
+
 
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size, num_categorical_inputs=num_categorical_inputs,
@@ -317,8 +318,15 @@ def main():
     input_to_model = torch.cat((feature_input, label_input), 1)
     outputs = model(input_to_model)
 
-    # (3) compute the embeddings of those
-    generated_input_features_final = outputs.cpu().detach().numpy()
+
+    # (3) round the categorial features
+    output_numerical = outputs[:, 0:num_numerical_inputs]
+    output_categorical = outputs[:, num_numerical_inputs:]
+    output_categorical = torch.round(output_categorical)
+
+    output_combined = torch.cat((output_numerical, output_categorical), 1)
+
+    generated_input_features_final = output_combined.cpu().detach().numpy()
     generated_labels_final = label_input.cpu().detach().numpy()
 
 
@@ -327,7 +335,16 @@ def main():
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
     f1score = f1_score(y_test, pred_ours, average='weighted')
-    print('F1-score', f1score)
+    print('F1-score (ours) is ', f1score)
+
 
 if __name__ == '__main__':
-    main()
+    print("covtype")
+    how_many_epochs_arg=[1000]
+    n_features_arg = [5000]
+    mini_batch_arg = [0.01]
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+
+        main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])

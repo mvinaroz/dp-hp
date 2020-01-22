@@ -1,6 +1,6 @@
 """" test a simple generating training using MMD for relatively simple datasets """
-""" for generating input features given random noise and the label """
-# Mijung re-wrote on Jan 22, 2020
+""" for generating input features given random noise and the label for ISOLET data """
+# Mijung wrote on Jan 09, 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -91,27 +91,36 @@ def main():
 # def main(n_features_arg, mini_batch_size_arg):
 
     n_features_arg = 500
-    mini_batch_size_arg = 10000
+    mini_batch_size_arg = 500
+    # as a reference, with n_features= 500 and mini_batch_size=1000, after 1000 epochs
+    # I get ROC= 0.54, PRC=0.21
+    # with different seed, I get ROC=0.5 and PRC 0.2. Similar to before.
+
+    # when I tested n_features = 500 and mini_batch_size=500,
+    # I got ROC = 0.6163 and PRC = 0.2668
 
     random.seed(0)
 
-    print("Creditcard fraud detection dataset")
+    print("epileptic seizure recognition dataset")
     print(socket.gethostname())
 
     if 'g0' not in socket.gethostname():
-        data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
+        data = pd.read_csv("../data/Epileptic/data.csv")
     else:
         # (1) load data
-        data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
+        data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
 
-
-    feature_names = data.iloc[:, 1:30].columns
-    target = data.iloc[:1, 30:].columns
+    feature_names = data.iloc[:, 1:-1].columns
+    target = data.iloc[:, -1:].columns
 
     data_features = data[feature_names]
     data_target = data[target]
 
-    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.90, test_size=0.10, random_state=0)
+    for i, row in data_target.iterrows():
+      if data_target.at[i,'y']!=1:
+        data_target.at[i,'y'] = 0
+
+    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=0)
 
     # unpack data
     data_samps = X_train.values
@@ -127,8 +136,8 @@ def main():
     print('ROC on real test data is', roc_auc_score(y_test, pred))
     print('PRC on real test data is', average_precision_score(y_test, pred))
 
-    # ROC on real test data is 0.827202369149882
-    # PRC on real test data is 0.5897580204985142
+    # ROC on real test data is 0.5569809947080179
+    # PRC on real test data is 0.2860654400815256
 
     ################################################################
 
@@ -188,7 +197,7 @@ def main():
 
     # kernel for labels with weights
     unnormalized_weights = np.sum(true_labels,0)
-    # positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
+    positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
 
     weights = unnormalized_weights/np.sum(unnormalized_weights)
 
@@ -307,3 +316,17 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# if __name__ == '__main__':
+
+    # n_features_arg=[50000, 80000, 100000]
+    # mini_batch_arg=[500,1000]
+    #
+    # grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
+    # for elem in grid:
+    #     print (elem)
+    #
+    #     main(elem["n_features_arg"], elem["mini_batch_arg"])
+
+

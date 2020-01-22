@@ -189,8 +189,7 @@ def main(n_features_arg, mini_batch_size_arg):
 
     # kernel for labels with weights
     unnormalized_weights = np.sum(true_labels,0)
-    positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
-
+    # positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
     weights = unnormalized_weights/np.sum(unnormalized_weights)
 
     ######################################################
@@ -265,7 +264,7 @@ def main(n_features_arg, mini_batch_size_arg):
 
     """ now generate samples from the trained network """
 
-    label_input = (1 * (torch.rand((n)) < positive_label_ratio)).type(torch.FloatTensor)
+    label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
     label_input = label_input.to(device)
     feature_input = torch.randn((n, input_size - 1)).to(device)
     input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
@@ -315,4 +314,5 @@ if __name__ == '__main__':
         print (elem)
 
         main(elem["n_features_arg"], elem["mini_batch_arg"])
+
 
