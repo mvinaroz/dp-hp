@@ -27,14 +27,15 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
     data_enc = enc(data)
     reconstruction = dec(data_enc)
 
-    v = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
+    l_enc = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
     if losses.wsiam > 0.:
-      v = v + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, per_sample=True)
-    l_enc = loss_to_backpack_mse(v, losses.l_enc)
+      l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+    # l_enc = pt.mean(v)
+    # l_enc = loss_to_backpack_mse(v, losses.l_enc)
 
     if dp_spec.clip is None:
       l_enc.backward()
-      bp_squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
+      squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
     else:
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
@@ -46,25 +47,28 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, per_sample=True)
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
         full_loss = rec_loss + siam_loss
       else:
         siam_loss = None
         full_loss = rec_loss
-      l_dec = loss_to_backpack_mse(full_loss, losses.l_dec)
+      l_dec = full_loss
 
       with backpack(BatchGrad(), BatchL2Grad()):
         l_dec.backward()
 
       # compute global gradient norm from parameter gradient norms
-      bp_squared_param_norms = [p.batch_l2 for p in dec.parameters()]
-      bp_global_norms = pt.sqrt(pt.sum(pt.stack(bp_squared_param_norms), dim=0))
+      squared_param_norms = [p.batch_l2 for p in dec.parameters()]
+      bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
       global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
       # aggregate samplewise grads, replace normal grad
-      for param in dec.parameters():
+      for idx, param in enumerate(dec.parameters()):
         if dp_spec.per_layer:
           # clip each param by C/sqrt(m), then total sensitivity is still C
-          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(bp_squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
+          if dp_spec.layer_clip:
+            local_clips = pt.clamp_max(dp_spec.layer_clip[idx] / pt.sqrt(param.batch_l2), 1.)
+          else:
+            local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2) ,1.)
           clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
         else:
           clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
@@ -87,14 +91,14 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
 
         summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
-        for idx, sq_norm in enumerate(bp_squared_param_norms):
+        for idx, sq_norm in enumerate(squared_param_norms):
+          print(f'param {idx} shape: {list(dec.parameters())[idx].shape}')
           summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
 
       if siam_loss is None:
         loss_str = 'Loss: {:.6f}'.format(l_enc.item())
       else:
-        l_s, l_r = pt.mean(siam_loss).item(), pt.mean(rec_loss).item()
-        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_enc.item(), l_r, l_s)
+        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_enc.item(), rec_loss.item(), siam_loss.item())
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
@@ -106,6 +110,7 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
   siam_loss_agg = 0
   with pt.no_grad():
     for data, labels in test_loader:
+      bs = data.shape[0]
       data = data.to(device)
       labels = labels.to(device)
       if not conv_ae:
@@ -114,10 +119,10 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
       data_enc = enc(data)
       reconstruction = dec(data_enc)
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
-      rec_loss_agg += pt.sum(rec_loss).item()
+      rec_loss_agg += rec_loss.item() * bs
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, per_sample=True)
-        siam_loss_agg += pt.sum(siam_loss).item()
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+        siam_loss_agg += siam_loss.item() * bs
 
   n_data = len(test_loader.dataset)
   rec_loss_agg /= n_data
@@ -144,15 +149,15 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
 
 def mse_loss(reconstruction, data):  # this could be done directly with backpack but this way is more consistent
   mse = (reconstruction - data)**2
-  return pt.sum(pt.reshape(mse, (mse.shape[0], -1)), dim=1, keepdim=True)
+  return pt.mean(pt.sum(pt.reshape(mse, (mse.shape[0], -1)), dim=1), dim=0)
 
 
 def bin_ce_loss(reconstruction, data):
   bce = nnf.binary_cross_entropy(reconstruction, data, reduction='none')
-  return pt.sum(pt.reshape(bce, (bce.shape[0], -1)), dim=1, keepdim=True)
+  return pt.mean(pt.sum(pt.reshape(bce, (bce.shape[0], -1)), dim=1), dim=0)
 
 
-def siamese_loss(feats, labels, margin, per_sample=False):
+def siamese_loss(feats, labels, margin):
     """
     :param feats: (bs, nfeats)
     :param labels: (bs)
@@ -172,14 +177,11 @@ def siamese_loss(feats, labels, margin, per_sample=False):
     no_match = 1. - match
     dist = pt.sqrt(pt.sum((feats_a - feats_b) ** 2, dim=1))
     loss = match * dist + no_match * nnf.relu(margin - dist)
-    if not per_sample:
-      return pt.mean(loss)
-    else:
-      return 0.5 * pt.cat([loss, loss])[:, None]
+    return pt.mean(loss)
 
 
-def loss_to_backpack_mse(loss_vector, pt_mse_loss):
-  return pt_mse_loss(pt.sqrt(loss_vector), pt.zeros_like(loss_vector))
+# def loss_to_backpack_mse(loss_vector, pt_mse_loss):  # turns out this is not necessary
+#   return pt_mse_loss(pt.sqrt(loss_vector), pt.zeros_like(loss_vector))
 
 
 def get_args():
@@ -218,9 +220,10 @@ def get_args():
   # parser.add_argument('--dec-spec', type=str, default='8,8,4,1')
 
   # DP SPEC
-  parser.add_argument('--clip-norm', '-clip', type=float, default=1e-5)
+  parser.add_argument('--clip-norm', '-clip', type=float, default=None)
   parser.add_argument('--noise-factor', '-noise', type=float, default=None)
   parser.add_argument('--clip-per-layer', action='store_true', default=False)
+  parser.add_argument('--layer-clip-norms', '-layer-clip', type=str, default=None)
 
   ar = parser.parse_args()
 
@@ -256,6 +259,7 @@ def preprocess_args(args):
     args.seed = np.random.randint(0, 1000)
 
   assert not (args.conv_ae and args.label_ae)  # not supported yet, will try conv with siamese loss first
+  assert not (args.layer_clip_norms and args.clip_norm)  # define only one of them
 
 
 def main():
@@ -263,7 +267,13 @@ def main():
   ar = get_args()
   pt.manual_seed(ar.seed)
 
-  dp_spec = namedtuple('dp_spec', ['clip', 'noise', 'per_layer'])(ar.clip_norm, ar.noise_factor, ar.clip_per_layer)
+  if ar.layer_clip_norms is not None:
+    ar.layer_clip_norms = tuple([float(k) for k in ar.layer_clip_norms.split(',')])
+    ar.clip_norm = np.sqrt(np.sum([k**2 for k in ar.layer_clip_norms]))
+    print(f'Computed new global L2 norm from layer norms: {ar.clip_norm}')
+
+  dp_spec = namedtuple('dp_spec', ['clip', 'noise', 'per_layer', 'layer_clip'])(ar.clip_norm, ar.noise_factor,
+                                                                                ar.clip_per_layer, ar.layer_clip_norms)
   log_spec = namedtuple('log_spec', ['log_dir', 'base_dir', 'log_name'])(ar.log_dir, ar.base_log_dir, ar.log_name)
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
@@ -301,7 +311,7 @@ def main():
           summary_writer)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
-    print('new lr:', scheduler.get_lr())
+    # print('new lr:', scheduler.get_lr())
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')
