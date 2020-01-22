@@ -3,12 +3,12 @@ executable =/home/kadamczewski/miniconda3/bin/python
 
 #arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/Generator_census_multi.py
 #arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Isolet.py
-arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_covtype.py
+arguments =unbuffer /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_covtype.py
 
 
 
-var=gen_covtype_5000_1000_mb0.1_fin
-#var=covtype_mijung_all_fin
+#var=gen_covtype_5000_1000_mb0.1_fin
+var=covtype_mijung_all_fin2
 error = clust/clust_err/$(var).$(Process).err
 output = clust/clust_out/$(var).$(Process).out
 log = clust/clust_log/$(var).$(Process).log
