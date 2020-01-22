@@ -87,11 +87,11 @@ class Generative_Model(nn.Module):
 
 #####################################################
 
-def main(n_features_arg, mini_batch_size_arg):
+def main(n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
     random.seed(0)
 
-    print("census dataset")
+    print("isolet dataset")
     print(socket.gethostname())
     if 'g0' not in socket.gethostname():
         data_features_npy = np.load('../data/Isolet/isolet_data.npy')
@@ -101,7 +101,7 @@ def main(n_features_arg, mini_batch_size_arg):
         data_features_npy = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Isolet/isolet_data.npy')
         data_target_npy = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/Isolet/isolet_labels.npy')
 
-
+    print(data_features_npy.shape)
     # dtype = [('Col1', 'int32'), ('Col2', 'float32'), ('Col3', 'float32')]
     values = data_features_npy
     index = ['Row' + str(i) for i in range(1, len(values) + 1)]
@@ -179,7 +179,7 @@ def main(n_features_arg, mini_batch_size_arg):
                              output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    how_many_epochs = 1000
+    how_many_epochs = how_many_epochs_arg
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -307,12 +307,13 @@ def main(n_features_arg, mini_batch_size_arg):
 
 if __name__ == '__main__':
 
-    n_features_arg=[50000, 80000, 100000]
-    mini_batch_arg=[500,1000]
-    grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
+    n_features_arg=[100, 1000, 10000, 50000, 80000, 100000]
+    mini_batch_arg=[200, 500,1000]
+    how_many_epochs_arg=[1000, 2000]
+    grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print (elem)
-
-        main(elem["n_features_arg"], elem["mini_batch_arg"])
+        for i in range(5):
+            main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
 
 

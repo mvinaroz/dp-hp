@@ -25,7 +25,7 @@ from sklearn.model_selection import ParameterGrid
 
 import os
 
-Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
+#Results_PATH = "/".join([os.getenv("HOME"), "condMMD/"])
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
@@ -87,11 +87,10 @@ class Generative_Model(nn.Module):
 
 #####################################################
 
-def main():
-# def main(n_features_arg, mini_batch_size_arg):
 
-    n_features_arg = 500
-    mini_batch_size_arg = 500
+def main(n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
+
+
     # as a reference, with n_features= 500 and mini_batch_size=1000, after 1000 epochs
     # I get ROC= 0.54, PRC=0.21
     # with different seed, I get ROC=0.5 and PRC 0.2. Similar to before.
@@ -108,7 +107,7 @@ def main():
         data = pd.read_csv("../data/Epileptic/data.csv")
     else:
         # (1) load data
-        data = np.load('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
+        data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
 
     feature_names = data.iloc[:, 1:-1].columns
     target = data.iloc[:, -1:].columns
@@ -187,7 +186,7 @@ def main():
                              output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
-    how_many_epochs = 1000
+    how_many_epochs = how_many_epochs_arg
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -314,19 +313,24 @@ def main():
     # np.save(method + '_output_label_samps.npy', generated_labels)
 
 
+
+#to test one setting put only one element array for each variable
+
 if __name__ == '__main__':
-    main()
+
+    how_many_epochs_arg=[1000, 2000]
+    n_features_arg=[50, 500, 5000, 50000, 80000, 100000]
+    mini_batch_arg=[500,1000]
+
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                          "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+        for i in range(3):
+            print(i)
+            main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+        print('*'*30)
 
 
-# if __name__ == '__main__':
-
-    # n_features_arg=[50000, 80000, 100000]
-    # mini_batch_arg=[500,1000]
-    #
-    # grid=ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg})
-    # for elem in grid:
-    #     print (elem)
-    #
-    #     main(elem["n_features_arg"], elem["mini_batch_arg"])
 
 
