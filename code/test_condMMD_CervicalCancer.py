@@ -152,6 +152,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     df_nan.head()
 
     df1 = df_nan.convert_objects(convert_numeric=True)
+    #df1=df_nan
 
     df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
 
