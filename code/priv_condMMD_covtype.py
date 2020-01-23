@@ -307,7 +307,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
             running_loss += loss.item()
 
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
@@ -346,14 +346,21 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     print('is private?', is_private)
     print('F1-score (ours) is ', f1score)
 
+    return f1score
+
 
 if __name__ == '__main__':
-    print("covtype")
+    print("intrusion")
     how_many_epochs_arg=[1000, 2000]
     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
-    mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
+    mini_batch_arg = [0.5]
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print(elem)
-        for ii in range(1):
-            main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+        f1_arr = []
+        repetitions = 5
+        for ii in range(repetitions):
+            f1 = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+            f1_arr.append(f1)
+        print("Average F1: ", np.mean(f1_arr))
+        print("Std F1: ", np.std(f1_arr))
