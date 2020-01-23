@@ -134,9 +134,9 @@ def main():
     ##################
     # parameters
     seed_number = 0
-    n_features_arg2 = 500
+    #n_features_arg2 = 500
     mini_batch_arg2 = 0.5
-    how_many_epochs_arg2 = 1000
+    #how_many_epochs_arg2 = 1000
     is_private = True
 
     dataset = "intrusion"
@@ -352,8 +352,8 @@ def main():
     # so I will keep it the same as before.
 
 
-if __name__ == '__main__':
-    main()
+# if __name__ == '__main__':
+#     main()
 
 # if __name__ == '__main__':
 #     print("intrusion")
@@ -367,18 +367,18 @@ if __name__ == '__main__':
 #             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
 
 #
-# if __name__ == '__main__':
-#     print("intrusion")
-#     how_many_epochs_arg=[1000, 2000]
-#     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
-#     mini_batch_arg = [0.5]
-#     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
-#     for elem in grid:
-#         print(elem)
-#         f1_arr = []
-#         repetitions = 5
-#         for ii in range(repetitions):
-#             f1 = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
-#             f1_arr.append(f1)
-#         print("Average F1: ", np.mean(f1_arr))
-#         print("Std F1: ", np.std(f1_arr))
+if __name__ == '__main__':
+    print("intrusion")
+    how_many_epochs_arg=[1000, 2000]
+    n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
+    mini_batch_arg = [0.5]
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+        f1_arr = []
+        repetitions = 5
+        for ii in range(repetitions):
+            f1 = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+            f1_arr.append(f1)
+        print("Average F1: ", np.mean(f1_arr))
+        print("Std F1: ", np.std(f1_arr))
