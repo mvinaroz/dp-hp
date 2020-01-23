@@ -69,6 +69,20 @@ class FCDecFlat(nn.Module):
     return x
 
 
+class FCDecLin(nn.Module):
+  def __init__(self, d_enc, d_out, use_sigmoid=False, use_bias=True):
+    super(FCDecLin, self).__init__()
+    self.fc = nn.Linear(d_enc, d_out, bias=use_bias)
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
+
+  def forward(self, x):
+    x = self.fc(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
+    return x
+
+
 # class FCEnc(nn.Module):
 #
 #   def __init__(self, d_in, d_hid, d_enc, reshape=False):
