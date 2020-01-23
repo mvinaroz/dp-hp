@@ -279,7 +279,9 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
             df[feature] = df[feature].fillna(feature_mean)
 
         for feature in categorical_df:
-            df[feature] = df[feature].convert_objects(convert_numeric=True).fillna(0.0)
+            #df[feature] = df[feature].convert_objects(convert_numeric=True).fillna(0.0)
+            df[feature] = df[feature].fillna(0.0)
+
 
         target = df['Biopsy']
         # feature_names = df.iloc[:, :-1].columns
