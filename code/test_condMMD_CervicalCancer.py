@@ -126,27 +126,27 @@ class Generative_Model(nn.Module):
 
 
 # def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
-# def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
-def main():
+def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
+#def main():
 
     ##################
     # parameters
     seed_number = 0
     dataset = "Cervical cancer dataset"
 
-    n_features_arg2 = 1000
-    mini_batch_arg2 = 0.5
-    how_many_epochs_arg2 = 1000
+    #n_features_arg2 = 1000
+    #mini_batch_arg2 = 0.5
+    #how_many_epochs_arg2 = 1000
 
 
     print("dataset is", dataset)
     print(socket.gethostname())
     if 'g0' not in socket.gethostname():
         df = pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
-    # else:
-
-
-    df.head()
+    else:
+        df = pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+        print("Loaded Cervical")
+    #df.head()
 
     df_nan = df.replace("?", np.nan)
     df_nan.head()
@@ -183,6 +183,7 @@ def main():
     target = df['Biopsy']
     # feature_names = df.iloc[:, :-1].columns
     inputs = df[feature_names]
+    print('raw input features', inputs.shape)
 
     X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.80, test_size=0.20, random_state=seed_number)  # 60% training and 40% test
 
@@ -358,16 +359,18 @@ def main():
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
 
-if __name__ == '__main__':
-    main()
 
-# if __name__ == '__main__':
-#     print("covtype")
-#     how_many_epochs_arg=[1000, 2000]
-#     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
-#     mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
-#     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
-#     for elem in grid:
-#         print(elem)
-#         for ii in range(1):
-#             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+if __name__ == '__main__':
+    print("census")
+    how_many_epochs_arg=[1000, 2000]
+    n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
+    mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+        prc_arr=[]; roc_arr=[]
+        repetitions=5
+        for ii in range(repetitions):
+            roc, prc = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+            roc_arr.append(roc); prc_arr.append(prc)
+        print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
