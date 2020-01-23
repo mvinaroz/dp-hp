@@ -304,10 +304,10 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     LR_model = LogisticRegression(solver='lbfgs', max_iter=5000)
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
-    pred = LR_model.predict(X_test) # test on real data
+    pred_ours = LR_model.predict(X_test) # test on real data
 
-    print('ROC is', roc_auc_score(y_test, pred))
-    print('PRC is', average_precision_score(y_test, pred))
+    print('ROC is', roc_auc_score(y_test, pred_ours))
+    print('PRC is', average_precision_score(y_test, pred_ours))
     print('n_features are ', n_features)
 
     # save results
