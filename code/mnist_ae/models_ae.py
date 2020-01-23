@@ -17,6 +17,20 @@ class FCEnc(nn.Module):
     return x
 
 
+class FCEncFlat(nn.Module):
+  def __init__(self, d_in, d_hid, d_enc):
+    super(FCEncFlat, self).__init__()
+    # nc = (1, 4, 8, 16)  # n channels
+    self.fc1 = nn.Linear(d_in, d_hid[0])
+    self.fc2 = nn.Linear(d_hid[0], d_enc)
+    self.relu = nn.ReLU()
+
+  def forward(self, x):
+    x = self.relu(self.fc1(x))
+    x = self.fc2(x)
+    return x
+
+
 class FCDec(nn.Module):
   def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False, use_bias=True):
     super(FCDec, self).__init__()

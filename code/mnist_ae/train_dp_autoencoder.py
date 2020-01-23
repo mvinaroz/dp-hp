@@ -7,13 +7,13 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec, FCDecFlat, ConvEnc, ConvDec, ConvDecFlat
+from models_ae import FCEnc, FCDec, FCDecFlat, FCEncFlat, ConvEnc, ConvDec, ConvDecFlat
 from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
 from tensorboardX import SummaryWriter
 
 
 def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
-          summary_writer):
+          summary_writer, noise_up_enc):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -37,6 +37,26 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
       l_enc.backward()
       squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
     else:
+      # if noise_up_enc:
+      #   with backpack(BatchGrad(), BatchL2Grad()):
+      #     l_enc.backward(retain_graph=True)  # get grads for encoder
+      #
+      #   squared_param_norms = [p.batch_l2 for p in enc.parameters()]
+      #   bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
+      #   global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
+      #   # aggregate samplewise grads, replace normal grad
+      #   for idx, param in enumerate(enc.parameters()):
+      #     assert not dp_spec.per_layer  # keep it simple
+      #     clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
+      #     clipped_grad = pt.mean(clipped_sample_grads, dim=0)
+      #
+      #     if dp_spec.noise is not None:
+      #       bs = clipped_grad.shape[0]
+      #       noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
+      #       clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
+      #     param.grad = clipped_grad
+      #
+      # else:  # DEBUG END
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
       # wipe grads from decoder:
@@ -68,7 +88,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
           if dp_spec.layer_clip:
             local_clips = pt.clamp_max(dp_spec.layer_clip[idx] / pt.sqrt(param.batch_l2), 1.)
           else:
-            local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2) ,1.)
+            local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
           clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
         else:
           clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
@@ -92,7 +112,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
         summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
         for idx, sq_norm in enumerate(squared_param_norms):
-          print(f'param {idx} shape: {list(dec.parameters())[idx].shape}')
+          # print(f'param {idx} shape: {list(dec.parameters())[idx].shape}')
           summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
 
       if siam_loss is None:
@@ -209,6 +229,7 @@ def get_args():
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--flat-dec', action='store_true', default=False)
+  parser.add_argument('--flat-enc', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
@@ -225,6 +246,7 @@ def get_args():
   parser.add_argument('--clip-per-layer', action='store_true', default=False)
   parser.add_argument('--layer-clip-norms', '-layer-clip', type=str, default=None)
 
+  parser.add_argument('--noise-up-enc', action='store_true', default=False)
   ar = parser.parse_args()
 
   # python3 train_dp_autoencoder.py --log-name tb0_1 -bs 500 -ep 20 -lr 1e-3 --lr-decay 0.9 -denc 5 -s-enc 300,100 -s-dec 100,300 -clip 0.1 -noise 2.0
@@ -260,6 +282,7 @@ def preprocess_args(args):
 
   assert not (args.conv_ae and args.label_ae)  # not supported yet, will try conv with siamese loss first
   assert not (args.layer_clip_norms and args.clip_norm)  # define only one of them
+  assert not (args.clip_norm is None and args.noise_factor is not None)
 
 
 def main():
@@ -295,7 +318,10 @@ def main():
     else:
       dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
   else:
-    enc = FCEnc(d_data, enc_spec, ar.d_enc).to(device)
+    if ar.flat_enc:
+      enc = FCEncFlat(d_data, enc_spec, ar.d_enc).to(device)
+    else:
+      enc = FCEnc(d_data, enc_spec, ar.d_enc).to(device)
     if ar.flat_dec:
       dec = extend(FCDecFlat(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
     else:
@@ -308,7 +334,7 @@ def main():
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
     train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
-          summary_writer)
+          summary_writer, ar.noise_up_enc)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
     # print('new lr:', scheduler.get_lr())
