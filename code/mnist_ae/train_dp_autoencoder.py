@@ -7,7 +7,7 @@ import argparse
 from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
-from models_ae import FCEnc, FCDec, FCDecFlat, FCEncFlat, ConvEnc, ConvDec, ConvDecFlat
+from models_ae import FCEnc, FCDec, FCDecFlat, FCDecLin, FCEncFlat, ConvEnc, ConvDec, ConvDecFlat
 from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
 from tensorboardX import SummaryWriter
 
@@ -229,6 +229,7 @@ def get_args():
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--flat-dec', action='store_true', default=False)
+  parser.add_argument('--lin-dec', action='store_true', default=False)
   parser.add_argument('--flat-enc', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
@@ -324,6 +325,8 @@ def main():
       enc = FCEnc(d_data, enc_spec, ar.d_enc).to(device)
     if ar.flat_dec:
       dec = extend(FCDecFlat(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
+    elif ar.lin_dec:
+      dec = extend(FCDecLin(ar.d_enc, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
     else:
       dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias).to(device))
 
