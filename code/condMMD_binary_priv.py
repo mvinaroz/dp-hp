@@ -557,7 +557,7 @@ if __name__ == '__main__':
 
     for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
         print("\n\n")
-        how_many_epochs_arg = [101]#[1000, 2000]
+        how_many_epochs_arg = [1001]#[1000, 2000]
         n_features_arg = [50]#[50, 500, 5000, 50000, 80000, 100000]
         mini_batch_arg = [500]#[500, 1000]
 
@@ -566,7 +566,7 @@ if __name__ == '__main__':
         for elem in grid:
             print(elem)
             prc_arr = []; roc_arr = []
-            repetitions = 2
+            repetitions = 5
             for ii in range(repetitions):
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)
