@@ -133,7 +133,6 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
     label_selected = np.concatenate((pos_samps_label, neg_samps_label))
 
-
     X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90, test_size=0.10, random_state=0)
 
     data_samps = X_train
@@ -162,6 +161,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     print('mini batch size is', mini_batch_size_arg)
 
     how_many_epochs = how_many_epochs_arg
+
 
     """ we use 10 datapoints to compute the median heuristic (then discard), and use the rest for training """
     idx_rp = np.random.permutation(n)
