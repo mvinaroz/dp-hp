@@ -523,10 +523,17 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1))  # training on synthetic data
     pred = LR_model.predict(X_test)  # test on real data
 
+    roc = roc_auc_score(y_test, pred)
+    prc = average_precision_score(y_test, pred)
+
+
     print('is private?', is_private)
-    print('ROC is', roc_auc_score(y_test, pred))
-    print('PRC is', average_precision_score(y_test, pred))
+    print('ROC ours is', roc)
+    print('PRC ours is', prc)
     print('n_features are ', n_features)
+
+
+    return roc, prc
 
     # save results
     # n_0 = weights[0]
@@ -548,19 +555,23 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    dataset="adult"
-    how_many_epochs_arg = [1000]#[1000, 2000]
-    n_features_arg = [50]#[50, 500, 5000, 50000, 80000, 100000]
-    mini_batch_arg = [500]#[500, 1000]
+    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+        print("\n\n")
+        how_many_epochs_arg = [101]#[1000, 2000]
+        n_features_arg = [50]#[50, 500, 5000, 50000, 80000, 100000]
+        mini_batch_arg = [500]#[500, 1000]
 
-    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
-                          "how_many_epochs_arg": how_many_epochs_arg})
-    for elem in grid:
-        print(elem)
-        for i in range(5):
-            print(i)
-            main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
-        print('*' * 30)
+        grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                              "how_many_epochs_arg": how_many_epochs_arg})
+        for elem in grid:
+            print(elem)
+            prc_arr = []; roc_arr = []
+            repetitions = 2
+            for ii in range(repetitions):
+                roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+                roc_arr.append(roc)
+                prc_arr.append(prc)
+            print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
 
 
 
