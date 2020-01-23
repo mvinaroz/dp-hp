@@ -11,6 +11,7 @@ import util
 import random
 import socket
 from sdgym import load_dataset
+import argparse
 
 
 import pandas as pd
@@ -34,6 +35,11 @@ import os
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
+
+args=argparse.ArgumentParser()
+args.add_argument("--dataset")
+arguments=args.parse_args()
+print("arg", arguments.dataset)
 
 def RFF_Gauss(n_features, X, W):
     """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
@@ -242,10 +248,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         # df.head()
 
-        df_nan = df.replace("?", np.nan)
+        df_nan = df.replace("?", np.float64(np.nan))
         df_nan.head()
 
-        df1 = df_nan.convert_objects(convert_numeric=True)
+        #df1 = df_nan.convert_objects(convert_numeric=True)
+        df1=df.apply(pd.to_numeric, errors="coerce")
 
         df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
 
@@ -555,11 +562,12 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    for dataset in [arguments.dataset]:
         print("\n\n")
-        how_many_epochs_arg = [1001]#[1000, 2000]
-        n_features_arg = [50]#[50, 500, 5000, 50000, 80000, 100000]
-        mini_batch_arg = [500]#[500, 1000]
+        how_many_epochs_arg = [1000, 2000]
+        n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
+        mini_batch_arg = [1000]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
