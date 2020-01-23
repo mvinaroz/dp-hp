@@ -126,15 +126,15 @@ class Generative_Model(nn.Module):
 
 
 # def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
-# def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
-def main():
+def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
+#def main():
 
     ##################
     # parameters
     seed_number = 0
-    n_features_arg2 = 500
-    mini_batch_arg2 = 0.5
-    how_many_epochs_arg2 = 1000
+    #n_features_arg2 = 500
+    #mini_batch_arg2 = 0.5
+    #how_many_epochs_arg2 = 1000
 
     print("census dataset")
     print(socket.gethostname())
@@ -156,6 +156,7 @@ def main():
 
     raw_input_features = data[:, :-1]
     raw_labels = data[:, -1]
+    print('raw input features', raw_input_features.shape)
 
     """ we take a pre-processing step such that the dataset is a bit more balanced """
     idx_negative_label = raw_labels==0
@@ -308,7 +309,7 @@ def main():
 
             running_loss += loss.item()
 
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
@@ -343,19 +344,26 @@ def main():
     LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-    print('ROC ours is', roc_auc_score(y_test, pred_ours))
-    print('PRC ours is', average_precision_score(y_test, pred_ours))
+    roc=roc_auc_score(y_test, pred_ours)
+    prc=average_precision_score(y_test, pred_ours)
+
+    print('ROC ours is', roc)
+    print('PRC ours is', prc)
+
+    return roc, prc
+
 
 if __name__ == '__main__':
-    main()
-
-# if __name__ == '__main__':
-#     print("covtype")
-#     how_many_epochs_arg=[1000, 2000]
-#     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
-#     mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
-#     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
-#     for elem in grid:
-#         print(elem)
-#         for ii in range(1):
-#             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+    print("census")
+    how_many_epochs_arg=[1000, 2000]
+    n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
+    mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem)
+        prc_arr=[]; roc_arr=[]
+        repetitions=3
+        for ii in range(repetitions):
+            roc, prc = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+            roc_arr.append(roc); prc_arr.append(prc)
+        print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
