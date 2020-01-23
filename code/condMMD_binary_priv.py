@@ -275,7 +275,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         for feature in numerical_df:
             # print(feature, '', df[feature].convert_objects(convert_numeric=True).mean())
-            feature_mean = round(df[feature].convert_objects(convert_numeric=True).median(), 1)
+            feature_mean = round(df[feature].median(), 1)
             df[feature] = df[feature].fillna(feature_mean)
 
         for feature in categorical_df:
