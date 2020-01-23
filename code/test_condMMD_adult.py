@@ -184,7 +184,7 @@ def main():
     if np.var(sigma_array)>100:
         print('we will use separate frequencies for each column of numerical features')
         sigma2 = sigma_array**2
-        sigma2[sigma2 == 0] = 1e-3
+        sigma2[sigma2 == 0] = 0.1
         # sigma2 = np.mean(sigma2)
     else:
         # median heuristic to choose the frequency range
@@ -211,12 +211,12 @@ def main():
 
     """ specifying the model """
     mini_batch_size = np.int(np.round(mini_batch_arg2*n)); print("minibatch: ", mini_batch_size)
-    # input_size = 2 + 1
-    # hidden_size_1 = input_dim
-    # hidden_size_2 = np.int(np.round(1.2* input_dim))
-    input_size = 10 + 1
-    hidden_size_1 = 4 * input_dim
-    hidden_size_2 = 2 * input_dim
+    input_size = 2 + 1
+    hidden_size_1 = input_dim
+    hidden_size_2 = np.int(np.round(1.2* input_dim))
+    # input_size = 10 + 1
+    # hidden_size_1 = 4 * input_dim
+    # hidden_size_2 = 2 * input_dim
     output_size = input_dim
     how_many_epochs = how_many_epochs_arg2
 
@@ -289,7 +289,7 @@ def main():
 
             running_loss += loss.item()
 
-        if epoch % 10 == 0:
+        if epoch % 100 == 0:
             print('epoch # and running loss are ', [epoch, running_loss])
             training_loss_per_epoch[epoch] = running_loss
 
@@ -324,12 +324,14 @@ def main():
     LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-    print('ROC ours is', roc_auc_score(y_test, pred_ours))  # 0.6155721200036084
-    print('PRC ours is', average_precision_score(y_test, pred_ours)) # 0.3624266414442684
+    print('ROC ours is', roc_auc_score(y_test, pred_ours))
+    print('PRC ours is', average_precision_score(y_test, pred_ours))
 
 
 if __name__ == '__main__':
     main()
+
+    # is_private = True
 
 # if __name__ == '__main__':
 #     print("intrusion")
