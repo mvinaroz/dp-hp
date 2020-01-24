@@ -215,17 +215,20 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     ######################################################
 
-
-
     if is_private:
         # desired privacy level
         epsilon = 1.0
         delta = 1e-5
-        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta)
+        gamma = 1
+        k = 2 # one for weight perturbation and the other for embedding perturbation
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, prob=gamma, k=k)
         print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
 
-        sensitivity = 2 / n
-        noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+        sensitivity_for_weights = 2 / n
+        noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
+        weights = weights + np.random.randn(weights.shape[0])*noise_std_for_weights
+        weights[weights < 0] = 1e-3 # post-processing so that we don't have negative weights.
+
 
     """ computing mean embedding of  true data """
     emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
@@ -234,7 +237,9 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     mean_emb1 = torch.mean(outer_emb1, 0)
 
     if is_private:
-        noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
+        n_k = np.round(weights*n)
+        sensitivity_for_emb = 2/np.min(n_k)
+        noise = sensitivity_for_emb * torch.randn(mean_emb1.size())
         noise = noise.to(device)
         mean_emb1 = mean_emb1 + noise
 
