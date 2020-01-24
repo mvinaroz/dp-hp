@@ -5,79 +5,56 @@ class FCEnc(nn.Module):
   def __init__(self, d_in, d_hid, d_enc):
     super(FCEnc, self).__init__()
     # nc = (1, 4, 8, 16)  # n channels
-    self.fc1 = nn.Linear(d_in, d_hid[0])
-    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
-    self.fc3 = nn.Linear(d_hid[1], d_enc)
+    if d_hid is None:
+      self.fc1 = nn.Linear(d_in, d_enc)
+      self.fc2 = None
+      self.fc3 = None
+    elif len(d_hid) == 1:
+      self.fc1 = nn.Linear(d_in, d_hid[0])
+      self.fc2 = nn.Linear(d_hid[0], d_enc)
+      self.fc3 = None
+    elif len(d_hid) == 2:
+      self.fc1 = nn.Linear(d_in, d_hid[0])
+      self.fc2 = nn.Linear(d_hid[0], d_hid[1])
+      self.fc3 = nn.Linear(d_hid[1], d_enc)
+    else:
+      raise ValueError
+
     self.relu = nn.ReLU()
 
   def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.relu(self.fc2(x))
-    x = self.fc3(x)
-    return x
-
-
-class FCEncFlat(nn.Module):
-  def __init__(self, d_in, d_hid, d_enc):
-    super(FCEncFlat, self).__init__()
-    # nc = (1, 4, 8, 16)  # n channels
-    self.fc1 = nn.Linear(d_in, d_hid[0])
-    self.fc2 = nn.Linear(d_hid[0], d_enc)
-    self.relu = nn.ReLU()
-
-  def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.fc2(x)
+    x = self.fc1(x)
+    x = self.fc2(self.relu(x)) if self.fc2 is not None else x
+    x = self.fc3(self.relu(x)) if self.fc3 is not None else x
     return x
 
 
 class FCDec(nn.Module):
   def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False, use_bias=True):
     super(FCDec, self).__init__()
-    self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
-    self.fc2 = nn.Linear(d_hid[0], d_hid[1], bias=use_bias)
-    self.fc3 = nn.Linear(d_hid[1], d_out, bias=use_bias)
+    if d_hid is None:
+      self.fc1 = nn.Linear(d_enc, d_out, bias=use_bias)
+      self.fc2 = None
+      self.fc3 = None
+    elif len(d_hid) == 1:
+      self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
+      self.fc2 = nn.Linear(d_hid[0], d_out, bias=use_bias)
+      self.fc3 = None
+    elif len(d_hid) == 2:
+      self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
+      self.fc2 = nn.Linear(d_hid[0], d_hid[1], bias=use_bias)
+      self.fc3 = nn.Linear(d_hid[1], d_out, bias=use_bias)
+    else:
+      raise ValueError
 
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
 
   def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.relu(self.fc2(x))
-    x = self.fc3(x)
-    if self.use_sigmoid:
-      x = self.sigmoid(x)
-    return x
-
-
-class FCDecFlat(nn.Module):
-  def __init__(self, d_enc, d_hid, d_out, use_sigmoid=False, use_bias=True):
-    super(FCDecFlat, self).__init__()
-    self.fc1 = nn.Linear(d_enc, d_hid[0], bias=use_bias)
-    self.fc2 = nn.Linear(d_hid[0], d_out, bias=use_bias)
-
-    self.relu = nn.ReLU()
-    self.sigmoid = nn.Sigmoid()
-    self.use_sigmoid = use_sigmoid
-
-  def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.fc2(x)
-    if self.use_sigmoid:
-      x = self.sigmoid(x)
-    return x
-
-
-class FCDecLin(nn.Module):
-  def __init__(self, d_enc, d_out, use_sigmoid=False, use_bias=True):
-    super(FCDecLin, self).__init__()
-    self.fc = nn.Linear(d_enc, d_out, bias=use_bias)
-    self.sigmoid = nn.Sigmoid()
-    self.use_sigmoid = use_sigmoid
-
-  def forward(self, x):
-    x = self.fc(x)
+    x = self.fc1(x)
+    x = self.fc2(self.relu(x)) if self.fc2 is not None else x
+    x = self.fc3(self.relu(x)) if self.fc3 is not None else x
     if self.use_sigmoid:
       x = self.sigmoid(x)
     return x

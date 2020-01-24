@@ -3,18 +3,49 @@ import torch.nn as nn
 
 
 class FCGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc):
+  def __init__(self, d_code, d_hid, d_enc, use_sigmoid=False):
     super(FCGen, self).__init__()
-    self.fc1 = nn.Linear(d_code, d_hid)
-    self.fc2 = nn.Linear(d_hid, d_hid)
-    self.fc3 = nn.Linear(d_hid, d_enc)
+    self.fc1 = nn.Linear(d_code, d_hid[0])
+    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
+    self.fc3 = nn.Linear(d_hid[1], d_enc)
     self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
     self.d_code = d_code
 
   def forward(self, x):
     x = self.relu(self.fc1(x))
     x = self.relu(self.fc2(x))
     x = self.fc3(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
+    return x
+
+  def get_code(self, batch_size, device):
+    return pt.randn(batch_size, self.d_code, device=device)
+
+
+class FCGenBig(nn.Module):
+  def __init__(self, d_code, d_hid, d_enc, use_sigmoid=False):
+    super(FCGenBig, self).__init__()
+    self.fc1 = nn.Linear(d_code, d_hid[0])
+    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
+    self.fc3 = nn.Linear(d_hid[1], d_hid[2])
+    self.fc4 = nn.Linear(d_hid[2], d_hid[3])
+    self.fc5 = nn.Linear(d_hid[3], d_enc)
+    self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
+    self.d_code = d_code
+
+  def forward(self, x):
+    x = self.relu(self.fc1(x))
+    x = self.relu(self.fc2(x))
+    x = self.relu(self.fc3(x))
+    x = self.relu(self.fc4(x))
+    x = self.fc5(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
     return x
 
   def get_code(self, batch_size, device):
@@ -22,13 +53,15 @@ class FCGen(nn.Module):
 
 
 class FCLabelGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc, n_labels=10):
+  def __init__(self, d_code, d_hid, d_enc, n_labels=10, use_sigmoid=False):
     super(FCLabelGen, self).__init__()
-    self.fc1 = nn.Linear(d_code, d_hid)
-    self.fc2 = nn.Linear(d_hid, d_hid)
-    self.data_layer = nn.Linear(d_hid, d_enc)
-    self.label_layer = nn.Linear(d_hid, n_labels)
+    self.fc1 = nn.Linear(d_code, d_hid[0])
+    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
+    self.data_layer = nn.Linear(d_hid[1], d_enc)
+    self.label_layer = nn.Linear(d_hid[1], n_labels)
     self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
     self.softmax = nn.Softmax(dim=1)
     self.d_code = d_code
 
@@ -37,6 +70,8 @@ class FCLabelGen(nn.Module):
     x = self.relu(self.fc2(x))
     x_data = self.data_layer(x)
     x_labels = self.softmax(self.label_layer(x))
+    if self.use_sigmoid:
+      x_data = self.sigmoid(x_data)
     return x_data, x_labels
 
   def get_code(self, batch_size, device):
@@ -44,12 +79,14 @@ class FCLabelGen(nn.Module):
 
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc, n_labels):
+  def __init__(self, d_code, d_hid, d_enc, n_labels, use_sigmoid=False):
     super(FCCondGen, self).__init__()
-    self.fc1 = nn.Linear(d_code + n_labels, d_hid)
-    self.fc2 = nn.Linear(d_hid, d_hid)
-    self.fc3 = nn.Linear(d_hid, d_enc)
+    self.fc1 = nn.Linear(d_code + n_labels, d_hid[0])
+    self.fc2 = nn.Linear(d_hid[0], d_hid[1])
+    self.fc3 = nn.Linear(d_hid[1], d_enc)
     self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
     self.d_code = d_code
     self.n_labels = n_labels
 
@@ -57,6 +94,8 @@ class FCCondGen(nn.Module):
     x = self.relu(self.fc1(x))
     x = self.relu(self.fc2(x))
     x = self.fc3(x)
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
     return x
 
   def get_code(self, batch_size, device, return_labels=True):
