@@ -135,6 +135,7 @@ def get_args():
   parser.add_argument('--gen-labels', action='store_true', default=False)
   parser.add_argument('--uniform-labels', action='store_true', default=False)
   parser.add_argument('--big-gen', action='store_true', default=False)
+  parser.add_argument('--batch-norm', action='store_true', default=False)
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=100)
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=50.0)
@@ -195,7 +196,7 @@ def main():
     if ar.big_gen:
       gen = FCGenBig(ar.d_code, gen_spec, 784, use_sigmoid=True)
     else:
-      gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True)
+      gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
