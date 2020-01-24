@@ -21,7 +21,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import ParameterGrid
-
+from autodp import privacy_calibrator
 
 import os
 
@@ -93,6 +93,8 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     random.seed(0)
 
     print("Creditcard fraud detection dataset")
+    is_private = True
+
     print(socket.gethostname())
 
     if 'g0' not in socket.gethostname():
@@ -213,6 +215,30 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     ######################################################
 
+
+
+    if is_private:
+        # desired privacy level
+        epsilon = 1.0
+        delta = 1e-5
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta)
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
+        sensitivity = 2 / n
+        noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+
+    """ computing mean embedding of  true data """
+    emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+    emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+    outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+    mean_emb1 = torch.mean(outer_emb1, 0)
+
+    if is_private:
+        noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
+        noise = noise.to(device)
+        mean_emb1 = mean_emb1 + noise
+
+
     print('Starting Training')
 
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
@@ -220,16 +246,6 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
         running_loss = 0.0
 
         for i in range(how_many_iter):
-
-            """ computing mean embedding of subsampled true data """
-            sample_idx = random.choices(np.arange(n), k=mini_batch_size)
-            sampled_data = data_samps[sample_idx,:]
-            emb1_input_features = RFF_Gauss(n_features, torch.Tensor(sampled_data), W_freq)
-            sampled_labels = true_labels[sample_idx,:]
-            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
-
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -306,6 +322,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
     pred_ours = LR_model.predict(X_test) # test on real data
 
+    print('is private?', is_private)
     print('ROC is', roc_auc_score(y_test, pred_ours))
     print('PRC is', average_precision_score(y_test, pred_ours))
     print('n_features are ', n_features)

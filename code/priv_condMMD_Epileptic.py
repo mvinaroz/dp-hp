@@ -1,6 +1,6 @@
 """" test a simple generating training using MMD for relatively simple datasets """
-""" for generating input features given random noise and the label """
-# Mijung re-wrote on Jan 22, 2020
+""" for generating input features given random noise and the label for ISOLET data """
+# Mijung wrote on Jan 09, 2020
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -21,7 +21,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import ParameterGrid
-
+from autodp import privacy_calibrator
 
 import os
 
@@ -87,56 +87,45 @@ class Generative_Model(nn.Module):
 
 #####################################################
 
-def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
+def main(n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
+
+
+    # as a reference, with n_features= 500 and mini_batch_size=1000, after 1000 epochs
+    # I get ROC= 0.54, PRC=0.21
+    # with different seed, I get ROC=0.5 and PRC 0.2. Similar to before.
+
+    # when I tested n_features = 500 and mini_batch_size=500,
+    # I got ROC = 0.6163 and PRC = 0.2668
 
     random.seed(0)
 
-    print("Creditcard fraud detection dataset")
+    print("epileptic seizure recognition dataset")
+    is_private = True
+
     print(socket.gethostname())
 
     if 'g0' not in socket.gethostname():
-        data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
+        data = pd.read_csv("../data/Epileptic/data.csv")
     else:
         # (1) load data
-        data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
+        data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
 
-
-
-    feature_names = data.iloc[:, 1:30].columns
-    target = data.iloc[:1, 30:].columns
+    feature_names = data.iloc[:, 1:-1].columns
+    target = data.iloc[:, -1:].columns
 
     data_features = data[feature_names]
     data_target = data[target]
-    print(data_features.shape)
 
-    """ we take a pre-processing step such that the dataset is a bit more balanced """
-    raw_input_features = data_features.values
-    raw_labels = data_target.values.ravel()
+    for i, row in data_target.iterrows():
+      if data_target.at[i,'y']!=1:
+        data_target.at[i,'y'] = 0
 
-    idx_negative_label = raw_labels==0
-    idx_positive_label = raw_labels==1
+    X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=0)
 
-    pos_samps_input = raw_input_features[idx_positive_label,:]
-    pos_samps_label = raw_labels[idx_positive_label]
-    neg_samps_input = raw_input_features[idx_negative_label,:]
-    neg_samps_label = raw_labels[idx_negative_label]
-
-    # take random 10 percent of the negative labelled data
-    in_keep = np.random.permutation(np.sum(idx_negative_label))
-    under_sampling_rate = 0.025
-    in_keep = in_keep[0:np.int(np.sum(idx_negative_label)*under_sampling_rate)]
-
-    neg_samps_input = neg_samps_input[in_keep,:]
-    neg_samps_label = neg_samps_label[in_keep]
-
-    feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
-    label_selected = np.concatenate((pos_samps_label, neg_samps_label))
-
-    X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90, test_size=0.10, random_state=0)
-
-    data_samps = X_train
-    y_labels = y_train
+    # unpack data
+    data_samps = X_train.values
+    y_labels = y_train.values.ravel()
 
     ##########################################################
 
@@ -148,20 +137,13 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     print('ROC on real test data is', roc_auc_score(y_test, pred))
     print('PRC on real test data is', average_precision_score(y_test, pred))
 
-    # ROC on real test data is 0.9365079365079365
-    # PRC on real test data is 0.8835421888053467
+    # ROC on real test data is 0.5569809947080179
+    # PRC on real test data is 0.2860654400815256
 
     ################################################################
 
     n_classes = 2
     n, input_dim = data_samps.shape
-
-    #n_features_arg = 350
-    mini_batch_size_arg = np.int(np.round(n*mini_batch_size_frac))
-    print('mini batch size is', mini_batch_size_arg)
-
-    how_many_epochs = how_many_epochs_arg
-
 
     """ we use 10 datapoints to compute the median heuristic (then discard), and use the rest for training """
     idx_rp = np.random.permutation(n)
@@ -169,9 +151,16 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
+    # sigma_array = np.zeros(input_dim)
+    # for i in np.arange(0,input_dim):
+    #     med = util.meddistance(np.expand_dims(data_samps[idx_to_discard,i],1))
+    #     sigma_array[i] = med
+    # sigma2 = sigma_array**2
 
     med = util.meddistance(data_samps[idx_to_discard, :])
     sigma2 = med**2
+
+    # print('length scale from median heuristic is', sigma2)
 
     data_samps = data_samps[idx_to_keep,:]
     n = idx_to_keep.shape[0]
@@ -199,6 +188,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
                              output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
+    how_many_epochs = how_many_epochs_arg
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -208,10 +198,34 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     # kernel for labels with weights
     unnormalized_weights = np.sum(true_labels,0)
+    positive_label_ratio = unnormalized_weights[1]/unnormalized_weights[0]
+
     weights = unnormalized_weights/np.sum(unnormalized_weights)
-    print('weights for label proportion is', weights)
 
     ######################################################
+
+
+    if is_private:
+        # desired privacy level
+        epsilon = 1.0
+        delta = 1e-5
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta)
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
+        sensitivity = 2 / n
+        noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+
+    """ computing mean embedding of  true data """
+    emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+    emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+    outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+    mean_emb1 = torch.mean(outer_emb1, 0)
+
+    if is_private:
+        noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
+        noise = noise.to(device)
+        mean_emb1 = mean_emb1 + noise
+
 
     print('Starting Training')
 
@@ -220,16 +234,6 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
         running_loss = 0.0
 
         for i in range(how_many_iter):
-
-            """ computing mean embedding of subsampled true data """
-            sample_idx = random.choices(np.arange(n), k=mini_batch_size)
-            sampled_data = data_samps[sample_idx,:]
-            emb1_input_features = RFF_Gauss(n_features, torch.Tensor(sampled_data), W_freq)
-            sampled_labels = true_labels[sample_idx,:]
-            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
-
 
             # zero the parameter gradients
             optimizer.zero_grad()
@@ -262,7 +266,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
             # print statistics
             running_loss += loss.item()
 
-        if epoch%100==0:
+        if epoch%10==0:
             print('epoch # and running loss are ', [epoch, running_loss])
         training_loss_per_epoch[epoch] = running_loss
 
@@ -304,17 +308,18 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     LR_model = LogisticRegression(solver='lbfgs', max_iter=5000)
     LR_model.fit(generated_samples, np.argmax(generated_labels, axis=1)) # training on synthetic data
-    pred_ours = LR_model.predict(X_test) # test on real data
+    pred = LR_model.predict(X_test) # test on real data
 
-    print('ROC is', roc_auc_score(y_test, pred_ours))
-    print('PRC is', average_precision_score(y_test, pred_ours))
+    print('is private?',is_private)
+    print('ROC is', roc_auc_score(y_test, pred))
+    print('PRC is', average_precision_score(y_test, pred))
     print('n_features are ', n_features)
 
     # save results
     # n_0 = weights[0]
     # n_1 = weights[1]
 
-    # method = os.path.join(Results_PATH, 'Credit_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
+    # method = os.path.join(Results_PATH, 'Epileptic_condMMD_mini_batch_size=%s_input_size=%s_hidden1=%s_hidden2=%s_sigma2=%s_n0=%s_n1=%s_nfeatures=%s' % (
     # mini_batch_size, input_size, hidden_size_1, hidden_size_2, sigma2, n_0, n_1, n_features))
     #
     # print('model specifics are', method)
@@ -324,11 +329,14 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     # np.save(method + '_output_label_samps.npy', generated_labels)
 
 
+
+#to test one setting put only one element array for each variable
+
 if __name__ == '__main__':
 
     how_many_epochs_arg=[1000, 2000]
-    n_features_arg=[50, 300, 500, 1000, 5000, 50000, 80000, 100000]
-    mini_batch_arg=[0.2, 0.5]
+    n_features_arg=[50, 500, 5000, 50000, 80000, 100000]
+    mini_batch_arg=[500,1000]
 
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                           "how_many_epochs_arg": how_many_epochs_arg})
@@ -338,3 +346,7 @@ if __name__ == '__main__':
             print(i)
             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
         print('*'*30)
+
+
+
+

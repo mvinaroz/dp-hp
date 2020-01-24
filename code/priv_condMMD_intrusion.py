@@ -12,7 +12,7 @@ import socket
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.model_selection import ParameterGrid
 
-import pandas as pd
+
 import seaborn as sns
 sns.set()
 # %matplotlib inline
@@ -23,7 +23,7 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 
 from sklearn.preprocessing import Imputer
-# from sklearn.impute import SimpleImputer
+from sklearn.impute import SimpleImputer
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.feature_selection import SelectFromModel
@@ -33,12 +33,14 @@ from sklearn.ensemble import AdaBoostClassifier
 
 from sklearn import tree
 
-import matplotlib.gridspec as gridspec
+# import matplotlib.gridspec as gridspec
 
 import warnings
 warnings.filterwarnings('ignore')
 
 import os
+
+from sdgym import load_dataset
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
@@ -46,9 +48,10 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import f1_score
 
+from autodp import privacy_calibrator
+
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
-
 #torch.cuda.empty_cache()
 #os.environ['CUDA_VISIBLE_DEVICES'] ='0'
 
@@ -87,6 +90,7 @@ def Feature_labels(labels, weights):
 
 class Generative_Model(nn.Module):
 
+        # def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, num_categorical_inputs, num_rest_columns, num_numerical_inputs):
         def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, num_categorical_inputs, num_numerical_inputs):
             super(Generative_Model, self).__init__()
 
@@ -97,6 +101,7 @@ class Generative_Model(nn.Module):
             # self.n_classes = n_classes
             self.num_numerical_inputs = num_numerical_inputs
             self.num_categorical_inputs = num_categorical_inputs
+            # self.num_rest_columns = num_rest_columns
 
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
             self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
@@ -114,11 +119,8 @@ class Generative_Model(nn.Module):
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
 
-            output_numerical = self.relu(output[:, 0:self.num_numerical_inputs]) # these numerical values are non-negative
-            # output_numerical = torch.round(output_numerical)
-
+            output_numerical = self.relu(output[:, 0:self.num_numerical_inputs])
             output_categorical = self.sigmoid(output[:, self.num_numerical_inputs:])
-            # output_categorical = torch.round(output_categorical)
 
             output_combined = torch.cat((output_numerical, output_categorical),1)
 
@@ -132,74 +134,62 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     ##################
     # parameters
     seed_number = 0
-    dataset = "Cervical cancer dataset"
-
-    #n_features_arg2 = 1000
-    #mini_batch_arg2 = 0.5
+    #n_features_arg2 = 500
+    mini_batch_arg2 = 0.5
     #how_many_epochs_arg2 = 1000
+    is_private = True
 
+    dataset = "intrusion"
 
     print("dataset is", dataset)
     print(socket.gethostname())
     if 'g0' not in socket.gethostname():
-        df = pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
-    else:
-        df = pd.read_csv("/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
-        print("Loaded Cervical")
-    #df.head()
 
-    df_nan = df.replace("?", np.nan)
-    df_nan.head()
+        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
 
-    df1 = df_nan.convert_objects(convert_numeric=True)
-    #df1=df_nan
+    """ some specifics on this dataset """
+    n_classes = 5
 
-    df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
+    """ some changes we make in the type of features for applying to our model """
+    categorical_columns_binary = [6,11,13,20] # these are binary categorical columns
+    the_rest_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns_binary))
 
-    """ this is the key in this data-preprocessing """
-    df = df1[df1.isnull().sum(axis=1) < 10]
+    num_numerical_inputs = len(the_rest_columns) # 10. Separately from the numerical ones, we compute the length-scale for the rest columns
+    num_categorical_inputs = len(categorical_columns_binary) # 4.
 
-    numerical_df = ['Age', 'Numberofsexualpartners', 'Firstsexualintercourse', 'Numofpregnancies', 'Smokes(years)',
-                    'Smokes(packs/year)', 'HormonalContraceptives(years)', 'IUD(years)', 'STDs(number)', 'STDs:Numberofdiagnosis',
-                    'STDs:Timesincefirstdiagnosis', 'STDs:Timesincelastdiagnosis']
-    categorical_df = ['Smokes', 'HormonalContraceptives', 'IUD', 'STDs', 'STDs:condylomatosis',
-                      'STDs:vulvo-perinealcondylomatosis', 'STDs:syphilis', 'STDs:pelvicinflammatorydisease',
-                      'STDs:genitalherpes', 'STDs:AIDS', 'STDs:cervicalcondylomatosis',
-                      'STDs:molluscumcontagiosum', 'STDs:HIV', 'STDs:HepatitisB', 'STDs:HPV',
-                      'Dx:Cancer', 'Dx:CIN', 'Dx:HPV', 'Dx', 'Hinselmann', 'Schiller', 'Citology', 'Biopsy']
+    raw_labels = data[:, -1]
+    raw_input_features = data[:, the_rest_columns + categorical_columns_binary]
 
-    feature_names = numerical_df + categorical_df[:-1]
-    num_numerical_inputs = len(numerical_df)
-    num_categorical_inputs = len(categorical_df[:-1])
+    """ we take a pre-processing step such that the dataset is a bit more balanced """
+    idx_negative_label= raw_labels == 0 # this is a dominant one about 80%, which we want to undersample
+    idx_positive_label = raw_labels != 0
 
-    for feature in numerical_df:
-        # print(feature, '', df[feature].convert_objects(convert_numeric=True).mean())
-        feature_mean = round(df[feature].convert_objects(convert_numeric=True).median(), 1)
-        df[feature] = df[feature].fillna(feature_mean)
+    pos_samps_input = raw_input_features[idx_positive_label,:]
+    pos_samps_label = raw_labels[idx_positive_label]
+    neg_samps_input = raw_input_features[idx_negative_label,:]
+    neg_samps_label = raw_labels[idx_negative_label]
 
-    for feature in categorical_df:
-        df[feature] = df[feature].convert_objects(convert_numeric=True).fillna(0.0)
+    # take random 10 percent of the negative labelled data
+    in_keep = np.random.permutation(np.sum(idx_negative_label))
+    under_sampling_rate = 0.5
+    in_keep = in_keep[0:np.int(np.sum(idx_negative_label)*under_sampling_rate)]
 
+    neg_samps_input = neg_samps_input[in_keep,:]
+    neg_samps_label = neg_samps_label[in_keep]
 
-    target = df['Biopsy']
-    # feature_names = df.iloc[:, :-1].columns
-    inputs = df[feature_names]
-    print('raw input features', inputs.shape)
+    feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+    label_selected = np.concatenate((pos_samps_label, neg_samps_label))
 
-    X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.80, test_size=0.20, random_state=seed_number)  # 60% training and 40% test
+    X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30,
+                                                        random_state=seed_number)
 
-    # test logistic regression on the real data
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # LR_model.fit(X_train, y_train)  # training on synthetic data
+    # pred = LR_model.predict(X_test)  # test on real data
+    # print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
+    # # for intrusion dataset, f1 score is 0.975213718779742, with raw data
+    # with undersampled data, F1-score on real test data is  0.9664078620440224
 
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-
-    print('ROC on real test data from Logistic regression is', roc_auc_score(y_test, pred)) # 0.9444444444444444
-    print('PRC on real test data from Logistic regression is', average_precision_score(y_test, pred)) # 0.8955114054451803
-
-
-    y_train = y_train.values.ravel()  # X_train_pos
-    X_train = X_train.values
 
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
@@ -207,24 +197,22 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     y_train = np.expand_dims(y_train, 1)
     true_labels = onehot_encoder.fit_transform(y_train)
 
+    if is_private:
+        # desired privacy level
+        epsilon = 1.0
+        delta = 1e-5
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta)
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
+        sensitivity = 2/n
+        noise_std_for_privacy = privacy_param['sigma']*sensitivity
+
     """ specifying random fourier features """
 
     idx_rp = np.random.permutation(n)
     num_data_pt_to_discard = 10
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
-
-    # sigma_array = np.zeros(num_numerical_inputs)
-    # for i in np.arange(0,num_numerical_inputs):
-    #     med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
-    #     sigma_array[i] = med
-    # if np.var(sigma_array)>100:
-    #     print('we will use separate frequencies for each column of numerical features')
-    #     sigma2 = sigma_array**2
-    # else:
-    #     # median heuristic to choose the frequency range
-    #     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-    #     sigma2 = med ** 2
 
     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
     sigma2 = med ** 2
@@ -242,6 +230,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     """ specifying ratios of data to generate depending on the class lables """
     unnormalized_weights = np.sum(true_labels,0)
     weights = unnormalized_weights/np.sum(unnormalized_weights)
+    print('weights are', weights)
 
     """ specifying the model """
     mini_batch_size = np.int(np.round(mini_batch_arg2*n)); print("minibatch: ", mini_batch_size)
@@ -251,7 +240,6 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     output_size = input_dim
     how_many_epochs = how_many_epochs_arg2
 
-
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1, hidden_size_2=hidden_size_2,
                                  output_size=output_size, num_categorical_inputs=num_categorical_inputs,
                                  num_numerical_inputs=num_numerical_inputs).to(device)
@@ -259,6 +247,24 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     how_many_iter = np.int(n / mini_batch_size)
     training_loss_per_epoch = np.zeros(how_many_epochs)
+
+    """ computing mean embedding of true data """
+    numerical_input_data = X_train[:, 0:num_numerical_inputs]
+    emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+
+    categorical_input_data = X_train[:, num_numerical_inputs:]
+    emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+
+    emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+
+    emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+    outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+    mean_emb1 = torch.mean(outer_emb1, 0)
+
+    if is_private:
+        noise = noise_std_for_privacy*torch.randn(mean_emb1.size())
+        noise = noise.to(device)
+        mean_emb1 = mean_emb1 + noise
 
     print('Starting Training')
 
@@ -268,21 +274,6 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
         for i in range(how_many_iter):
 
-            """ computing mean embedding of subsampled true data """
-            # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
-            sample_idx = random.sample(range(n), k=mini_batch_size)
-            numerical_input_data = X_train[sample_idx, 0:num_numerical_inputs]
-            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
-
-            categorical_input_data = X_train[sample_idx, num_numerical_inputs:]
-            emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
-
-            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical),1)
-
-            sampled_labels = true_labels[sample_idx,:]
-            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
 
             """ computing mean embedding of generated data """
             # zero the parameter gradients
@@ -300,9 +291,9 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
             # (3) compute the embeddings of those
             numerical_samps = outputs[:, 0:num_numerical_inputs] #[4553,6]
-            emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq) #W_freq [n_features/2,6], n_features=10000
+            emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq)
 
-            categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
+            categorical_samps = outputs[:, num_numerical_inputs:]
             emb2_categorical = categorical_samps /(torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(device) # 8
 
             emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
@@ -338,7 +329,6 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     input_to_model = torch.cat((feature_input, label_input), 1)
     outputs = model(input_to_model)
 
-
     # (3) round the categorial features
     output_numerical = outputs[:, 0:num_numerical_inputs]
     output_categorical = outputs[:, num_numerical_inputs:]
@@ -354,24 +344,41 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-    ROC_ours = roc_auc_score(y_test, pred_ours)
-    PRC_ours = average_precision_score(y_test, pred_ours)
+    f1score = f1_score(y_test, pred_ours, average='weighted')
+    print('is private?', is_private)
+    print('F1-score (ours) is ', f1score)
+    # F1 - score(ours) is 0.93 without taking two sets of random fourier features
+    # with taking two sets of random fourier features with different frequencies, F1-score (ours) is 0.69 worse.
+    # so I will keep it the same as before.
 
-    print('ROC on generated samples using Logistic regression is', ROC_ours)
-    print('PRC on generated samples using Logistic regression is', PRC_ours)
 
+# if __name__ == '__main__':
+#     main()
 
+# if __name__ == '__main__':
+#     print("intrusion")
+#     how_many_epochs_arg=[1000, 2000]
+#     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
+#     mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
+#     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
+#     for elem in grid:
+#         print(elem)
+#         for ii in range(1):
+#             main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+
+#
 if __name__ == '__main__':
-    print("census")
+    print("intrusion")
     how_many_epochs_arg=[1000, 2000]
     n_features_arg = [50, 100, 300, 500, 1000, 5000, 10000]
-    mini_batch_arg = [0.01, 0.02, 0.05, 0.1, 0.5]
+    mini_batch_arg = [0.5]
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg, "how_many_epochs_arg": how_many_epochs_arg})
     for elem in grid:
         print(elem)
-        prc_arr=[]; roc_arr=[]
-        repetitions=5
+        f1_arr = []
+        repetitions = 5
         for ii in range(repetitions):
-            roc, prc = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
-            roc_arr.append(roc); prc_arr.append(prc)
-        print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+            f1 = main(elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+            f1_arr.append(f1)
+        print("Average F1: ", np.mean(f1_arr))
+        print("Std F1: ", np.std(f1_arr))

@@ -83,7 +83,7 @@ def main():
 
     # test logistic regression on the real data
     LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train.values.ravel()) # training on synthetic data
+    LR_model.fit(X_train, y_train.values.ravel())
     pred = LR_model.predict(X_test) # test on real data
 
     print('ROC on real test data is', roc_auc_score(y_test, pred))

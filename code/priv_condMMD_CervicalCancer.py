@@ -46,6 +46,8 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.metrics import f1_score
 
+from autodp import privacy_calibrator
+
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -133,6 +135,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     # parameters
     seed_number = 0
     dataset = "Cervical cancer dataset"
+    is_private = True
 
     #n_features_arg2 = 1000
     #mini_batch_arg2 = 0.5
@@ -152,7 +155,6 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     df_nan.head()
 
     df1 = df_nan.convert_objects(convert_numeric=True)
-    #df1=df_nan
 
     df1.columns = df1.columns.str.replace(' ', '')  # deleting spaces for ease of use
 
@@ -207,24 +209,22 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     y_train = np.expand_dims(y_train, 1)
     true_labels = onehot_encoder.fit_transform(y_train)
 
+    if is_private:
+        # desired privacy level
+        epsilon = 1.0
+        delta = 1e-5
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta)
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
+        sensitivity = 2 / n
+        noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+
     """ specifying random fourier features """
 
     idx_rp = np.random.permutation(n)
     num_data_pt_to_discard = 10
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
-
-    # sigma_array = np.zeros(num_numerical_inputs)
-    # for i in np.arange(0,num_numerical_inputs):
-    #     med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
-    #     sigma_array[i] = med
-    # if np.var(sigma_array)>100:
-    #     print('we will use separate frequencies for each column of numerical features')
-    #     sigma2 = sigma_array**2
-    # else:
-    #     # median heuristic to choose the frequency range
-    #     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-    #     sigma2 = med ** 2
 
     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
     sigma2 = med ** 2
@@ -260,6 +260,26 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     how_many_iter = np.int(n / mini_batch_size)
     training_loss_per_epoch = np.zeros(how_many_epochs)
 
+
+    """ computing mean embedding of subsampled true data """
+    numerical_input_data = X_train[:, 0:num_numerical_inputs]
+    emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+
+    categorical_input_data = X_train[:, num_numerical_inputs:]
+    emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+
+    emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+
+    emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+    outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+    mean_emb1 = torch.mean(outer_emb1, 0)
+
+
+    if is_private:
+        noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
+        noise = noise.to(device)
+        mean_emb1 = mean_emb1 + noise
+
     print('Starting Training')
 
     for epoch in range(how_many_epochs):  # loop over the dataset multiple times
@@ -267,22 +287,6 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
         running_loss = 0.0
 
         for i in range(how_many_iter):
-
-            """ computing mean embedding of subsampled true data """
-            # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
-            sample_idx = random.sample(range(n), k=mini_batch_size)
-            numerical_input_data = X_train[sample_idx, 0:num_numerical_inputs]
-            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
-
-            categorical_input_data = X_train[sample_idx, num_numerical_inputs:]
-            emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
-
-            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical),1)
-
-            sampled_labels = true_labels[sample_idx,:]
-            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
 
             """ computing mean embedding of generated data """
             # zero the parameter gradients
@@ -357,6 +361,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     ROC_ours = roc_auc_score(y_test, pred_ours)
     PRC_ours = average_precision_score(y_test, pred_ours)
 
+    print('is private?', is_private)
     print('ROC on generated samples using Logistic regression is', ROC_ours)
     print('PRC on generated samples using Logistic regression is', PRC_ours)
 
