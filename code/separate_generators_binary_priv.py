@@ -195,7 +195,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.5
+        under_sampling_rate = 0.8
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -501,13 +501,30 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         if is_private:
             # desired privacy level
-            epsilon = 1.0
-            delta = 1e-5
-            privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=2) # split the privacy cost for training two generators
-            print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+            # epsilon = 1.0
+            # delta = 1e-5
+            # privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=2) # split the privacy cost for training two generators
+            # print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
+
+            if which_class==0:
+
+                """ if you want to use different epsilon, delta budget for each training """
+                epsilon = 0.01
+                delta = 1e-5*0.5
+                privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta) # split the privacy cost for training two generators
+                print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+            else:
+
+                epsilon = 1.99
+                delta = 1e-5*0.5
+                privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta) # split the privacy cost for training two generators
+                print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+
 
             sensitivity = 2 / n
             noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+            print('noise standard deviation is', noise_std_for_privacy)
 
         """ computing mean embedding of  true data """
         if dataset in homogeneous_datasets:
@@ -562,7 +579,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
                     mean_emb2 = torch.mean(emb2_input_features, 0)
 
 
-                loss = torch.norm(mean_emb1-mean_emb2, p=2)**2
+                loss = torch.norm(mean_emb1-mean_emb2, p=2)
 
                 loss.backward()
                 optimizer.step()
@@ -623,8 +640,8 @@ if __name__ == '__main__':
     # for dataset in [arguments.dataset]:
     for dataset in ["credit"]:
         print("\n\n")
-        how_many_epochs_arg = [2000]
-        n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
+        how_many_epochs_arg = [1000]
+        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
         mini_batch_arg = [1.0]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
