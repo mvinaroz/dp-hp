@@ -128,8 +128,8 @@ class Generative_Model(nn.Module):
 
 
 # def main(features_num, batch_size, input_layer, hidden1, hidden2, epochs_num, input_dim):
-# def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
-def main():
+def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
+#def main():
 
     ##################
     # parameters
