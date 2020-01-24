@@ -407,7 +407,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     """ training a Generator via minimizing MMD """
 
     #mini_batch_size = mini_batch_size_arg
-    mini_batch_size = np.int(np.round(mini_batch_arg*n)); print("minibatch: ", mini_batch_size)
+    mini_batch_size = np.int(np.round(mini_batch_size_arg*n)); print("minibatch: ", mini_batch_size)
     input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
@@ -567,6 +567,7 @@ if __name__ == '__main__':
 
     #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
     for dataset in [arguments.dataset]:
+    #for dataset in ["credit"]:
         print("\n\n")
         how_many_epochs_arg = [1000, 2000]
         n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
