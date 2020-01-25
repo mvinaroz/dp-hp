@@ -409,13 +409,13 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
     #########################################3
 
-        # test logistic regression on the real data
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(data_samps, y_labels)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-
-    print('ROC on real test data is', roc_auc_score(y_test, pred))
-    print('PRC on real test data is', average_precision_score(y_test, pred))
+    #     # test logistic regression on the real data
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # LR_model.fit(data_samps, y_labels)  # training on synthetic data
+    # pred = LR_model.predict(X_test)  # test on real data
+    #
+    # print('ROC on real test data is', roc_auc_score(y_test, pred))
+    # print('PRC on real test data is', average_precision_score(y_test, pred))
 
     ############################### end of data loading ##################################
 
