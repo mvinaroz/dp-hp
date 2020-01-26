@@ -726,12 +726,12 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
-    for dataset in ["isolet", "epileptic", "credit", "census", "cervical", "adult", ]:
+    for dataset in ["epileptic", "credit", "census", "cervical", "adult", ]:
     #for dataset in ["epileptic"]:
     #for dataset in ["credit"]:
         print("\n\n")
         how_many_epochs_arg = [2000]
-        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
+        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000]
         mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
