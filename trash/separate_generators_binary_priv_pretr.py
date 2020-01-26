@@ -380,7 +380,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         data_samps = X_train.values
         y_labels = y_train.values.ravel()
 
-    ############################### end of data loading ##################################
+    ############################### end of data loading ######################################
+    ##############################################################################################
 
     # specify heterogeneous dataset or not
     heterogeneous_datasets = ['cervical', 'adult', 'census']
@@ -709,7 +710,7 @@ if __name__ == '__main__':
     # for dataset in [arguments.dataset]:
     for dataset in ["census"]:
         print("\n\n")
-        how_many_epochs_arg = [100, 500, 1000]
+        how_many_epochs_arg = [100]#[100, 500, 1000]
         n_features_arg = [500]#, 1000, 5000, 10000, 50000, 80000, 100000]
         mini_batch_arg = [1.0]
 
@@ -718,7 +719,7 @@ if __name__ == '__main__':
         for elem in grid:
             print(elem, "\n")
             prc_arr = []; roc_arr = []
-            repetitions = 5
+            repetitions = 2
             for ii in range(repetitions):
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)

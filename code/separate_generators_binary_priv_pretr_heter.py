@@ -163,6 +163,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         data_samps = X_train.values
         y_labels = y_train.values.ravel()
 
+        print(data_samps.shape)
+
     elif dataset=="credit":
 
         print("Creditcard fraud detection dataset") # this is homogeneous
@@ -348,6 +350,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         y_labels = y_train
         data_samps = X_train
 
+        print(data_samps.shape)
+
     elif dataset=='isolet':
 
         print("isolet dataset")
@@ -380,27 +384,15 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         data_samps = X_train.values
         y_labels = y_train.values.ravel()
 
-    ############################### end of data loading ##################################
 
     # specify heterogeneous dataset or not
     heterogeneous_datasets = ['cervical', 'adult', 'census']
     homogeneous_datasets = ['epileptic','credit','isolet']
 
-    ###########################################################################
 
-    # As a reference, we first test logistic regression on the real data
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_labels)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-
-    print('ROC on real test data is', roc_auc_score(y_test, pred))
-    print('PRC on real test data is', average_precision_score(y_test, pred))
-
-    ###########################################################################
+    #################### split data into two classes for separate training of each generator ####
 
     n_classes = 2
-
-    #################### split data into two classes for separate training of each generator ########################333
 
     X_train_pos =  data_samps[y_labels==1,:]
     y_train_pos = y_labels[y_labels==1]
@@ -412,9 +404,21 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     # random Fourier features
     n_features = n_features_arg
 
+    ########################### end of dealing with loading data
+    ########################################################################################
 
-    #####################################
-    #one model for all classes
+    # As a reference, we first test logistic regression on the real data
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_labels)  # training on synthetic data
+    pred = LR_model.predict(X_test)  # test on real data
+
+    print('ROC on real test data is', roc_auc_score(y_test, pred))
+    print('PRC on real test data is', average_precision_score(y_test, pred))
+
+    ###########################################################################
+    ######################################
+    # MODEL - one model for all classes
+
     one_model=False
     if one_model==True:
 
@@ -453,10 +457,9 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         training_loss_per_epoch = np.zeros(how_many_epochs)
 
 
-
-    ############
-
-
+    ##########################################################################
+    ####################################################
+    # start training for each class
 
 
     for which_class in range(n_classes):
@@ -546,7 +549,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         draws = n_features // 2
 
-        """ computing mean embedding of  true data """
+        #######################################################################
+        # mean embedding
+        #""" computing mean embedding of  true data """
+
+
         if dataset in homogeneous_datasets:
 
             W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
@@ -577,6 +584,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
         ######################################################
+        # private
 
         if is_private:
             # desired privacy level
@@ -605,23 +613,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
             noise_std_for_privacy = privacy_param['sigma'] * sensitivity
             print('noise standard deviation is', noise_std_for_privacy)
 
-        """ computing mean embedding of  true data """
-        if dataset in homogeneous_datasets:
-
-            emb1_input_features = RFF_Gauss(n_features, torch.Tensor(X), W_freq)
-            mean_emb1 = torch.mean(emb1_input_features, 0)
-
-        elif dataset in heterogeneous_datasets:
-
-            numerical_input_data = X[:, 0:num_numerical_inputs]
-            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
-
-            categorical_input_data = X[:, num_numerical_inputs:]
-            emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
-
-            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
-            mean_emb1 = torch.mean(emb1_input_features, 0)
-
         # print("before training: ")
         # for name, param in model.named_parameters():
         #     if name=="fc1.weight":
@@ -629,6 +620,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         #         print(param.shape)
         #         print(param[1:3])
 
+        #######################
 
         if is_private:
             noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
@@ -636,6 +628,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
             mean_emb1 = mean_emb1 + noise
 
         #########################################################################################################################
+        ####################################################################################
+        # TRAINING
 
         for epoch in range(how_many_epochs):  # loop over the dataset multiple times
 
@@ -731,12 +725,12 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
     # for dataset in [arguments.dataset]:
-    for dataset in ["isolet"]:
+    #for dataset in ["isolet"]:
         print("\n\n")
         how_many_epochs_arg = [100, 500, 1000]
-        n_features_arg = [500, 1000, 5000]#, 10000, 50000, 80000, 100000]
+        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
         mini_batch_arg = [1.0]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
