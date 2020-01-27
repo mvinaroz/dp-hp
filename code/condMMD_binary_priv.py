@@ -162,7 +162,7 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
 def init_weights(m):
     if type(m) == nn.Linear:
-        torch.nn.init.normal_(m.weight, mean=0.0, std=1.0)
+        torch.nn.init.normal_(m.weight, mean=3.0, std=1.0)
         #torch.nn.init.kaiming_uniform(m.weight)
         m.bias.data.fill_(0.01)
 
