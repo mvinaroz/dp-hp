@@ -878,7 +878,7 @@ if __name__ == '__main__':
         else:
             how_many_epochs_arg = [100, 200, 2000, 500, 1000]
             #n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
+            n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000]
             mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
