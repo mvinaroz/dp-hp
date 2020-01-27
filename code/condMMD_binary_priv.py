@@ -568,27 +568,40 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     weights = unnormalized_weights / np.sum(unnormalized_weights)
 
     ######################################################
-
+    # if mean outside
 
     """ computing mean embedding of  true data """
     if dataset in homogeneous_datasets:
 
         W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
-        emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
-        mean_emb1 = torch.mean(emb1_input_features, 0)
-
-
-        # """ computing mean embedding of  true data """
         # emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
-        # emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
-        # outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-        # mean_emb1 = torch.mean(outer_emb1, 0)
+        # mean_emb1 = torch.mean(emb1_input_features, 0)
+
+
+        """ computing mean embedding of  true data """
+        emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+        emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+        outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+        mean_emb1 = torch.mean(outer_emb1, 0)
 
     elif dataset in heterogeneous_datasets:
 
-        W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
 
+
+        W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+        #
+        # numerical_input_data = data_samps[:, 0:num_numerical_inputs]
+        # emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+        #
+        # categorical_input_data = data_samps[:, num_numerical_inputs:]
+        # emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+        #
+        # emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+        # mean_emb1 = torch.mean(emb1_input_features, 0)
+        # mean_emb1_nw=mean_emb1
+
+        """ computing mean embedding of subsampled true data """
         numerical_input_data = data_samps[:, 0:num_numerical_inputs]
         emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
 
@@ -596,8 +609,10 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
 
         emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
-        mean_emb1 = torch.mean(emb1_input_features, 0)
-        mean_emb1_nw=mean_emb1
+
+        emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+        outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+        mean_emb1 = torch.mean(outer_emb1, 0)
 
 
 
@@ -613,23 +628,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         for i in range(how_many_iter):
             ###################################
 
-            """ computing mean embedding of subsampled true data """
-            # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
-            sample_idx = random.sample(range(n), k=mini_batch_size)
-            numerical_input_data = data_samps[sample_idx, 0:num_numerical_inputs]
-            emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
-
-            categorical_input_data = data_samps[sample_idx, num_numerical_inputs:]
-            emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
-
-            emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
-
-            sampled_labels = true_labels[sample_idx, :]
-            emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
-
-            """ computing mean embedding of generated data """
             # zero the parameter gradients
             optimizer.zero_grad()
 
@@ -644,19 +642,88 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
             input_to_model = torch.cat((feature_input, label_input), 1)
             outputs = model(input_to_model)
 
-            # (3) compute the embeddings of those
-            numerical_samps = outputs[:, 0:num_numerical_inputs]  # [4553,6]
-            emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq)  # W_freq [n_features/2,6], n_features=10000
+            if dataset in homogeneous_datasets:
 
-            categorical_samps = outputs[:, num_numerical_inputs:]  # [4553,8]
-            emb2_categorical = categorical_samps / (torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(device)  # 8
+                # """ computing mean embedding of subsampled true data """
+                # # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
+                # sample_idx = random.sample(range(n), k=mini_batch_size)
+                # numerical_input_data = data_samps[sample_idx, :]
+                # sampled_labels = true_labels[sample_idx, :]
+                # emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
+                # outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                # mean_emb1 = torch.mean(outer_emb1, 0)
 
-            emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
+                # """ computing mean embedding of  true data """
+                # emb1_input_features = RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq)
+                # emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+                # outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                # mean_emb1 = torch.mean(outer_emb1, 0)
 
-            generated_labels = onehot_encoder.fit_transform(label_input.cpu().detach().numpy())  # [1008]
-            emb2_labels = Feature_labels(torch.Tensor(generated_labels), weights)
-            outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
-            mean_emb2 = torch.mean(outer_emb2, 0)
+
+
+                #
+                # numerical_input_data = data_samps[sample_idx, 0:num_numerical_inputs]
+                # emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+                #
+                # categorical_input_data = data_samps[sample_idx, num_numerical_inputs:]
+                # emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+                #
+                # emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+                #
+                # sampled_labels = true_labels[sample_idx, :]
+                # emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
+                # outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                # mean_emb1 = torch.mean(outer_emb1, 0)
+
+                """ computing mean embedding of generated samples """
+                emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
+
+                label_input_t = torch.zeros((mini_batch_size, n_classes))
+                idx_1 = (label_input == 1.).nonzero()[:, 0]
+                idx_0 = (label_input == 0.).nonzero()[:, 0]
+                label_input_t[idx_1, 1] = 1.
+                label_input_t[idx_0, 0] = 1.
+
+                emb2_labels = Feature_labels(label_input_t, weights)
+                outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+                mean_emb2 = torch.mean(outer_emb2, 0)
+
+            elif dataset in heterogeneous_datasets:
+
+                #if mean subsampled inside
+
+                # """ computing mean embedding of subsampled true data """
+                # # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
+                # sample_idx = random.sample(range(n), k=mini_batch_size)
+                # numerical_input_data = data_samps[sample_idx, 0:num_numerical_inputs]
+                # emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+                #
+                # categorical_input_data = data_samps[sample_idx, num_numerical_inputs:]
+                # emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+                #
+                # emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+                #
+                # sampled_labels = true_labels[sample_idx, :]
+                # emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
+                # outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                # mean_emb1 = torch.mean(outer_emb1, 0)
+
+                """ computing mean embedding of generated data """
+
+
+                # (3) compute the embeddings of those
+                numerical_samps = outputs[:, 0:num_numerical_inputs]  # [4553,6]
+                emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq)  # W_freq [n_features/2,6], n_features=10000
+
+                categorical_samps = outputs[:, num_numerical_inputs:]  # [4553,8]
+                emb2_categorical = categorical_samps / (torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(device)  # 8
+
+                emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
+
+                generated_labels = onehot_encoder.fit_transform(label_input.cpu().detach().numpy())  # [1008]
+                emb2_labels = Feature_labels(torch.Tensor(generated_labels), weights)
+                outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+                mean_emb2 = torch.mean(outer_emb2, 0)
 
             #no wieghing
             mean_emb2_nw = torch.mean(emb2_input_features, 0)
@@ -796,15 +863,23 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
 if __name__ == '__main__':
 
+    single_run=False
     #epileptic, credit, census, cervical, adult, isolet
-    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
-    #for dataset in ["epileptic"]:
+    #for dataset in ["cervical", "census", "adult"]:
+    #for dataset in ["epileptic", "isolet", "credit"]:
     for dataset in [arguments.dataset]:
         print("\n\n")
-        how_many_epochs_arg = [2000, 1000]
-        #n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-        n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [0.5]
+
+        if single_run==True:
+            how_many_epochs_arg = [200]
+            #n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.5]
+        else:
+            how_many_epochs_arg = [100, 200, 2000, 500, 1000]
+            #n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+            n_features_arg = [20, 50, 100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
+            mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
@@ -816,7 +891,7 @@ if __name__ == '__main__':
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)
                 prc_arr.append(prc)
-            print("\nAverage ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr), "\n")
+            print("\nAverage ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr), "\n")
 
 
 
