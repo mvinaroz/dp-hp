@@ -886,12 +886,13 @@ if __name__ == '__main__':
         for elem in grid:
             print(elem)
             prc_arr = []; roc_arr = []
-            repetitions = 5
+            repetitions = 10
             for ii in range(repetitions):
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)
                 prc_arr.append(prc)
-            print("\nAverage ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr), "\n")
+            print("\nAverage ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
+            print("Variance ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(roc_arr), "\n")
 
 
 
