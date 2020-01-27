@@ -25,6 +25,9 @@ from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import ParameterGrid
 from autodp import privacy_calibrator
+from sklearn.preprocessing import OneHotEncoder
+
+
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -389,6 +392,18 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     heterogeneous_datasets = ['cervical', 'adult', 'census']
     homogeneous_datasets = ['epileptic','credit','isolet']
 
+    #####################################
+
+    n_classes = 2
+    n, input_dim = data_samps.shape
+    # one-hot encoding of labels.
+    n, input_dim = X_train.shape
+    onehot_encoder = OneHotEncoder(sparse=False)
+    y_train = np.array(y_train)
+    if len(y_train.shape) <= 1:
+        y_train = np.expand_dims(y_train, 1)
+    true_labels = onehot_encoder.fit_transform(y_train)
+
 
     #################### split data into two classes for separate training of each generator ####
 
@@ -463,7 +478,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
 
     for which_class in range(n_classes):
-        print('*'*10)
+        #print('*'*10)
         print(which_class)
         if which_class==1:
 
@@ -637,6 +652,73 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
             for i in range(how_many_iter):
 
+                ############################3
+            #
+            #     """ computing mean embedding of subsampled true data """
+            #     # sample_idx = random.choices(np.arange(n), k=mini_batch_size)
+            #     sample_idx = random.sample(range(n), k=mini_batch_size)
+            #     numerical_input_data = data_samps[sample_idx, 0:num_numerical_inputs]
+            #     emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
+            #
+            #     categorical_input_data = data_samps[sample_idx, num_numerical_inputs:]
+            #     emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
+            #
+            #     emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
+            #
+            #     sampled_labels = true_labels[sample_idx, :]
+            #     emb1_labels = Feature_labels(torch.Tensor(sampled_labels), weights)
+            #     outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+            #     mean_emb1 = torch.mean(outer_emb1, 0)
+            #
+            #     """ computing mean embedding of generated data """
+            #     # zero the parameter gradients
+            #     optimizer.zero_grad()
+            #
+            #     # (1) generate labels
+            #     label_input = torch.multinomial(torch.Tensor([weights]), mini_batch_size, replacement=True).type(
+            #         torch.FloatTensor)
+            #     label_input = label_input.transpose_(0, 1)
+            #     label_input = label_input.to(device)
+            #
+            #     # (2) generate corresponding features
+            #     feature_input = torch.randn((mini_batch_size, input_size - 1)).to(device)
+            #     input_to_model = torch.cat((feature_input, label_input), 1)
+            #     outputs = model(input_to_model)
+            #
+            #     # (3) compute the embeddings of those
+            #     numerical_samps = outputs[:, 0:num_numerical_inputs]  # [4553,6]
+            #     emb2_numerical = RFF_Gauss(n_features, numerical_samps,
+            #                                W_freq)  # W_freq [n_features/2,6], n_features=10000
+            #
+            #     categorical_samps = outputs[:, num_numerical_inputs:]  # [4553,8]
+            #     emb2_categorical = categorical_samps / (torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(
+            #         device)  # 8
+            #
+            #     emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
+            #
+            #     generated_labels = onehot_encoder.fit_transform(label_input.cpu().detach().numpy())  # [1008]
+            #     emb2_labels = Feature_labels(torch.Tensor(generated_labels), weights)
+            #     outer_emb2 = torch.einsum('ki,kj->kij', [emb2_input_features, emb2_labels])
+            #     mean_emb2 = torch.mean(outer_emb2, 0)
+            #
+            #     # no wieghing
+            #     mean_emb2_nw = torch.mean(emb2_input_features, 0)
+            #
+            #     loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
+            #     # loss = torch.norm(mean_emb1_nw - mean_emb2_nw, p=2) ** 2
+            #
+            #     loss.backward()
+            #     optimizer.step()
+            #
+            #     running_loss += loss.item()
+            #
+            # if epoch % 100 == 0:
+            #     print('epoch # and running loss are ', [epoch, running_loss])
+            #     training_loss_per_epoch[epoch] = running_loss
+
+
+                ###################
+
                 # zero the parameter gradients
                 optimizer.zero_grad()
                 input_to_model = torch.randn((mini_batch_size, input_size)).to(device)
@@ -725,13 +807,13 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
     # for dataset in [arguments.dataset]:
-    #for dataset in ["isolet"]:
+    for dataset in ["cervical"]:
         print("\n\n")
-        how_many_epochs_arg = [100, 500, 1000]
-        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [1.0]
+        how_many_epochs_arg = [1000]#[100, 500, 1000]
+        n_features_arg = [100000]#[500, 1000, 5000, 10000, 50000, 80000, 100000]
+        mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
@@ -740,6 +822,7 @@ if __name__ == '__main__':
             prc_arr = []; roc_arr = []
             repetitions = 5
             for ii in range(repetitions):
+                print(ii)
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)
                 prc_arr.append(prc)
