@@ -156,6 +156,15 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
                 return output_combined
 
+
+
+            #net = nn.Sequential(nn.Linear(2, 2), nn.Linear(2, 2))
+
+def init_weights(m):
+    if type(m) == nn.Linear:
+        torch.nn.init.xavier_uniform(m.weight)
+        m.bias.data.fill_(0.01)
+
 ############################### end of generative models ###############################
 
 def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
@@ -537,6 +546,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         model = Generative_Model_homogeneous_data(input_size=input_size, hidden_size_1=hidden_size_1,
                                                   hidden_size_2=hidden_size_2,
                                                   output_size=output_size).to(device)
+        model.apply(init_weights)
 
     elif dataset in heterogeneous_datasets:
 
@@ -545,6 +555,9 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
                                                     output_size=output_size,
                                                     num_categorical_inputs=num_categorical_inputs,
                                                     num_numerical_inputs=num_numerical_inputs).to(device)
+
+        model.apply(init_weights)
+
     else:
         print(
             'sorry, please enter the name of your dataset either in homogeneous_dataset or heterogeneous_dataset list ')
@@ -892,7 +905,7 @@ if __name__ == '__main__':
                 roc_arr.append(roc)
                 prc_arr.append(prc)
             print("\nAverage ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
-            print("Variance ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(roc_arr), "\n")
+            print("Variance ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
 
 
 
