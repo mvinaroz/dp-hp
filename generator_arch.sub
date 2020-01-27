@@ -36,8 +36,22 @@ request_gpus = 1
 dataset=census
 queue 1
 
+dataset=epileptic
+queue 1
+
+dataset=credit
+queue 1
+
 dataset=adult
 queue 1
+
+dataset=cervical
+queue 1
+
+dataset=isolet
+queue 1
+
+
 
 
 
