@@ -147,7 +147,6 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     if dataset=="covtype":
 
-        print("dataset is", dataset)
         print(socket.gethostname())
         if 'g0' not in socket.gethostname():
             train_data = np.load("../data/real/covtype/train.npy")
@@ -190,8 +189,8 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     elif dataset=="intrusion":
 
-        if 'g0' not in socket.gethostname():
-            data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+        #if 'g0' not in socket.gethostname():
+        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
 
         """ some specifics on this dataset """
         n_classes = 5
@@ -234,11 +233,13 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     #######################################################################################
 
     # This takes way too long for this dataset. So I will comment this out for now. We know F1-score is 0.44ish
-
-    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # print("test on real dataset: ")
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=5000)
     # LR_model.fit(X_train, y_train)  # training on synthetic data
     # pred = LR_model.predict(X_test)  # test on real data
     # print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
+
+    ##########################################################################################
 
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
@@ -391,7 +392,7 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     generated_labels_final = label_input.cpu().detach().numpy()
 
 
-    LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=5000)
     LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
     pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
