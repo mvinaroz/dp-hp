@@ -808,9 +808,9 @@ if __name__ == '__main__':
     #epileptic, credit, census, cervical, adult, isolet
     single_run = False
 
-    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
     # for dataset in [arguments.dataset]:
-    #for dataset in [arguments.dataset]:
+    for dataset in [arguments.dataset]:
         print("\n\n")
 
         if single_run == True:
@@ -830,7 +830,7 @@ if __name__ == '__main__':
         for elem in grid:
             print(elem, "\n")
             prc_arr = []; roc_arr = []
-            repetitions = 1
+            repetitions = 3
             for ii in range(repetitions):
                 print(ii)
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
