@@ -806,27 +806,39 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
+    single_run = False
 
-    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
     # for dataset in [arguments.dataset]:
-    for dataset in ["cervical"]:
+    #for dataset in [arguments.dataset]:
         print("\n\n")
-        how_many_epochs_arg = [1000]#[100, 500, 1000]
-        n_features_arg = [100000]#[500, 1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [0.5]
+
+        if single_run == True:
+            how_many_epochs_arg = [200]
+            # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.5]
+        else:
+            how_many_epochs_arg = [100, 200, 2000, 500, 1000]
+            # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+            n_features_arg = [50, 100, 500, 1000, 5000, 10000]
+            mini_batch_arg = [0.5]
+
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
         for elem in grid:
             print(elem, "\n")
             prc_arr = []; roc_arr = []
-            repetitions = 5
+            repetitions = 1
             for ii in range(repetitions):
                 print(ii)
                 roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 roc_arr.append(roc)
                 prc_arr.append(prc)
             print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+            print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+
 
 
 
