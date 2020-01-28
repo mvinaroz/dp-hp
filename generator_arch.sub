@@ -18,7 +18,7 @@ arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_
 
 
 
-var=testall2_$(dataset)
+var=testall3_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
