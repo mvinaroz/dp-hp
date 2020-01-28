@@ -818,7 +818,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     if n_classes>2:
 
         f1score = f1_score(y_test, pred_ours, average='weighted')
-        print('is private?', is_private)
         print('F1-score (ours) is ', f1score)
 
         return f1score
@@ -828,7 +827,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         roc = roc_auc_score(y_test, pred_ours)
         prc = average_precision_score(y_test, pred_ours)
 
-        print('is private?', is_private)
         print('ROC ours is', roc)
         print('PRC ours is', prc)
         print('n_features are ', n_features)
@@ -847,6 +845,8 @@ if __name__ == '__main__':
     #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     for dataset in [arguments.dataset]:
         print("\n\n")
+        print('is private?', is_priv_arg)
+
 
 
 
@@ -869,7 +869,7 @@ if __name__ == '__main__':
             for elem in grid:
                 print(elem, "\n")
                 prc_arr = []; roc_arr = []
-                repetitions = 1
+                repetitions = 5
                 for ii in range(repetitions):
 
                     roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
@@ -899,7 +899,7 @@ if __name__ == '__main__':
             for elem in grid:
                 print(elem, "\n")
                 f1score_arr = []
-                repetitions = 1
+                repetitions = 5
                 for ii in range(repetitions):
 
                     f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
