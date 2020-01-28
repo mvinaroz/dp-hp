@@ -182,7 +182,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # unpack data
         X_train = X_train.values
         y_train = y_train.values.ravel()
-        n_classes = 2 
+        n_classes = 2
 
 
     elif dataset=="credit":
@@ -217,7 +217,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.8
+        # under_sampling_rate = 0.8
+        under_sampling_rate = 0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -494,24 +495,24 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     ########################################################################################
 
-    # # As a reference, we first test logistic regression on the real data
-    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    # LR_model.fit(X_train, y_train)  # training on synthetic data
-    # pred = LR_model.predict(X_test)  # test on real data
-    #
-    # if n_classes>2:
-    #
-    #     f1score = f1_score(y_test, pred, average='weighted')
-    #     print('F1-score (on real test data) is ', f1score)
-    #     # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
-    #
-    # else:
-    #
-    #     roc = roc_auc_score(y_test, pred)
-    #     prc = average_precision_score(y_test, pred)
-    #
-    #     print('ROC on real test data is', roc)
-    #     print('PRC on real test data is', prc)
+    # As a reference, we first test logistic regression on the real data
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_train)  # training on synthetic data
+    pred = LR_model.predict(X_test)  # test on real data
+
+    if n_classes>2:
+
+        f1score = f1_score(y_test, pred, average='weighted')
+        print('F1-score (on real test data) is ', f1score)
+        # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
+
+    else:
+
+        roc = roc_auc_score(y_test, pred)
+        prc = average_precision_score(y_test, pred)
+
+        print('ROC on real test data is', roc)
+        print('PRC on real test data is', prc)
 
     ###########################################################################
 
@@ -666,7 +667,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
             # zero the parameter gradients
             optimizer.zero_grad()
 
-            if dataset in homogeneous_datasets:
+            if dataset in homogeneous_datasets: # In our case, if a dataset is homogeneous, then it is a binary dataset.
 
                 label_input = (1 * (torch.rand((mini_batch_size)) < weights[1])).type(torch.FloatTensor)
                 label_input = label_input.to(device)
@@ -728,33 +729,64 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
 
     #######################################################################33
+    if dataset in heterogeneous_datasets:
 
-    """ draw final data samples """
+        """ draw final data samples """
 
-    label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
-    label_input = label_input.transpose_(0, 1)
-    label_input = label_input.to(device)
+        label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
+        label_input = label_input.transpose_(0, 1)
+        label_input = label_input.to(device)
 
-    # (2) generate corresponding features
-    feature_input = torch.randn((n, input_size - 1)).to(device)
-    input_to_model = torch.cat((feature_input, label_input), 1)
-    outputs = model(input_to_model)
-
-
-    # (3) round the categorial features
-    output_numerical = outputs[:, 0:num_numerical_inputs]
-    output_categorical = outputs[:, num_numerical_inputs:]
-    output_categorical = torch.round(output_categorical)
-
-    output_combined = torch.cat((output_numerical, output_categorical), 1)
-
-    generated_input_features_final = output_combined.cpu().detach().numpy()
-    generated_labels_final = label_input.cpu().detach().numpy()
+        # (2) generate corresponding features
+        feature_input = torch.randn((n, input_size - 1)).to(device)
+        input_to_model = torch.cat((feature_input, label_input), 1)
+        outputs = model(input_to_model)
 
 
-    LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
-    pred_ours = LR_model_ours.predict(X_test)  # test on real data
+        # (3) round the categorial features
+        output_numerical = outputs[:, 0:num_numerical_inputs]
+        output_categorical = outputs[:, num_numerical_inputs:]
+        output_categorical = torch.round(output_categorical)
+
+        output_combined = torch.cat((output_numerical, output_categorical), 1)
+
+        generated_input_features_final = output_combined.cpu().detach().numpy()
+        generated_labels_final = label_input.cpu().detach().numpy()
+
+        LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+        LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
+        pred_ours = LR_model_ours.predict(X_test)  # test on real data
+
+    else: # homogeneous datasets
+
+        """ now generate samples from the trained network """
+
+        label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
+        label_input = label_input.to(device)
+
+        feature_input = torch.randn((n, input_size - 1)).to(device)
+        input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
+        outputs = model(input_to_model)
+
+        samp_input_features = outputs
+
+        label_input_t = torch.zeros((n, n_classes))
+        idx_1 = (label_input == 1.).nonzero()[:, 0]
+        idx_0 = (label_input == 0.).nonzero()[:, 0]
+        label_input_t[idx_1, 1] = 1.
+        label_input_t[idx_0, 0] = 1.
+
+        samp_labels = label_input_t
+
+        generated_input_features_final = samp_input_features.cpu().detach().numpy()
+        generated_labels_final = samp_labels.cpu().detach().numpy()
+
+        LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+        LR_model_ours.fit(generated_input_features_final,
+                          np.argmax(generated_labels_final, axis=1))  # training on synthetic data
+        pred_ours = LR_model_ours.predict(X_test)  # test on real data
+
+
 
     if n_classes>2:
 
@@ -774,35 +806,32 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         print('PRC ours is', prc)
         print('n_features are ', n_features)
 
-        scores = [ roc, prc ]
-
-        return scores
+        return roc, prc
 
 
 if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    dataset = "isolet"
+    dataset = "credit"
     is_priv_arg = True
 
     if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
         print("\n\n")
         how_many_epochs_arg = [1000]
-        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [0.5]
+        # n_features_arg = [10000, 50000, 80000, 100000]
+        n_features_arg = [5000, 10000, 50000, 80000, 100000]
+        mini_batch_arg = [0.2]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
         for elem in grid:
             print(elem, "\n")
             prc_arr = []; roc_arr = []
-            repetitions = 5
+            repetitions = 2
             for ii in range(repetitions):
 
-                scores  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
-                roc = scores[0]
-                prc = scores[1]
+                roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
                 roc_arr.append(roc)
                 prc_arr.append(prc)
 
