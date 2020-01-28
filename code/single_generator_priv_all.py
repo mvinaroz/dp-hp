@@ -434,8 +434,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("dataset is", dataset)
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
-            data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
 
         """ some specifics on this dataset """
         n_classes = 5
