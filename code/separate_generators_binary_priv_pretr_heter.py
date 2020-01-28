@@ -137,7 +137,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     seed_number=0
     random.seed(seed_number)
 
-    is_private = False
+    is_private = True
 
     ############################### data loading ##################################
 
