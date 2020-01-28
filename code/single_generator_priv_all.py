@@ -182,6 +182,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # unpack data
         X_train = X_train.values
         y_train = y_train.values.ravel()
+        n_classes = 2 
 
 
     elif dataset=="credit":
@@ -227,6 +228,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90,
                                                             test_size=0.10, random_state=0)
+        n_classes = 2
 
 
     elif dataset=='census':
@@ -338,6 +340,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         y_train = y_train.values.ravel()  # X_train_pos
         X_train = X_train.values
+        n_classes = 2
 
     elif dataset=='adult':
 
@@ -395,6 +398,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # unpack data
         X_train = X_train.values
         y_train = y_train.values.ravel()
+        n_classes = 2
 
 
     elif dataset=='intrusion':
@@ -411,8 +415,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         categorical_columns_binary = [6, 11, 13, 20]  # these are binary categorical columns
         the_rest_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns_binary))
 
-        num_numerical_inputs = len(
-            the_rest_columns)  # 10. Separately from the numerical ones, we compute the length-scale for the rest columns
+        num_numerical_inputs = len(the_rest_columns)  # 10. Separately from the numerical ones, we compute the length-scale for the rest columns
         num_categorical_inputs = len(categorical_columns_binary)  # 4.
 
         raw_labels = data[:, -1]
@@ -427,9 +430,9 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         neg_samps_input = raw_input_features[idx_negative_label, :]
         neg_samps_label = raw_labels[idx_negative_label]
 
-        # take random 10 percent of the negative labelled data
+        # take random 40% of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.5
+        under_sampling_rate = 0.4
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -491,23 +494,24 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     ########################################################################################
 
-    # As a reference, we first test logistic regression on the real data
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-
-    if n_classes>2:
-
-        f1score = f1_score(y_test, pred, average='weighted')
-        print('F1-score (on real test data) is ', f1score) # 0.6742486709433465 for covtype data
-
-    else:
-
-        roc = roc_auc_score(y_test, pred)
-        prc = average_precision_score(y_test, pred)
-
-        print('ROC on real test data is', roc)
-        print('PRC on real test data is', prc)
+    # # As a reference, we first test logistic regression on the real data
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # LR_model.fit(X_train, y_train)  # training on synthetic data
+    # pred = LR_model.predict(X_test)  # test on real data
+    #
+    # if n_classes>2:
+    #
+    #     f1score = f1_score(y_test, pred, average='weighted')
+    #     print('F1-score (on real test data) is ', f1score)
+    #     # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
+    #
+    # else:
+    #
+    #     roc = roc_auc_score(y_test, pred)
+    #     prc = average_precision_score(y_test, pred)
+    #
+    #     print('ROC on real test data is', roc)
+    #     print('PRC on real test data is', prc)
 
     ###########################################################################
 
@@ -572,13 +576,17 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     X_train = X_train[idx_to_keep,:]
     true_labels = true_labels[idx_to_keep,:]
     n = X_train.shape[0]
+    print('total number of datapoints in the training data is', n)
 
     # random Fourier features
     n_features = n_features_arg
     draws = n_features // 2
 
     # random fourier features for numerical inputs only
-    W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+    if dataset in heterogeneous_datasets:
+        W_freq = np.random.randn(draws, num_numerical_inputs) / np.sqrt(sigma2)
+    else:
+        W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
 
     """ specifying ratios of data to generate depending on the class lables """
     unnormalized_weights = np.sum(true_labels,0)
@@ -775,8 +783,8 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    dataset = "covtype"
-    is_priv_arg = False
+    dataset = "isolet"
+    is_priv_arg = True
 
     if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
         print("\n\n")
@@ -805,9 +813,9 @@ if __name__ == '__main__':
 
         print("\n\n")
         how_many_epochs_arg = [1000, 1500]
-        n_features_arg = [700, 1000, 5000, 10000, 50000, 80000, 100000]
+        n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
         # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [0.2]
+        mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
