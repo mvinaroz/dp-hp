@@ -235,10 +235,12 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     # This takes way too long for this dataset. So I will comment this out for now. We know F1-score is 0.44ish
 
-    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    # LR_model.fit(X_train, y_train)  # training on synthetic data
-    # pred = LR_model.predict(X_test)  # test on real data
-    # print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_train)  # training on synthetic data
+    pred = LR_model.predict(X_test)  # test on real data
+    print('F1-score on real test data is ', f1_score(y_test, pred, average='weighted'))
+
+    ##########################################################################################
 
     # one-hot encoding of labels.
     n, input_dim = X_train.shape
@@ -404,7 +406,7 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
 if __name__ == '__main__':
 
-    single_run = False
+    single_run = True
     # epileptic, credit, census, cervical, adult, isolet
     # for dataset in ["cervical", "census", "adult"]:
     #for dataset in ["covtype"]:
