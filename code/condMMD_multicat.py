@@ -190,8 +190,8 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     elif dataset=="intrusion":
 
-        if 'g0' not in socket.gethostname():
-            data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+        #if 'g0' not in socket.gethostname():
+        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
 
         """ some specifics on this dataset """
         n_classes = 5
