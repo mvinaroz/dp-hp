@@ -472,8 +472,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         print('indices for ordinal columns are', ordinal_columns)
 
         # sorting the data based on the type of features.
-        # data = data[:, numerical_columns + ordinal_columns + categorical_columns]
-        data = data[0:150000, numerical_columns + ordinal_columns + categorical_columns] # for fast testing the results
+        data = data[:, numerical_columns + ordinal_columns + categorical_columns]
+        # data = data[0:150000, numerical_columns + ordinal_columns + categorical_columns] # for fast testing the results
 
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
@@ -491,23 +491,23 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     ########################################################################################
 
-    # # As a reference, we first test logistic regression on the real data
-    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    # LR_model.fit(X_train, y_train)  # training on synthetic data
-    # pred = LR_model.predict(X_test)  # test on real data
-    #
-    # if n_classes>2:
-    #
-    #     f1score = f1_score(y_test, pred, average='weighted')
-    #     print('F1-score (on real test data) is ', f1score) # 0.6742486709433465 for covtype data
-    #
-    # else:
-    #
-    #     roc = roc_auc_score(y_test, pred)
-    #     prc = average_precision_score(y_test, pred)
-    #
-    #     print('ROC on real test data is', roc)
-    #     print('PRC on real test data is', prc)
+    # As a reference, we first test logistic regression on the real data
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_train)  # training on synthetic data
+    pred = LR_model.predict(X_test)  # test on real data
+
+    if n_classes>2:
+
+        f1score = f1_score(y_test, pred, average='weighted')
+        print('F1-score (on real test data) is ', f1score) # 0.6742486709433465 for covtype data
+
+    else:
+
+        roc = roc_auc_score(y_test, pred)
+        prc = average_precision_score(y_test, pred)
+
+        print('ROC on real test data is', roc)
+        print('PRC on real test data is', prc)
 
     ###########################################################################
 
