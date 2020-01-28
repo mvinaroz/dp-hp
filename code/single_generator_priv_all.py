@@ -862,7 +862,7 @@ if __name__ == '__main__':
                 n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
                 # n_features_arg = [5000, 10000, 50000, 80000, 100000]
                 # n_features_arg = [50000, 80000, 100000]
-                mini_batch_arg = [1.0]
+                mini_batch_arg = [0.3]
 
             grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                                   "how_many_epochs_arg": how_many_epochs_arg})
@@ -892,7 +892,7 @@ if __name__ == '__main__':
                 how_many_epochs_arg = [2000, 1000]
                 n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
                 # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
-                mini_batch_arg = [0.5]
+                mini_batch_arg = [0.2]
 
             grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                                   "how_many_epochs_arg": how_many_epochs_arg})
