@@ -137,7 +137,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     #n_features_arg2 = 500
     mini_batch_arg2 = 0.5
     #how_many_epochs_arg2 = 1000
-    is_private = True
+    is_private = False
 
     dataset = "intrusion"
 

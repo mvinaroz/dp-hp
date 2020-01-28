@@ -207,6 +207,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         data_samps = X_train.values
         y_labels = y_train.values.ravel()
 
+        print(data_samps.shape)
+
     elif dataset=="credit": #numeric
         dataset_type = 'numeric'
 
@@ -880,8 +882,8 @@ if __name__ == '__main__':
     single_run=False
     #epileptic, credit, census, cervical, adult, isolet
     #for dataset in ["cervical", "census", "adult"]:
-    #for dataset in ["epileptic", "isolet", "credit"]:
-    for dataset in [arguments.dataset]:
+    for dataset in ["epileptic", "isolet", "credit"]:
+    #for dataset in [arguments.dataset]:
         print("\n\n")
 
         if single_run==True:
@@ -906,7 +908,7 @@ if __name__ == '__main__':
                 roc_arr.append(roc)
                 prc_arr.append(prc)
             print("\nAverage ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
-            print("Variance ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+            print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
 
 
 

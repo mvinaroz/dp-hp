@@ -404,11 +404,11 @@ def main(dataset, n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
 if __name__ == '__main__':
 
-    single_run = True
+    single_run = False
     # epileptic, credit, census, cervical, adult, isolet
     # for dataset in ["cervical", "census", "adult"]:
-    for dataset in ["covtype"]:
-        # for dataset in [arguments.dataset]:
+    #for dataset in ["covtype"]:
+    for dataset in [arguments.dataset]:
         print("\n\n")
 
         if single_run == True:
@@ -426,7 +426,7 @@ if __name__ == '__main__':
         for elem in grid:
             print(elem)
             f1_arr = []
-            repetitions = 2
+            repetitions = 5
             for ii in range(repetitions):
                 f1 = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
                 f1_arr.append(f1)
