@@ -1,6 +1,6 @@
 ### this is for training a single generator for all labels ###
 """ with the analysis of """
-### weights = weights + N(0, sigma**2*(2/N)**2)
+### weights = weights + N(0, sigma**2*(sqrt(2)/N)**2)
 ### columns of mean embedding = raw + N(0, sigma**2*(2/N)**2)
 
 import numpy as np
@@ -28,6 +28,8 @@ from sklearn.model_selection import ParameterGrid
 from autodp import privacy_calibrator
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import f1_score
+
+from autodp import privacy_calibrator
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -148,11 +150,11 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
 ############################### beginning of main script ######################
 
-def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
+def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg):
     seed_number=0
     random.seed(seed_number)
 
-    is_private = True
+    is_private = is_priv_arg
 
     ############################### data loading ##################################
 
@@ -449,9 +451,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
             test_data = np.load("../data/real/covtype/test.npy")
             # we put them together and make a new train/test split in the following
             data = np.concatenate((train_data, test_data))
-            # """ comment this out later """
-            # data = data[0:50000,:] # use only 50,000 samples for fast training
-            # """ end of comment this out later """
         else:
             # I don't know why cervical data is loaded here. Probablby you need to change it to covtype dataset?
             train_data = np.load(
@@ -473,7 +472,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         print('indices for ordinal columns are', ordinal_columns)
 
         # sorting the data based on the type of features.
-        data = data[:, numerical_columns + ordinal_columns + categorical_columns]
+        # data = data[:, numerical_columns + ordinal_columns + categorical_columns]
+        data = data[0:150000, numerical_columns + ordinal_columns + categorical_columns] # for fast testing the results
 
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
@@ -491,13 +491,23 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
     ########################################################################################
 
-    # As a reference, we first test logistic regression on the real data
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
-
-    print('ROC on real test data is', roc_auc_score(y_test, pred))
-    print('PRC on real test data is', average_precision_score(y_test, pred))
+    # # As a reference, we first test logistic regression on the real data
+    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    # LR_model.fit(X_train, y_train)  # training on synthetic data
+    # pred = LR_model.predict(X_test)  # test on real data
+    #
+    # if n_classes>2:
+    #
+    #     f1score = f1_score(y_test, pred, average='weighted')
+    #     print('F1-score (on real test data) is ', f1score) # 0.6742486709433465 for covtype data
+    #
+    # else:
+    #
+    #     roc = roc_auc_score(y_test, pred)
+    #     prc = average_precision_score(y_test, pred)
+    #
+    #     print('ROC on real test data is', roc)
+    #     print('PRC on real test data is', prc)
 
     ###########################################################################
 
@@ -552,7 +562,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+    if dataset in heterogeneous_datasets:
+        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+    else:
+        med = util.meddistance(X_train[idx_to_discard, ])
+
     sigma2 = med ** 2
 
     X_train = X_train[idx_to_keep,:]
@@ -614,10 +628,19 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     if is_private:
         sensitivity = 2 / n
         noise_std_for_privacy = privacy_param['sigma'] * sensitivity
-        # make sure add noise after rescaling 
+
+        # make sure add noise after rescaling
+        weights_torch = torch.Tensor(weights)
+        weights_torch = weights_torch.to(device)
+
+        rescaled_mean_emb = weights_torch*mean_emb1
         noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
         noise = noise.to(device)
-        mean_emb1 = mean_emb1 + noise
+
+        rescaled_mean_emb = rescaled_mean_emb + noise
+
+        mean_emb1 = rescaled_mean_emb/weights_torch # rescaling back
+        # mean_emb1 = mean_emb1 + noise
 
     # End of Privatising quantities if necessary
     ####################################################
@@ -743,20 +766,23 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
         print('PRC ours is', prc)
         print('n_features are ', n_features)
 
-        return roc, prc
+        scores = [ roc, prc ]
+
+        return scores
 
 
 if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    for dataset in ["covtype", "intrusion", "epileptic", "credit", "census", "cervical", "adult", "isolet"]:
-    # for dataset in [arguments.dataset]:
-    #for dataset in ["isolet"]:
+    dataset = "covtype"
+    is_priv_arg = False
+
+    if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
         print("\n\n")
-        how_many_epochs_arg = [100, 500, 1000]
+        how_many_epochs_arg = [1000]
         n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [1.0]
+        mini_batch_arg = [0.5]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
@@ -765,10 +791,36 @@ if __name__ == '__main__':
             prc_arr = []; roc_arr = []
             repetitions = 5
             for ii in range(repetitions):
-                roc, prc = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"])
+
+                scores  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
+                roc = scores[0]
+                prc = scores[1]
                 roc_arr.append(roc)
                 prc_arr.append(prc)
+
             print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+
+
+    elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
+
+        print("\n\n")
+        how_many_epochs_arg = [1000, 1500]
+        n_features_arg = [700, 1000, 5000, 10000, 50000, 80000, 100000]
+        # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
+        mini_batch_arg = [0.2]
+
+        grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                              "how_many_epochs_arg": how_many_epochs_arg})
+        for elem in grid:
+            print(elem, "\n")
+            f1score_arr = []
+            repetitions = 5
+            for ii in range(repetitions):
+
+                f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
+                f1score_arr.append(f1scr)
+
+            print("Average f1 score: ", np.mean(f1score_arr))
 
 
 
