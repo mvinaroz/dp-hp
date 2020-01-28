@@ -137,7 +137,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
     seed_number=0
     random.seed(seed_number)
 
-    is_private = True
+    is_private = False
 
     ############################### data loading ##################################
 
@@ -603,10 +603,10 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg):
 
         if is_private:
             # desired privacy level
-            # epsilon = 1.0
-            # delta = 1e-5
-            # privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=2) # split the privacy cost for training two generators
-            # print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+            epsilon = 1.0
+            delta = 1e-5
+            privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=2) # split the privacy cost for training two generators
+            print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
 
 
             if which_class==0:
