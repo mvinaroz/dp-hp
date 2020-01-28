@@ -581,7 +581,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     # define details for training
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     how_many_epochs = how_many_epochs_arg
-    how_many_iter = np.int(n / mini_batch_size)
+    how_many_iter = 1 #np.int(n / mini_batch_size)
     training_loss_per_epoch = np.zeros(how_many_epochs)
 
 
@@ -843,6 +843,7 @@ if __name__ == '__main__':
 
     #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     for dataset in [arguments.dataset]:
+    #for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
@@ -891,7 +892,7 @@ if __name__ == '__main__':
                 how_many_epochs_arg = [2000, 1000]
                 n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
                 # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
-                mini_batch_arg = [0.2]
+                mini_batch_arg = [0.5]
 
             grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                                   "how_many_epochs_arg": how_many_epochs_arg})
