@@ -217,8 +217,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        # under_sampling_rate = 0.8
-        under_sampling_rate = 0.3
+        under_sampling_rate = 0.8
+        # under_sampling_rate = 0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -335,13 +335,41 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         inputs = df[feature_names]
         print('raw input features', inputs.shape)
 
-        X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.80, test_size=0.20,
-                                                            random_state=seed_number)  # 60% training and 40% test
-
-
-        y_train = y_train.values.ravel()  # X_train_pos
-        X_train = X_train.values
+        # X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
+        #                                                     random_state=seed_number)
+        #
+        #
+        # y_train = y_train.values.ravel()  # X_train_pos
+        # X_train = X_train.values
         n_classes = 2
+
+        raw_input_features = inputs.values
+        raw_labels = target.values.ravel()
+
+        print('raw input features', raw_input_features.shape)
+
+        """ we take a pre-processing step such that the dataset is a bit more balanced """
+        idx_negative_label = raw_labels == 0
+        idx_positive_label = raw_labels == 1
+
+        pos_samps_input = raw_input_features[idx_positive_label, :]
+        pos_samps_label = raw_labels[idx_positive_label]
+        neg_samps_input = raw_input_features[idx_negative_label, :]
+        neg_samps_label = raw_labels[idx_negative_label]
+
+        # take random 10 percent of the negative labelled data
+        in_keep = np.random.permutation(np.sum(idx_negative_label))
+        under_sampling_rate = 0.5
+        in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
+
+        neg_samps_input = neg_samps_input[in_keep, :]
+        neg_samps_label = neg_samps_label[in_keep]
+
+        feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+        label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.80,
+                                                            test_size=0.20, random_state=seed_number)
 
     elif dataset=='adult':
 
@@ -648,8 +676,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         rescaled_mean_emb = rescaled_mean_emb + noise
 
-        mean_emb1 = rescaled_mean_emb/weights_torch # rescaling back
-        # mean_emb1 = mean_emb1 + noise
+        mean_emb1 = rescaled_mean_emb/weights_torch # rescaling back\
 
     # End of Privatising quantities if necessary
     ####################################################
@@ -813,15 +840,16 @@ if __name__ == '__main__':
 
     #epileptic, credit, census, cervical, adult, isolet
 
-    dataset = "credit"
+    dataset = "cervical"
     is_priv_arg = True
 
     if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
         print("\n\n")
         how_many_epochs_arg = [1000]
-        # n_features_arg = [10000, 50000, 80000, 100000]
-        n_features_arg = [5000, 10000, 50000, 80000, 100000]
-        mini_batch_arg = [0.2]
+        n_features_arg = [500, 1000]
+        # n_features_arg = [5000, 10000, 50000, 80000, 100000]
+        # n_features_arg = [50000, 80000, 100000]
+        mini_batch_arg = [1.0]
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
