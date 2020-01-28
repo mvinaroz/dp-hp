@@ -838,7 +838,7 @@ if __name__ == '__main__':
     #epileptic, credit, census, cervical, adult, isolet
 
     #dataset = "cervical"
-    is_priv_arg = True
+    is_priv_arg = False
     single_run = False
 
     #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
