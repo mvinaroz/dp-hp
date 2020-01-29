@@ -269,7 +269,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 1.0
+        under_sampling_rate = 0.7
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -522,23 +522,23 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     ########################################################################################
 
     # As a reference, we first test logistic regression on the real data
-    # LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    # LR_model.fit(X_train, y_train)  # training on synthetic data
-    # pred = LR_model.predict(X_test)  # test on real data
+    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+    LR_model.fit(X_train, y_train)  # training on synthetic data
+    pred = LR_model.predict(X_test)  # test on real data
 
-    # if n_classes>2:
-    #
-    #     f1score = f1_score(y_test, pred, average='weighted')
-    #     print('F1-score (on real test data) is ', f1score)
-    #     # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
-    #
-    # else:
-    #
-    #     roc = roc_auc_score(y_test, pred)
-    #     prc = average_precision_score(y_test, pred)
-    #
-    #     print('ROC on real test data is', roc)
-    #     print('PRC on real test data is', prc)
+    if n_classes>2:
+
+        f1score = f1_score(y_test, pred, average='weighted')
+        print('F1-score (on real test data) is ', f1score)
+        # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
+
+    else:
+
+        roc = roc_auc_score(y_test, pred)
+        prc = average_precision_score(y_test, pred)
+
+        print('ROC on real test data is', roc)
+        print('PRC on real test data is', prc)
 
     ###########################################################################
 
@@ -589,16 +589,39 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     """ specifying random fourier features """
 
     idx_rp = np.random.permutation(n)
-    num_data_pt_to_discard = 10
+
+    if dataset=='census': # some columns of census data have many zeros, so we need more datapoints to get meaningful length scales
+        num_data_pt_to_discard = 100
+    else:
+        num_data_pt_to_discard = 10
+
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    if dataset in heterogeneous_datasets:
-        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-    else:
-        med = util.meddistance(X_train[idx_to_discard, ])
+    # if dataset in heterogeneous_datasets:
+    #     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+    # else:
+    #     med = util.meddistance(X_train[idx_to_discard, ])
+    #
+    # sigma2 = med ** 2
 
-    sigma2 = med ** 2
+    sigma_array = np.zeros(num_numerical_inputs)
+    for i in np.arange(0,num_numerical_inputs):
+        med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
+        sigma_array[i] = med
+
+    if dataset=='census':
+        print('we will use separate frequencies for each column of numerical features')
+        sigma2 = sigma_array**2
+        sigma2[sigma2==0] = 1.0
+        # sigma2[sigma2>500] = 500
+        print('sigma values are ', sigma2)
+        # sigma2 = np.mean(sigma2)
+    else:
+        # median heuristic to choose the frequency range
+        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+        sigma2 = med ** 2
+
 
     X_train = X_train[idx_to_keep,:]
     true_labels = true_labels[idx_to_keep,:]
@@ -618,6 +641,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     """ specifying ratios of data to generate depending on the class lables """
     unnormalized_weights = np.sum(true_labels,0)
     weights = unnormalized_weights/np.sum(unnormalized_weights)
+    print('weights before privatization are', weights)
 
     ####################################################
     # Privatising quantities if necessary
@@ -635,6 +659,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
         weights = weights + np.random.randn(weights.shape[0])*noise_std_for_weights
         weights[weights < 0] = 1e-3 # post-processing so that we don't have negative weights.
+        print('weights after privatization are', weights)
 
     """ computing mean embedding of subsampled true data """
     if dataset in homogeneous_datasets:
@@ -840,72 +865,94 @@ if __name__ == '__main__':
     is_priv_arg = True
     single_run = False
 
+    dataset = 'census'
+
+    how_many_epochs_arg = [1000]
+    n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
+    mini_batch_arg = [0.5]
+
+    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                                  "how_many_epochs_arg": how_many_epochs_arg})
+    for elem in grid:
+        print(elem, "\n")
+        prc_arr = []; roc_arr = []
+        repetitions = 5
+        for ii in range(repetitions):
+
+            roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+            roc_arr.append(roc)
+            prc_arr.append(prc)
+
+        print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+        print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+
+
     #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    for dataset in [arguments.dataset]:
-    #for dataset in ["intrusion"]:
-        print("\n\n")
-        print('is private?', is_priv_arg)
-
-
-
-
-        if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
-
-            if single_run == True:
-                how_many_epochs_arg = [200]
-                # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-                n_features_arg = [100]
-                mini_batch_arg = [0.5]
-            else:
-                how_many_epochs_arg = [2000, 1000]
-                n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
-                # n_features_arg = [5000, 10000, 50000, 80000, 100000]
-                # n_features_arg = [50000, 80000, 100000]
-                mini_batch_arg = [0.3]
-
-            grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
-                                  "how_many_epochs_arg": how_many_epochs_arg})
-            for elem in grid:
-                print(elem, "\n")
-                prc_arr = []; roc_arr = []
-                repetitions = 5
-                for ii in range(repetitions):
-
-                    roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-                    roc_arr.append(roc)
-                    prc_arr.append(prc)
-
-                print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
-                print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
-
-
-
-        elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
-
-            if single_run == True:
-                how_many_epochs_arg = [200]
-                # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-                n_features_arg = [100]
-                mini_batch_arg = [0.5]
-            else:
-                how_many_epochs_arg = [2000, 1000]
-                n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
-                # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
-                mini_batch_arg = [0.6]
-
-            grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
-                                  "how_many_epochs_arg": how_many_epochs_arg})
-            for elem in grid:
-                print(elem, "\n")
-                f1score_arr = []
-                repetitions = 5
-                for ii in range(repetitions):
-
-                    f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-                    f1score_arr.append(f1scr)
-
-                print("Average f1 score: ", np.mean(f1score_arr))
-                print("Std F1: ", np.std(f1score_arr))
+    # for dataset in [arguments.dataset]:
+    # #for dataset in ["intrusion"]:
+    #     print("\n\n")
+    #     print('is private?', is_priv_arg)
+    #
+    #
+    #
+    #
+    #     if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
+    #
+    #         if single_run == True:
+    #             how_many_epochs_arg = [200]
+    #             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+    #             n_features_arg = [100]
+    #             mini_batch_arg = [0.5]
+    #         else:
+    #             how_many_epochs_arg = [2000, 1000]
+    #             n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
+    #             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
+    #             # n_features_arg = [50000, 80000, 100000]
+    #             mini_batch_arg = [0.3]
+    #
+    #         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+    #                               "how_many_epochs_arg": how_many_epochs_arg})
+    #         for elem in grid:
+    #             print(elem, "\n")
+    #             prc_arr = []; roc_arr = []
+    #             repetitions = 5
+    #             for ii in range(repetitions):
+    #
+    #                 roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+    #                 roc_arr.append(roc)
+    #                 prc_arr.append(prc)
+    #
+    #             print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+    #             print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+    #
+    #
+    #
+    #     elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
+    #
+    #         if single_run == True:
+    #             how_many_epochs_arg = [200]
+    #             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+    #             n_features_arg = [100]
+    #             mini_batch_arg = [0.5]
+    #         else:
+    #             how_many_epochs_arg = [2000, 1000]
+    #             n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
+    #             # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
+    #             mini_batch_arg = [0.6]
+    #
+    #         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+    #                               "how_many_epochs_arg": how_many_epochs_arg})
+    #         for elem in grid:
+    #             print(elem, "\n")
+    #             f1score_arr = []
+    #             repetitions = 5
+    #             for ii in range(repetitions):
+    #
+    #                 f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+    #                 f1score_arr.append(f1scr)
+    #
+    #             print("Average f1 score: ", np.mean(f1score_arr))
+    #             print("Std F1: ", np.std(f1score_arr))
 
 
 
