@@ -150,8 +150,8 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
 ############################### beginning of main script ######################
 
-def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg):
-    seed_number=0
+def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg, seed_number):
+
     random.seed(seed_number)
 
     is_private = is_priv_arg
@@ -177,7 +177,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
           if data_target.at[i,'y']!=1:
             data_target.at[i,'y'] = 0
 
-        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=0)
+        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=seed_number)
 
         # unpack data
         X_train = X_train.values
@@ -228,7 +228,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         label_selected = np.concatenate((pos_samps_label, neg_samps_label))
 
         X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90,
-                                                            test_size=0.10, random_state=0)
+                                                            test_size=0.10, random_state=seed_number)
         n_classes = 2
 
 
@@ -422,7 +422,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         data_target = pd.DataFrame(values_l, index=index_l)
 
         X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30,
-                                                            random_state=0)
+                                                            random_state=seed_number)
 
         # unpack data
         X_train = X_train.values
@@ -872,7 +872,7 @@ if __name__ == '__main__':
                 repetitions = 5
                 for ii in range(repetitions):
 
-                    roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
+                    roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     roc_arr.append(roc)
                     prc_arr.append(prc)
 
@@ -902,7 +902,7 @@ if __name__ == '__main__':
                 repetitions = 5
                 for ii in range(repetitions):
 
-                    f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg)
+                    f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     f1score_arr.append(f1scr)
 
                 print("Average f1 score: ", np.mean(f1score_arr))
