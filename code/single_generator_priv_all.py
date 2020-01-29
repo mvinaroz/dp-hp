@@ -200,6 +200,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # unpack data
         X_train = X_train.values
         y_train = y_train.values.ravel()
+        X_test=np.array(X_test)
+        y_test=np.array(y_test)
         n_classes = 2
 
 
@@ -445,6 +447,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # unpack data
         X_train = X_train.values
         y_train = y_train.values.ravel()
+        X_test = np.array(X_test)
+        y_test = np.array(y_test)
         n_classes = 2
 
 
@@ -538,6 +542,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     homogeneous_datasets = ['epileptic','credit','isolet']
 
     ########################################################################################
+    ##########################################################################################3
 
 
 
@@ -572,8 +577,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
                 roc = roc_auc_score(y_te, pred)
                 prc = average_precision_score(y_te, pred)
 
-                print(datasettype, ' ROC on test data is', roc)
-                print(datasettype, ' PRC on test data is', prc)
+                print("ROC on test %s data is %.3f" % (datasettype, roc))
+                print("PRC on test %s data is %.3f" % (datasettype, prc))
 
                 roc_arr.append(roc)
                 prc_arr.append(prc)
@@ -867,7 +872,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_input_features_final = output_combined.cpu().detach().numpy()
         generated_labels_final = label_input.cpu().detach().numpy()
 
-        roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test)
+        roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
 
         # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
         # LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
@@ -936,8 +941,8 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
 
-    is_priv_arg = False
-    single_run = False
+    is_priv_arg = False #check
+    single_run = False #check
 
     ### this is setup I was testing for Credit data.
     ### Do not remove this please
@@ -967,8 +972,8 @@ if __name__ == '__main__':
 
 
 
-
-    #for dataset in ["credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
+    #check
+    #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     for dataset in [arguments.dataset]:
     #for dataset in ["adult"]:
         print("\n\n")
@@ -977,11 +982,11 @@ if __name__ == '__main__':
         if single_run == True:
             how_many_epochs_arg = [200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [100]
+            n_features_arg = [100, 200]
             mini_batch_arg = [0.5]
         else:
-            how_many_epochs_arg = [2000, 1000, 4000]
-            n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
+            how_many_epochs_arg = [200, 2000, 1000, 4000]
+            n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [50000, 80000, 100000]
             mini_batch_arg = [0.6]
@@ -989,17 +994,19 @@ if __name__ == '__main__':
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
 
-        repetitions = 5
+        repetitions = 5 #check
 
 
-        if dataset in ["adult", "credit", "census", "cervical", "isolet", "epileptic"]:
 
-            max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc=0, 0, 0, 0, 0
+        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
+
+            max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc, max_elem=0, 0, 0, 0, [0,0], 0
 
             for elem in grid:
                 print(elem, "\n")
                 prc_arr = []; roc_arr = []; rocprc_arr=[]
                 for ii in range(repetitions):
+                    print("\nRepetition: ",ii)
 
                     roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     roc_arr.append(roc)
@@ -1014,11 +1021,16 @@ if __name__ == '__main__':
                 if np.mean(prc_arr)>max_aver_prc:
                     max_aver_prc=np.mean(prc_arr)
 
-                if np.mean(roc_arr) + np.mean(prc_arr)> max_aver_rocprc:
-                    max_aver_roc = [np.mean(roc_arr), np.mean(prc_arr)]
+                if np.mean(roc_arr) + np.mean(prc_arr)> max_aver_rocprc[0]+max_aver_rocprc[1]:
+                    max_aver_rocprc = [np.mean(roc_arr), np.mean(prc_arr)]
+                    max_elem = elem
 
-            print("\n\n", "Max ROC! ", max_aver_roc[0])
-            print("Max PRC! ", max_aver_roc[1], "*"*20)
+            print("\n\n", "*"*30, )
+            print(dataset)
+            print("Max ROC! ", max_aver_rocprc[0])
+            print("Max PRC! ", max_aver_rocprc[1])
+            print("Setup: ", elem)
+            print('*'*100)
 
 
 
@@ -1026,12 +1038,13 @@ if __name__ == '__main__':
 
         elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
 
-            max_f1, max_aver_f1=0, 0
+            max_f1, max_aver_f1, max_elem=0, 0, 0
 
             for elem in grid:
                 print(elem, "\n")
                 f1score_arr = []
                 for ii in range(repetitions):
+                    print("\nRepetition: ",ii)
 
                     f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     f1score_arr.append(f1scr)
@@ -1041,8 +1054,11 @@ if __name__ == '__main__':
 
                 if np.mean(f1score_arr)>max_aver_f1:
                     max_aver_f1=np.mean(f1score_arr)
+                    max_elem = elem
 
             print("\n\n", "Max F1! ", max_aver_f1, "*"*20)
+            print("Setup: ", elem)
+            print('*' * 30)
 
 
 
