@@ -483,7 +483,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
             # we put them together and make a new train/test split in the following
             data = np.concatenate((train_data, test_data))
         else:
-            # I don't know why cervical data is loaded here. Probablby you need to change it to covtype dataset?
             train_data = np.load(
                 "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
             test_data = np.load(
