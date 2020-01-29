@@ -605,18 +605,21 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     #
     # sigma2 = med ** 2
 
-    sigma_array = np.zeros(num_numerical_inputs)
-    for i in np.arange(0,num_numerical_inputs):
-        med = util.meddistance(np.expand_dims(X_train[idx_to_discard,i],1))
-        sigma_array[i] = med
-
     if dataset=='census':
+
+        sigma_array = np.zeros(num_numerical_inputs)
+        for i in np.arange(0, num_numerical_inputs):
+            med = util.meddistance(np.expand_dims(X_train[idx_to_discard, i], 1))
+            sigma_array[i] = med
+
+
         print('we will use separate frequencies for each column of numerical features')
         sigma2 = sigma_array**2
         sigma2[sigma2==0] = 1.0
         # sigma2[sigma2>500] = 500
         print('sigma values are ', sigma2)
         # sigma2 = np.mean(sigma2)
+
     else:
         # median heuristic to choose the frequency range
         med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
@@ -865,7 +868,7 @@ if __name__ == '__main__':
     is_priv_arg = True
     single_run = False
 
-    dataset = 'census'
+    dataset = 'credit'
 
     how_many_epochs_arg = [1000]
     n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
