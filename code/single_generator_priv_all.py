@@ -598,13 +598,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     idx_to_discard = idx_rp[0:num_data_pt_to_discard]
     idx_to_keep = idx_rp[num_data_pt_to_discard:]
 
-    # if dataset in heterogeneous_datasets:
-    #     med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-    # else:
-    #     med = util.meddistance(X_train[idx_to_discard, ])
-    #
-    # sigma2 = med ** 2
-
     if dataset=='census':
 
         sigma_array = np.zeros(num_numerical_inputs)
@@ -621,10 +614,13 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # sigma2 = np.mean(sigma2)
 
     else:
-        # median heuristic to choose the frequency range
-        med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
-        sigma2 = med ** 2
 
+        if dataset in heterogeneous_datasets:
+            med = util.meddistance(X_train[idx_to_discard, 0:num_numerical_inputs])
+        else:
+            med = util.meddistance(X_train[idx_to_discard, ])
+
+        sigma2 = med ** 2
 
     X_train = X_train[idx_to_keep,:]
     true_labels = true_labels[idx_to_keep,:]
