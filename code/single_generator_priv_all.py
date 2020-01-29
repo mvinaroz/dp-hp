@@ -941,7 +941,7 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
 
-    is_priv_arg = False #check
+    is_priv_arg = True #check
     single_run = False #check
 
     ### this is setup I was testing for Credit data.
