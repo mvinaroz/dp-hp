@@ -47,6 +47,7 @@ def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_in
 def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label,
          do_gen_labels, uniform_labels, log_dir):
   gen.eval()
+  gen_samples, gen_labels = None, None
 
   test_loss = 0
   with pt.no_grad():
@@ -77,31 +78,29 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
         gen_enc, gen_labels = gen(gen.get_code(bs, device))
         loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
 
-      # gen_out = gen(gen_code)
       gen_samples = dec(gen_enc)
 
-      # if uniform_labels:
-      #   gen_out = (gen_out, gen_labels)
-
       test_loss += loss.item()  # sum up batch loss
-  test_loss /= (len(test_loader.dataset) / batch_size)
+    test_loss /= (len(test_loader.dataset) / batch_size)
 
-  data_enc_batch = data_enc.cpu().numpy()
-  med_dist = meddistance(data_enc_batch)
-  print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
+    data_enc_batch = data_enc.cpu().numpy()
+    med_dist = meddistance(data_enc_batch)
+    print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
 
-  plot_samples = gen_samples[:100, ...].cpu().numpy()
-  print(plot_samples.shape)
-  if ae_label:
-    plot_samples = gen_samples[:, :784]
-  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
-  if gen_labels is not None:
-    save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
-  # bs = plot_samples.shape[0]
-  # lit_samples = plot_samples - np.min(np.reshape(plot_samples, (bs, -1)), axis=1)[:, None, None, None]
-  # lit_samples = lit_samples / np.max(np.reshape(lit_samples, (bs, -1)), axis=1)[:, None, None, None]
-  # print(np.max(lit_samples), np.min(lit_samples))
-  # plot_mnist_batch(lit_samples, 10, 10, f'samples/gen_samples_bright_ep{epoch}.png')
+    if uniform_labels:
+      ordered_labels = pt.repeat_interleave(pt.arange(10), 10)[:, None].to(device)
+      gen_code, gen_labels = gen.get_code(100, device, labels=ordered_labels)
+      gen_samples = dec(gen(gen_code))
+
+    plot_samples = gen_samples[:100, ...].cpu().numpy()
+
+    if ae_label:
+      plot_samples = gen_samples[:, :784]
+    plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
+
+    if gen_labels is not None:
+      save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
+
   print('Test set: Average loss: {:.4f}'.format(test_loss))
 
 
@@ -153,9 +152,10 @@ def get_args():
   # parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
   parser.add_argument('--d-code', '-dcode', type=int, default=5)
-  parser.add_argument('--gen-hid', type=int, default=100)
+  parser.add_argument('--gen-spec', type=str, default='100,100')
   parser.add_argument('--gen-labels', action='store_true', default=False)
   parser.add_argument('--uniform-labels', action='store_true', default=False)
+  parser.add_argument('--batch-norm', action='store_true', default=False)
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=100)
@@ -174,6 +174,7 @@ def get_args():
   parser.add_argument('--ae-siam-weight', '-wsiam', type=float, default=0.)
   parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=1.)
   parser.add_argument('--ae-no-bias', action='store_true', default=False)
+  parser.add_argument('--ae-bn', action='store_true', default=False)
 
   ar = parser.parse_args()
 
@@ -198,7 +199,7 @@ def get_log_dir(ar):
     log_dir = ar.base_log_dir + ar.log_name + '/'
   else:
     gen_type = f'{"uniform_" if ar.uniform_labels else ""}{"labeled_" if ar.gen_labels else "unlabeled_"}'
-    gen_spec = f'd{ar.d_enc}_gen{ar.gen_hid}_sig{ar.noise_factor}_dcode{ar.d_code}_drff{ar.d_rff}_rffsig{ar.rff_sigma}'
+    gen_spec = f'd{ar.d_enc}_gen{ar.gen_spec}_sig{ar.noise_factor}_dcode{ar.d_code}_drff{ar.d_rff}_rffsig{ar.rff_sigma}'
     ae_type = f'{"label_" if ar.ae_label else ""}{"ce_" if ar.ae_ce_loss else "mse_"}'
     ae_spec = f'enc{ar.ae_enc_spec}_dec{ar.ae_dec_spec}_clip{ar.ae_clip}_sig{ar.ae_noise}'
     ae_siam = f'_siam_w{ar.ae_siam_weight}_m{ar.ae_siam_margin}' if ar.ae_siam_weight > 0. else ''
@@ -240,7 +241,7 @@ def main():
     dec = ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ae_ce_loss)
     # print(list(enc.layers[0].parameters()), list(enc.parameters()))
   else:
-    enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc)
+    enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc, batch_norm=ar.ae_bn)
     dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ae_ce_loss, use_bias=not ar.ae_no_bias)
 
   # enc = FCEnc(d_data, parse_n_hid(ar.ae_enc_hid), ar.d_enc)
@@ -253,13 +254,14 @@ def main():
   enc = enc.to(device)
   dec = dec.to(device)
 
+  gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, ar.gen_hid, ar.d_enc, ar.n_labels)
+      gen = FCCondGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
     else:
-      gen = FCLabelGen(ar.d_code, ar.gen_hid, ar.d_enc, ar.n_labels)
+      gen = FCLabelGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
   else:
-    gen = FCGen(ar.d_code, ar.gen_hid, ar.d_enc)
+    gen = FCGen(ar.d_code, gen_spec, ar.d_enc, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
   rff_mmd_loss = get_rff_mmd_loss(ar.d_enc, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,

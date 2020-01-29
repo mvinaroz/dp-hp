@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
-from copied_losses import mmd_g
+from real_mmd_loss import mmd_g, get_squared_dist
 
 
 def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels):
@@ -84,11 +84,15 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   print('Test set: Average loss: {:.4f}'.format(test_loss))
 
 
-def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size):
+def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size, real_mmd):
   assert d_rff % 2 == 0
   w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+  if real_mmd:
+    def rff_mmd_loss(data_enc, gen_enc):
+      dxx, dxy, dyy = get_squared_dist(data_enc, gen_enc)
+      return mmd_g(dxx, dxy, dyy, batch_size, sigma=np.sqrt(rff_sigma))
 
-  if not do_gen_labels:
+  elif not do_gen_labels:
     def mean_embedding(x):
       return pt.mean(rff_gauss(x, w_freq), dim=0)
 
@@ -107,6 +111,8 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   return rff_mmd_loss
+
+
 
 
 def get_args():
@@ -136,6 +142,8 @@ def get_args():
   parser.add_argument('--uniform-labels', action='store_true', default=False)
   parser.add_argument('--big-gen', action='store_true', default=False)
   parser.add_argument('--batch-norm', action='store_true', default=False)
+  parser.add_argument('--real-mmd', action='store_true', default=False)
+
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=100)
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=50.0)
@@ -173,7 +181,7 @@ def preprocess_args(args):
     args.seed = np.random.randint(0, 1000)
 
   assert args.gen_labels or not args.uniform_labels
-
+  assert not (args.gen_labels and args.real_mmd)
 
 def main():
   # Training settings
@@ -200,7 +208,7 @@ def main():
   gen = gen.to(device)
 
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
-                                  ar.n_labels, ar.noise_factor, ar.batch_size)
+                                  ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd)
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)

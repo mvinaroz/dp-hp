@@ -2,21 +2,27 @@ import torch.nn as nn
 
 
 class FCEnc(nn.Module):
-  def __init__(self, d_in, d_hid, d_enc):
+  def __init__(self, d_in, d_hid, d_enc, batch_norm=False):
     super(FCEnc, self).__init__()
     # nc = (1, 4, 8, 16)  # n channels
     if d_hid is None:
       self.fc1 = nn.Linear(d_in, d_enc)
       self.fc2 = None
       self.fc3 = None
+      self.bn1 = None
+      self.bn2 = None
     elif len(d_hid) == 1:
       self.fc1 = nn.Linear(d_in, d_hid[0])
       self.fc2 = nn.Linear(d_hid[0], d_enc)
       self.fc3 = None
+      self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
+      self.bn2 = None
     elif len(d_hid) == 2:
       self.fc1 = nn.Linear(d_in, d_hid[0])
       self.fc2 = nn.Linear(d_hid[0], d_hid[1])
       self.fc3 = nn.Linear(d_hid[1], d_enc)
+      self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
+      self.bn2 = nn.BatchNorm1d(d_hid[1]) if batch_norm else None
     else:
       raise ValueError
 
@@ -24,7 +30,9 @@ class FCEnc(nn.Module):
 
   def forward(self, x):
     x = self.fc1(x)
+    x = self.bn1(x) if self.bn1 is not None else x
     x = self.fc2(self.relu(x)) if self.fc2 is not None else x
+    x = self.bn2(x) if self.bn2 is not None else x
     x = self.fc3(self.relu(x)) if self.fc3 is not None else x
     return x
 

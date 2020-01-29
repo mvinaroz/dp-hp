@@ -234,6 +234,7 @@ def get_args():
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
   parser.add_argument('--dec-spec', '-s-dec', type=str, default='100,300')
   parser.add_argument('--no-bias', action='store_true', default=False)
+  parser.add_argument('--batch-norm', action='store_true', default=False)
   # parser.add_argument('--enc-spec', type=str, default='1,8,16,16')
   # parser.add_argument('--dec-spec', type=str, default='16,16,8,1')
   # parser.add_argument('--enc-spec', type=str, default='1,4,8,8')
@@ -320,7 +321,7 @@ def main():
     # if ar.flat_enc:
     #   enc = FCEncFlat(d_data, enc_spec, ar.d_enc).to(device)
     # else:
-    enc = FCEnc(d_data, enc_spec, ar.d_enc).to(device)
+    enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
     # if ar.flat_dec:
     #   dec = extend(FCDecFlat(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
     # elif ar.lin_dec:

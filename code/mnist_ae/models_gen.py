@@ -66,12 +66,14 @@ class FCGenBig(nn.Module):
 
 
 class FCLabelGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc, n_labels=10, use_sigmoid=False):
+  def __init__(self, d_code, d_hid, d_enc, n_labels=10, use_sigmoid=False, batch_norm=True):
     super(FCLabelGen, self).__init__()
     self.fc1 = nn.Linear(d_code, d_hid[0])
     self.fc2 = nn.Linear(d_hid[0], d_hid[1])
     self.data_layer = nn.Linear(d_hid[1], d_enc)
     self.label_layer = nn.Linear(d_hid[1], n_labels)
+    self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
+    self.bn2 = nn.BatchNorm1d(d_hid[1]) if batch_norm else None
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
@@ -79,8 +81,11 @@ class FCLabelGen(nn.Module):
     self.d_code = d_code
 
   def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.relu(self.fc2(x))
+    x = self.fc1(x)
+    x = self.bn1(x) if self.bn1 is not None else x
+    x = self.fc2(self.relu(x))
+    x = self.bn2(x) if self.bn1 is not None else x
+    x = self.relu(x)
     x_data = self.data_layer(x)
     x_labels = self.softmax(self.label_layer(x))
     if self.use_sigmoid:
@@ -92,11 +97,13 @@ class FCLabelGen(nn.Module):
 
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc, n_labels, use_sigmoid=False):
+  def __init__(self, d_code, d_hid, d_enc, n_labels, use_sigmoid=False, batch_norm=True):
     super(FCCondGen, self).__init__()
     self.fc1 = nn.Linear(d_code + n_labels, d_hid[0])
     self.fc2 = nn.Linear(d_hid[0], d_hid[1])
     self.fc3 = nn.Linear(d_hid[1], d_enc)
+    self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
+    self.bn2 = nn.BatchNorm1d(d_hid[1]) if batch_norm else None
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
@@ -104,18 +111,21 @@ class FCCondGen(nn.Module):
     self.n_labels = n_labels
 
   def forward(self, x):
-    x = self.relu(self.fc1(x))
-    x = self.relu(self.fc2(x))
-    x = self.fc3(x)
+    x = self.fc1(x)
+    x = self.bn1(x) if self.bn1 is not None else x
+    x = self.fc2(self.relu(x))
+    x = self.bn2(x) if self.bn1 is not None else x
+    x = self.fc3(self.relu(x))
     if self.use_sigmoid:
       x = self.sigmoid(x)
     return x
 
-  def get_code(self, batch_size, device, return_labels=True):
+  def get_code(self, batch_size, device, return_labels=True, labels=None):
+    if labels is None:  # sample labels
+      labels = pt.randint(self.n_labels, (batch_size, 1), device=device)
     code = pt.randn(batch_size, self.d_code, device=device)
-    sampled_labels = pt.randint(self.n_labels, (batch_size, 1), device=device)
     gen_one_hots = pt.zeros(batch_size, self.n_labels, device=device)
-    gen_one_hots.scatter_(1, sampled_labels, 1)
+    gen_one_hots.scatter_(1, labels, 1)
     code = pt.cat([code, gen_one_hots.to(pt.float32)], dim=1)
     # print(code.shape)
     if return_labels:
