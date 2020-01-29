@@ -96,7 +96,7 @@ def Feature_labels(labels, weights):
 
 class Generative_Model_homogeneous_data(nn.Module):
 
-        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
+        def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, dataset):
             super(Generative_Model_homogeneous_data, self).__init__()
 
             self.input_size = input_size
@@ -111,6 +111,8 @@ class Generative_Model_homogeneous_data(nn.Module):
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
 
+            self.dataset = dataset
+
 
         def forward(self, x):
             hidden = self.fc1(x)
@@ -118,6 +120,10 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc2(relu)
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
+
+            # if self.dataset=='credit':
+            #     all_pos = self.relu(output[:,-1])
+            #     output = torch.cat((output[:,:-1], all_pos[:,None]),1)
 
             return output
 
@@ -229,7 +235,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.025
+        under_sampling_rate = 0.01
         # under_sampling_rate = 0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
@@ -239,8 +245,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
         label_selected = np.concatenate((pos_samps_label, neg_samps_label))
 
-        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.90,
-                                                            test_size=0.10, random_state=seed_number)
+        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.80,
+                                                            test_size=0.20, random_state=seed_number)
         n_classes = 2
 
 
@@ -609,7 +615,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         model = Generative_Model_homogeneous_data(input_size=input_size, hidden_size_1=hidden_size_1,
                                                       hidden_size_2=hidden_size_2,
-                                                      output_size=output_size).to(device)
+                                                      output_size=output_size, dataset=dataset).to(device)
 
     elif dataset in heterogeneous_datasets:
 
@@ -656,6 +662,19 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         # sigma2[sigma2>500] = 500
         print('sigma values are ', sigma2)
         # sigma2 = np.mean(sigma2)
+
+    elif dataset=='credit':
+
+        # large value at the last column
+
+        med = util.meddistance(X_train[idx_to_discard, 0:-1])
+        med_last = util.meddistance(np.expand_dims(X_train[idx_to_discard, -1],1))
+        sigma_array = np.concatenate((med*np.ones(input_dim-1), [med_last]))
+
+        sigma2 = sigma_array**2
+        sigma2[sigma2==0] = 1.0
+
+        print('sigma values are ', sigma2)
 
     else:
 
@@ -718,6 +737,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
 
         categorical_input_data = X_train[:, num_numerical_inputs:]
+
         emb1_categorical = (torch.Tensor(categorical_input_data) / np.sqrt(num_categorical_inputs)).to(device)
 
         emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
@@ -799,6 +819,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
                 emb2_numerical = RFF_Gauss(n_features, numerical_samps, W_freq) #W_freq [n_features/2,6], n_features=10000
 
                 categorical_samps = outputs[:, num_numerical_inputs:] #[4553,8]
+
                 emb2_categorical = categorical_samps /(torch.sqrt(torch.Tensor([num_categorical_inputs]))).to(device) # 8
 
                 emb2_input_features = torch.cat((emb2_numerical, emb2_categorical), 1)
@@ -914,14 +935,20 @@ if __name__ == '__main__':
     #epileptic, credit, census, cervical, adult, isolet
 
     #dataset = "cervical"
+
     is_priv_arg = True
     single_run = True
 
+    ### this is setup I was testing for Credit data.
+    ### Do not remove this please
+    # is_priv_arg = False
+    # single_run = False
+    #
     # dataset = 'credit'
     #
-    # how_many_epochs_arg = [1000]
-    # n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
-    # mini_batch_arg = [0.5]
+    # how_many_epochs_arg = [4000]
+    # n_features_arg = [500]
+    # mini_batch_arg = [1.0]
     #
     # grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
     #                               "how_many_epochs_arg": how_many_epochs_arg})
@@ -937,7 +964,7 @@ if __name__ == '__main__':
     #
     #     print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
     #     print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
-    #
+
 
 
 
