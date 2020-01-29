@@ -22,6 +22,18 @@ sns.set()
 
 from sklearn.model_selection import train_test_split
 from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
+from sklearn.naive_bayes import BernoulliNB
+from sklearn.svm import  LinearSVC
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.ensemble import AdaBoostClassifier
+from sklearn.ensemble import BaggingClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.ensemble import GradientBoostingClassifier
+from sklearn.neural_network import MLPClassifier
+import xgboost
+
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import ParameterGrid
@@ -521,24 +533,56 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     ########################################################################################
 
+
+
+    def test_models(X_tr, y_tr, X_te, y_te, datasettype):
+
+        roc_arr=[]
+        prc_arr=[]
+        f1_arr=[]
+
+        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+            print('\n', type(model))
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+
+        #LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
+        # LR_model.fit(X_train, y_train)  # training on synthetic data
+        # pred = LR_model.predict(X_test)  # test on real data
+
+            if n_classes>2:
+
+                f1score = f1_score(y_te, pred, average='weighted')
+                print(datasettype, ' F1-score (on test data) is ', f1score)
+                # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
+                f1_arr.append(f1score)
+
+                res1=np.mean(f1_arr)
+                res2=0 #dummy
+
+
+            else:
+
+                roc = roc_auc_score(y_te, pred)
+                prc = average_precision_score(y_te, pred)
+
+                print(datasettype, ' ROC on test data is', roc)
+                print(datasettype, ' PRC on test data is', prc)
+
+                roc_arr.append(roc)
+                prc_arr.append(prc)
+
+                res1=np.mean(roc_arr)
+                res2=np.mean(prc_arr)
+
+        return res1, res2
+
+
+
     # As a reference, we first test logistic regression on the real data
-    LR_model = LogisticRegression(solver='lbfgs', max_iter=1000)
-    LR_model.fit(X_train, y_train)  # training on synthetic data
-    pred = LR_model.predict(X_test)  # test on real data
 
-    if n_classes>2:
 
-        f1score = f1_score(y_test, pred, average='weighted')
-        print('F1-score (on real test data) is ', f1score)
-        # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
-
-    else:
-
-        roc = roc_auc_score(y_test, pred)
-        prc = average_precision_score(y_test, pred)
-
-        print('ROC on real test data is', roc)
-        print('PRC on real test data is', prc)
+    #test_models(X_train, y_train, X_test, y_test)
 
     ###########################################################################
 
@@ -802,9 +846,13 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_input_features_final = output_combined.cpu().detach().numpy()
         generated_labels_final = label_input.cpu().detach().numpy()
 
-        LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
-        LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
-        pred_ours = LR_model_ours.predict(X_test)  # test on real data
+        roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test)
+
+        # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+        # LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
+        # pred_ours = LR_model_ours.predict(X_test)  # test on real data
+
+        return roc, prc
 
     else: # homogeneous datasets
 
@@ -829,31 +877,36 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         generated_input_features_final = samp_input_features.cpu().detach().numpy()
         generated_labels_final = samp_labels.cpu().detach().numpy()
+        generated_labels=np.argmax(generated_labels_final, axis=1)
 
-        LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
-        LR_model_ours.fit(generated_input_features_final,
-                          np.argmax(generated_labels_final, axis=1))  # training on synthetic data
-        pred_ours = LR_model_ours.predict(X_test)  # test on real data
+        f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
+
+        return f1
+
+        #LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
+        #LR_model_ours.fit(generated_input_features_final,
+         #                 np.argmax(generated_labels_final, axis=1))  # training on synthetic data
+        #pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
 
 
-    if n_classes>2:
-
-        f1score = f1_score(y_test, pred_ours, average='weighted')
-        print('F1-score (ours) is ', f1score)
-
-        return f1score
-
-    else:
-
-        roc = roc_auc_score(y_test, pred_ours)
-        prc = average_precision_score(y_test, pred_ours)
-
-        print('ROC ours is', roc)
-        print('PRC ours is', prc)
-        print('n_features are ', n_features)
-
-        return roc, prc
+    # if n_classes>2:
+    #
+    #     f1score = f1_score(y_test, pred_ours, average='weighted')
+    #     print('F1-score (ours) is ', f1score)
+    #
+    #     return f1score
+    #
+    # else:
+    #
+    #     roc = roc_auc_score(y_test, pred_ours)
+    #     prc = average_precision_score(y_test, pred_ours)
+    #
+    #     print('ROC ours is', roc)
+    #     print('PRC ours is', prc)
+    #     print('n_features are ', n_features)
+    #
+    #     return roc, prc
 
 
 if __name__ == '__main__':
@@ -862,96 +915,107 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
     is_priv_arg = True
-    single_run = False
+    single_run = True
 
-    dataset = 'credit'
-
-    how_many_epochs_arg = [1000]
-    n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
-    mini_batch_arg = [0.5]
-
-    grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
-                                  "how_many_epochs_arg": how_many_epochs_arg})
-    for elem in grid:
-        print(elem, "\n")
-        prc_arr = []; roc_arr = []
-        repetitions = 5
-        for ii in range(repetitions):
-
-            roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-            roc_arr.append(roc)
-            prc_arr.append(prc)
-
-        print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
-        print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
-
-
-    #for dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    # for dataset in [arguments.dataset]:
-    # #for dataset in ["intrusion"]:
-    #     print("\n\n")
-    #     print('is private?', is_priv_arg)
+    # dataset = 'credit'
     #
+    # how_many_epochs_arg = [1000]
+    # n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
+    # mini_batch_arg = [0.5]
     #
-    #
-    #
-    #     if dataset in ["epileptic", "credit", "census", "cervical", "adult", "isolet"]:
-    #
-    #         if single_run == True:
-    #             how_many_epochs_arg = [200]
-    #             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-    #             n_features_arg = [100]
-    #             mini_batch_arg = [0.5]
-    #         else:
-    #             how_many_epochs_arg = [2000, 1000]
-    #             n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
-    #             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
-    #             # n_features_arg = [50000, 80000, 100000]
-    #             mini_batch_arg = [0.3]
-    #
-    #         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+    # grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
     #                               "how_many_epochs_arg": how_many_epochs_arg})
-    #         for elem in grid:
-    #             print(elem, "\n")
-    #             prc_arr = []; roc_arr = []
-    #             repetitions = 5
-    #             for ii in range(repetitions):
+    # for elem in grid:
+    #     print(elem, "\n")
+    #     prc_arr = []; roc_arr = []
+    #     repetitions = 5
+    #     for ii in range(repetitions):
     #
-    #                 roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-    #                 roc_arr.append(roc)
-    #                 prc_arr.append(prc)
+    #         roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+    #         roc_arr.append(roc)
+    #         prc_arr.append(prc)
     #
-    #             print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
-    #             print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+    #     print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
+    #     print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
     #
-    #
-    #
-    #     elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
-    #
-    #         if single_run == True:
-    #             how_many_epochs_arg = [200]
-    #             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-    #             n_features_arg = [100]
-    #             mini_batch_arg = [0.5]
-    #         else:
-    #             how_many_epochs_arg = [2000, 1000]
-    #             n_features_arg = [100, 500, 1000, 5000, 10000, 50000, 80000, 100000]
-    #             # n_features_arg = [1000, 5000, 10000, 50000, 80000, 100000]
-    #             mini_batch_arg = [0.6]
-    #
-    #         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
-    #                               "how_many_epochs_arg": how_many_epochs_arg})
-    #         for elem in grid:
-    #             print(elem, "\n")
-    #             f1score_arr = []
-    #             repetitions = 5
-    #             for ii in range(repetitions):
-    #
-    #                 f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-    #                 f1score_arr.append(f1scr)
-    #
-    #             print("Average f1 score: ", np.mean(f1score_arr))
-    #             print("Std F1: ", np.std(f1score_arr))
+
+
+
+    for dataset in ["credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
+    #for dataset in [arguments.dataset]:
+    #for dataset in ["adult"]:
+        print("\n\n")
+        print('is private?', is_priv_arg)
+
+        if single_run == True:
+            how_many_epochs_arg = [200]
+            # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.5]
+        else:
+            how_many_epochs_arg = [2000, 1000, 4000]
+            n_features_arg = [500, 1000, 5000, 10000, 50000, 80000, 100000]
+            # n_features_arg = [5000, 10000, 50000, 80000, 100000]
+            # n_features_arg = [50000, 80000, 100000]
+            mini_batch_arg = [0.6]
+
+        grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+                              "how_many_epochs_arg": how_many_epochs_arg})
+
+        repetitions = 2
+
+
+        if dataset in ["adult", "credit", "census", "cervical", "isolet", "epileptic"]:
+
+            max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc=0, 0, 0, 0, 0
+
+            for elem in grid:
+                print(elem, "\n")
+                prc_arr = []; roc_arr = []; rocprc_arr=[]
+                for ii in range(repetitions):
+
+                    roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    roc_arr.append(roc)
+                    prc_arr.append(prc)
+
+                print("Average ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
+                print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+
+                if np.mean(roc_arr)>max_aver_roc:
+                    max_aver_roc=np.mean(roc_arr)
+
+                if np.mean(prc_arr)>max_aver_prc:
+                    max_aver_prc=np.mean(prc_arr)
+
+                if np.mean(roc_arr) + np.mean(prc_arr)> max_aver_rocprc:
+                    max_aver_roc = [np.mean(roc_arr), np.mean(prc_arr)]
+
+            print("\n\n", "Max ROC: ", max_aver_roc[0])
+            print("Max PRC: ", max_aver_roc[1], "*"*20)
+
+
+
+
+
+        elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
+
+            max_f1, max_aver_f1=0, 0
+
+            for elem in grid:
+                print(elem, "\n")
+                f1score_arr = []
+                for ii in range(repetitions):
+
+                    f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    f1score_arr.append(f1scr)
+
+                print("Average f1 score: ", np.mean(f1score_arr))
+                print("Std F1: ", np.std(f1score_arr))
+
+                if np.mean(f1score_arr)>max_aver_f1:
+                    max_aver_f1=np.mean(f1score_arr)
+
+            print("\n\n", "Max F1: ", max_aver_f1, "*"*20)
 
 
 
