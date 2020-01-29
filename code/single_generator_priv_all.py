@@ -936,8 +936,8 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
 
-    is_priv_arg = True
-    single_run = True
+    is_priv_arg = False
+    single_run = False
 
     ### this is setup I was testing for Credit data.
     ### Do not remove this please
@@ -968,8 +968,8 @@ if __name__ == '__main__':
 
 
 
-    for dataset in ["credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
+    #for dataset in ["credit", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
+    for dataset in [arguments.dataset]:
     #for dataset in ["adult"]:
         print("\n\n")
         print('is private?', is_priv_arg)
@@ -989,7 +989,7 @@ if __name__ == '__main__':
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
 
-        repetitions = 2
+        repetitions = 5
 
 
         if dataset in ["adult", "credit", "census", "cervical", "isolet", "epileptic"]:
@@ -1017,8 +1017,8 @@ if __name__ == '__main__':
                 if np.mean(roc_arr) + np.mean(prc_arr)> max_aver_rocprc:
                     max_aver_roc = [np.mean(roc_arr), np.mean(prc_arr)]
 
-            print("\n\n", "Max ROC: ", max_aver_roc[0])
-            print("Max PRC: ", max_aver_roc[1], "*"*20)
+            print("\n\n", "Max ROC! ", max_aver_roc[0])
+            print("Max PRC! ", max_aver_roc[1], "*"*20)
 
 
 
@@ -1042,7 +1042,7 @@ if __name__ == '__main__':
                 if np.mean(f1score_arr)>max_aver_f1:
                     max_aver_f1=np.mean(f1score_arr)
 
-            print("\n\n", "Max F1: ", max_aver_f1, "*"*20)
+            print("\n\n", "Max F1! ", max_aver_f1, "*"*20)
 
 
 
