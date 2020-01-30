@@ -18,7 +18,6 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
     data = data.to(device)
-    print(pt.max(data))
     labels = labels.to(device)
     if not conv_ae:
       data = flat_data(data, labels, device, add_label=label_ae)

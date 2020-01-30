@@ -44,7 +44,7 @@ def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_in
         epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label,
+def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label, ae_ce,
          do_gen_labels, uniform_labels, log_dir):
   gen.eval()
   gen_samples, gen_labels = None, None
@@ -80,6 +80,13 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
 
       gen_samples = dec(gen_enc)
 
+      # max_gen_enc = pt.max(pt.abs(gen_enc)).item()
+      # max_data_enc = pt.max(pt.abs(data_enc)).item()
+      # print(f'max enc - gen: {max_gen_enc}, data: {max_data_enc}')
+      # d_max, d_min = pt.max(data).item(), pt.min(data).item()
+      # g_max, g_min = pt.max(gen_samples).item(), pt.min(gen_samples).item()
+      # print(f'data range [{d_min}, {d_max}], gen range [{g_min}, {g_max}]')
+
       test_loss += loss.item()  # sum up batch loss
     test_loss /= (len(test_loader.dataset) / batch_size)
 
@@ -96,7 +103,7 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
 
     if ae_label:
       plot_samples = gen_samples[:, :784]
-    plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
+    plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=not ae_ce)
 
     if gen_labels is not None:
       save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
@@ -251,7 +258,8 @@ def main():
   pt.manual_seed(ar.seed)
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
-  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda)
+  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda,
+                                                    normalize=not ar.ae_ce_loss)
 
   device = pt.device("cuda" if use_cuda else "cpu")
 
@@ -297,7 +305,7 @@ def main():
     train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
           ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels)
     test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
-         ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels, ar.log_dir)
+         ar.ae_conv, ar.ae_label, ar.ae_ce_loss, ar.gen_labels, ar.uniform_labels, ar.log_dir)
     scheduler.step()
 
   pt.save(gen.state_dict(), ar.log_dir + 'gen.pt')
