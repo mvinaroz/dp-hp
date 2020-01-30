@@ -59,7 +59,7 @@ def main():
             'mlp': neural_network.MLPClassifier,
             'xgboost': xgboost.XGBClassifier}
 
-  slow_models = {'logistic_reg', 'bagging', 'gbm', 'xgboost'}
+  slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
