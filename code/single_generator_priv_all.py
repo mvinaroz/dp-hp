@@ -995,7 +995,7 @@ if __name__ == '__main__':
 
 
 
-    is_priv_arg = True  # check
+    is_priv_arg = False  # check
     single_run = False  # check
 
     #check
