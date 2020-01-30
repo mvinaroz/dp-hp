@@ -983,13 +983,19 @@ if __name__ == '__main__':
             how_many_epochs_arg = [200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
             n_features_arg = [100, 200]
-            mini_batch_arg = [0.5]
+            mini_batch_arg = [0.3]
         else:
             how_many_epochs_arg = [200, 2000, 1000, 4000]
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [50000, 80000, 100000]
             mini_batch_arg = [0.6]
+
+        if dataset=='adult':
+            mini_batch_arg=[0.2]
+        elif dataset=='census':
+            mini_batch_arg=[0.2]
+
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
