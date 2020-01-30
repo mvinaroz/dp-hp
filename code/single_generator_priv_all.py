@@ -995,7 +995,7 @@ if __name__ == '__main__':
 
 
 
-    is_priv_arg = True  # check
+    is_priv_arg = False  # check
     single_run = False  # check
 
     #check
@@ -1019,6 +1019,7 @@ if __name__ == '__main__':
 
         if dataset=='adult':
             mini_batch_arg=[0.1]
+            n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
         elif dataset=='census':
             mini_batch_arg=[0.2]
         elif dataset=='covtype':

@@ -19,7 +19,7 @@ arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_
 
 
 
-var=models_priv4_$(dataset)
+var=models_4_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
@@ -35,28 +35,28 @@ request_memory = 8040
 request_cpus = 1
 request_gpus = 1
 
-dataset=census
-queue 1
+#dataset=census
+#queue 1
 
-dataset=epileptic
-queue 1
+#dataset=epileptic
+#queue 1
 
-dataset=credit
-queue 1
+#dataset=credit
+#queue 1
+
+#dataset=cervical
+#queue 1
+
+#dataset=isolet
+#queue 1
+
+#dataset=covtype
+#queue 1
+
+#dataset=intrusion
+#queue 1
 
 dataset=adult
-queue 1
-
-dataset=cervical
-queue 1
-
-dataset=isolet
-queue 1
-
-dataset=covtype
-queue 1
-
-dataset=intrusion
 queue 1
 
 
