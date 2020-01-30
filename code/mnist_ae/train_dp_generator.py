@@ -129,6 +129,29 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
   return rff_mmd_loss
 
 
+def synthesize_mnist_with_uniform_labels(gen, dec, device, ae_label, gen_batch_size=1000, n_data=60000, n_labels=10):
+  gen.eval()
+  assert n_data % gen_batch_size == 0
+  assert gen_batch_size % n_labels == 0
+  n_iterations = n_data // gen_batch_size
+
+  data_list = []
+  ordered_labels = pt.repeat_interleave(pt.arange(n_labels), gen_batch_size // n_labels)[:, None].to(device)
+  labels_list = [ordered_labels] * n_iterations
+
+  with pt.no_grad():
+
+    for idx in range(n_iterations):
+
+      gen_code, gen_labels = gen.get_code(gen_batch_size, device, labels=ordered_labels)
+      gen_samples = dec(gen(gen_code))
+
+      if ae_label:
+        gen_samples = gen_samples[:, :784]
+      data_list.append(gen_samples)
+
+  return pt.cat(data_list, dim=0).cpu().numpy(), pt.cat(labels_list, dim=0).cpu().numpy()
+
 def get_args():
   parser = argparse.ArgumentParser()
 
@@ -140,6 +163,7 @@ def get_args():
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
+  parser.add_argument('--synth-mnist', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
@@ -277,6 +301,10 @@ def main():
     scheduler.step()
 
   pt.save(gen.state_dict(), ar.log_dir + 'gen.pt')
+  if ar.synth_mnist:
+    assert ar.uniform_labels
+    syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, dec, device, ar.ae_label)
+    np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
 
 
 if __name__ == '__main__':
