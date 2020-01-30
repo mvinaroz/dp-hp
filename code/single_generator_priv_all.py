@@ -949,9 +949,6 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
 
-    is_priv_arg = True #check
-    single_run = False #check
-
     ### this is setup I was testing for Credit data.
     ### Do not remove this please
     # is_priv_arg = False
@@ -978,7 +975,8 @@ if __name__ == '__main__':
     #     print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
     #     print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
 
-
+    is_priv_arg = False  # check
+    single_run = False  # check
 
     #check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
