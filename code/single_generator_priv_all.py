@@ -592,8 +592,12 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     # As a reference, we first test logistic regression on the real data
 
+    if dataset in heterogeneous_datasets:
+        roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
+    else:
+        f1_real = test_models(X_train, y_train, X_test, y_test, "real")
 
-    #test_models(X_train, y_train, X_test, y_test)
+
 
     ###########################################################################
 
@@ -872,13 +876,15 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_input_features_final = output_combined.cpu().detach().numpy()
         generated_labels_final = label_input.cpu().detach().numpy()
 
-        roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
+        #roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
+        roc, prc=-1, -1
 
         # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
         # LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
         # pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-        return roc, prc
+        return roc_real, prc_real
+        #return roc, prc
 
     else: # homogeneous datasets
 
@@ -905,9 +911,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_labels_final = samp_labels.cpu().detach().numpy()
         generated_labels=np.argmax(generated_labels_final, axis=1)
 
-        f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
+        #f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
+        f1=-1
 
-        return f1
+        return f1_real
+        #return f1
 
         #LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
         #LR_model_ours.fit(generated_input_features_final,
@@ -942,7 +950,7 @@ if __name__ == '__main__':
     #dataset = "cervical"
 
     is_priv_arg = True #check
-    single_run = False #check
+    single_run = True #check
 
     ### this is setup I was testing for Credit data.
     ### Do not remove this please
@@ -974,15 +982,15 @@ if __name__ == '__main__':
 
     #check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    for dataset in [arguments.dataset]:
-    #for dataset in ["adult"]:
+    #for dataset in [arguments.dataset]:
+    for dataset in ["adult"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
         if single_run == True:
             how_many_epochs_arg = [200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [100, 200]
+            n_features_arg = [100]
             mini_batch_arg = [0.3]
         else:
             how_many_epochs_arg = [200, 2000, 1000, 4000]
