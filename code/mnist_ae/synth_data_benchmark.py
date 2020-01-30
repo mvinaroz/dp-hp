@@ -22,7 +22,6 @@ def main():
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/')
   parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
   parser.add_argument('--log-results', action='store_true', default=False)
-  parser.add_argument('--renorm-data', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
   ar = parser.parse_args()
 
@@ -63,7 +62,7 @@ def main():
   model_specs['linear_svc'] = {'max_iter': 5000}
 
   for key in models.keys():
-    if key in slow_models and ar.skip_slow_models:
+    if ar.skip_slow_models and key in slow_models:
       pass
 
     print(f'Model: {key}', end='')
@@ -87,7 +86,7 @@ def main():
     if ar.log_results:
       accs = np.asarray([base_acc, g_to_r_acc, r_to_g_acc])
       f1_scores = np.asarray([base_f1, g_to_r_f1, r_to_g_f1])
-      conf_mats = np.stack(base_conf, g_to_r_conf, r_to_g_conv)
+      conf_mats = np.stack([base_conf, g_to_r_conf, r_to_g_conv])
       np.savez(os.path.join(log_save_dir, f'{key}_log'), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
 
