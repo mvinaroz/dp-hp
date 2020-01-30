@@ -41,6 +41,11 @@ def main():
   gen_data = np.load(os.path.join(gen_data_dir, 'synthetic_mnist.npz'))
   x_gen, y_gen = gen_data['data'], gen_data['labels'].ravel()
 
+  print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
+        f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
+  print(f'label ranges: [{np.min(y_real_test)}, {np.max(y_real_test)}], [{np.min(y_real_train)}, '
+        f'{np.max(y_real_train)}], [{np.min(y_gen)}, {np.max(y_gen)}]')
+
   models = {'logistic_reg': linear_model.LogisticRegression,
             'random_forest': ensemble.RandomForestClassifier,
             'gaussian_nb': naive_bayes.GaussianNB,
@@ -54,16 +59,17 @@ def main():
             'mlp': neural_network.MLPClassifier,
             'xgboost': xgboost.XGBClassifier}
 
-  slow_models = {'gbm', 'xgboost'}
+  slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100}
-  model_specs['linear_svc'] = {'max_iter': 5000}
+  model_specs['linear_svc'] = {'max_iter': 5000}  # still not enough??
+  model_specs['bernoulli_nb'] = {'binarize': 0.5}
 
   for key in models.keys():
     if ar.skip_slow_models and key in slow_models:
-      pass
+      continue
 
     print(f'Model: {key}', end='')
     model = models[key](**model_specs[key])
