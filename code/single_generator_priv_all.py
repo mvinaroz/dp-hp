@@ -13,6 +13,7 @@ import random
 import socket
 from sdgym import load_dataset
 import argparse
+import sys
 
 
 import pandas as pd
@@ -470,6 +471,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         raw_labels = data[:, -1]
         raw_input_features = data[:, the_rest_columns + categorical_columns_binary]
+        print(raw_input_features.shape)
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 0  # this is a dominant one about 80%, which we want to undersample
@@ -564,13 +566,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
             if n_classes>2:
 
                 f1score = f1_score(y_te, pred, average='weighted')
-                print(datasettype, ' F1-score (on test data) is ', f1score)
+
+                #print(datasettype, ' F1-score (on test data) is ', f1score)
+                print("F1-score on test %s data is %.3f" % (datasettype, f1score))
                 # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
                 f1_arr.append(f1score)
-
-                res1=np.mean(f1_arr)
-                res2=0 #dummy
-
 
             else:
 
@@ -583,8 +583,18 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
                 roc_arr.append(roc)
                 prc_arr.append(prc)
 
-                res1=np.mean(roc_arr)
-                res2=np.mean(prc_arr)
+        if n_classes > 2:
+
+            res1 = np.mean(f1_arr)
+            print("f1 mean across methods is %.3f\n" % res1)
+            res2 = 0  # dummy
+        else:
+
+            res1=np.mean(roc_arr)
+            res2=np.mean(prc_arr)
+            print("roc mean across methods is %.3f" % res1)
+            print("prc mean across methods is %.3f\n" % res2)
+
 
         return res1, res2
 
@@ -942,6 +952,14 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     #
     #     return roc, prc
 
+def sizeof_fmt(num, suffix='B'):
+    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
+    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
+        if abs(num) < 1024.0:
+            return "%3.1f %s%s" % (num, unit, suffix)
+        num /= 1024.0
+    return "%.1f %s%s" % (num, 'Yi', suffix)
+
 
 if __name__ == '__main__':
 
@@ -975,13 +993,15 @@ if __name__ == '__main__':
     #     print("Average ROC: ", np.mean(roc_arr)); print("Avergae PRC: ", np.mean(prc_arr))
     #     print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
 
+
+
     is_priv_arg = False  # check
     single_run = False  # check
 
     #check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     for dataset in [arguments.dataset]:
-    #for dataset in ["adult"]:
+    #for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
@@ -998,7 +1018,7 @@ if __name__ == '__main__':
             mini_batch_arg = [0.5]
 
         if dataset=='adult':
-            mini_batch_arg=[0.2]
+            mini_batch_arg=[0.1]
         elif dataset=='census':
             mini_batch_arg=[0.2]
         elif dataset=='covtype':
@@ -1023,6 +1043,13 @@ if __name__ == '__main__':
                     print("\nRepetition: ",ii)
 
                     roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+
+                    # print("Variables: ")
+                    # for name, size in sorted(((name, sys.getsizeof(value)) for name, value in locals().items()),
+                    #                          key=lambda x: -x[1])[:10]:
+                    #     print("{:>30}: {:>8}".format(name, sizeof_fmt(size)))
+                    # print("\n")
+
                     roc_arr.append(roc)
                     prc_arr.append(prc)
 
