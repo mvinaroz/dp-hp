@@ -1045,7 +1045,7 @@ if __name__ == '__main__':
             print(dataset)
             print("Max ROC! ", max_aver_rocprc[0])
             print("Max PRC! ", max_aver_rocprc[1])
-            print("Setup: ", elem)
+            print("Setup: ", max_elem)
             print('*'*100)
 
 
@@ -1073,7 +1073,7 @@ if __name__ == '__main__':
                     max_elem = elem
 
             print("\n\n", "Max F1! ", max_aver_f1, "*"*20)
-            print("Setup: ", elem)
+            print("Setup: ", max_elem)
             print('*' * 30)
 
 
