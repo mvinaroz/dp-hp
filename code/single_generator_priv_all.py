@@ -482,7 +482,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 40% of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.4
+        under_sampling_rate = 0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -592,10 +592,10 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     # As a reference, we first test logistic regression on the real data
 
-    if dataset in heterogeneous_datasets:
-        roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
-    else:
-        f1_real = test_models(X_train, y_train, X_test, y_test, "real")
+    # if dataset in heterogeneous_datasets:
+    #     roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
+    # else:
+    #     f1_real = test_models(X_train, y_train, X_test, y_test, "real")
 
 
 
@@ -876,15 +876,15 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_input_features_final = output_combined.cpu().detach().numpy()
         generated_labels_final = label_input.cpu().detach().numpy()
 
-        #roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
-        roc, prc=-1, -1
+        roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
+        #roc, prc=-1, -1
 
         # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
         # LR_model_ours.fit(generated_input_features_final, generated_labels_final)  # training on synthetic data
         # pred_ours = LR_model_ours.predict(X_test)  # test on real data
 
-        return roc_real, prc_real
-        #return roc, prc
+        #return roc_real, prc_real
+        return roc, prc
 
     else: # homogeneous datasets
 
@@ -911,11 +911,11 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         generated_labels_final = samp_labels.cpu().detach().numpy()
         generated_labels=np.argmax(generated_labels_final, axis=1)
 
-        #f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
-        f1=-1
+        f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
+        #f1=-1
 
-        return f1_real
-        #return f1
+        #return f1_real
+        return f1
 
         #LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
         #LR_model_ours.fit(generated_input_features_final,
@@ -949,8 +949,8 @@ if __name__ == '__main__':
 
     #dataset = "cervical"
 
-    is_priv_arg = True #check
-    single_run = True #check
+    is_priv_arg = False #check
+    single_run = False #check
 
     ### this is setup I was testing for Credit data.
     ### Do not remove this please
@@ -997,11 +997,13 @@ if __name__ == '__main__':
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [50000, 80000, 100000]
-            mini_batch_arg = [0.6]
+            mini_batch_arg = [0.5]
 
         if dataset=='adult':
             mini_batch_arg=[0.2]
         elif dataset=='census':
+            mini_batch_arg=[0.2]
+        elif dataset=='covtype':
             mini_batch_arg=[0.2]
 
 
