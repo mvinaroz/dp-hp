@@ -555,8 +555,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         prc_arr=[]
         f1_arr=[]
 
-        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
-        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
+        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
 
             print('\n', type(model))
             model.fit(X_tr, y_tr)
@@ -1006,8 +1006,8 @@ if __name__ == '__main__':
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
-    for dataset in ["intrusion"]:
+    for dataset in [arguments.dataset]:
+    #for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
@@ -1030,11 +1030,11 @@ if __name__ == '__main__':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
             elif dataset=='covtype':
-                how_many_epochs_arg = [8000, 6000, 4000, 2000, 1000]
+                how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
                 mini_batch_arg=[0.05]
                 repetitions=3
             elif dataset == 'intrusion':
-                how_many_epochs_arg = [1000, 8000, 6000, 4000, 2000, 1000]
+                how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
                 mini_batch_arg = [0.1]
                 repetitions=3
 
