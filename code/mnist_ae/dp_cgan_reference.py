@@ -218,7 +218,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 100000
+    num_training_steps = 10000  # was 100.000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -381,21 +381,21 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 n_class[9] = 5949
 
                 n_image = int(sum(n_class))
-                image_lables = np.zeros(shape=[n_image, len(n_class)])
+                image_labels = np.zeros(shape=[n_image, len(n_class)])
 
                 image_cntr = 0
                 for class_cntr in np.arange(len(n_class)):
                     for cntr in np.arange(n_class[class_cntr]):
-                        image_lables[image_cntr, class_cntr] = 1
+                        image_labels[image_cntr, class_cntr] = 1
                         image_cntr += 1
 
                 z_sample = sample_z(n_image, Z_dim)
 
-                images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_lables})
+                images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 x_test, y_test = loadlocal_mnist(
-                    images_path=baseDir + "our_dp_conditional_gan_mnist/" + 'mnist_dataset/t10k-images.idx3-ubyte',
-                    labels_path=baseDir + "our_dp_conditional_gan_mnist/" + 'mnist_dataset/t10k-labels.idx1-ubyte')
+                    images_path='data/MNIST/raw/t10k-images.idx3-ubyte',
+                    labels_path='data/MNIST/raw/t10k-labels.idx1-ubyte')
 
                 y_test = [int(y) for y in y_test]
                 result_file = open(result_path + "/" + "results.txt", "w")
@@ -406,7 +406,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 print("\n################# Logistic Regression #######################")
 
                 print("  Classifying ...")
-                y_score = classify(images, image_lables, x_test, "lr", random_state_value=30)
+                y_score = classify(images, image_labels, x_test, "lr", random_state_value=30)
 
                 print("  Computing ROC ...")
                 false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
@@ -416,7 +416,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 print("\n################# Multi-layer Perceptron #######################")
 
                 print("  Classifying ...")
-                y_score = classify(images, image_lables, x_test, "mlp", random_state_value=30)
+                y_score = classify(images, image_labels, x_test, "mlp", random_state_value=30)
 
                 print("  Computing ROC ...")
                 false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
