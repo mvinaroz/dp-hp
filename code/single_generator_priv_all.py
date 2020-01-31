@@ -55,7 +55,8 @@ device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
 args=argparse.ArgumentParser()
-args.add_argument("--dataset")
+args.add_argument("--dataset", default="adult")
+args.add_argument("--private", default=False)
 arguments=args.parse_args()
 print("arg", arguments.dataset)
 
@@ -995,8 +996,10 @@ if __name__ == '__main__':
 
 
 
-    is_priv_arg = False  # check
+    is_priv_arg = arguments.private  # check
     single_run = False  # check
+
+    repetitions = 5  # check
 
     #check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
@@ -1011,7 +1014,7 @@ if __name__ == '__main__':
             n_features_arg = [100]
             mini_batch_arg = [0.3]
         else:
-            how_many_epochs_arg = [200, 2000, 1000, 4000]
+            how_many_epochs_arg = [8000, 6000, 2000, 1000, 4000]
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [5000, 10000, 50000, 80000, 100000]
             # n_features_arg = [50000, 80000, 100000]
@@ -1021,15 +1024,23 @@ if __name__ == '__main__':
             mini_batch_arg=[0.1]
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
         elif dataset=='census':
-            mini_batch_arg=[0.2]
+            mini_batch_arg=[0.1]
+            n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
         elif dataset=='covtype':
-            mini_batch_arg=[0.2]
+            how_many_epochs_arg = [6000, 4000, 2000, 1000]
+            mini_batch_arg=[0.05]
+            repetitions=3
+        elif dataset == 'intrusion':
+            how_many_epochs_arg = [6000, 4000, 2000, 1000]
+            mini_batch_arg = [0.3]
+            repetitions=3
+
 
 
         grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
 
-        repetitions = 5 #check
+
 
 
 
@@ -1054,6 +1065,7 @@ if __name__ == '__main__':
                     roc_arr.append(roc)
                     prc_arr.append(prc)
 
+                print("Average over repetitions of running on set of methods")
                 print("Average ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
                 print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
 
@@ -1091,6 +1103,7 @@ if __name__ == '__main__':
                     f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     f1score_arr.append(f1scr)
 
+                print("Average over repetitions of running on set of methods")
                 print("Average f1 score: ", np.mean(f1score_arr))
                 print("Std F1: ", np.std(f1score_arr))
 
