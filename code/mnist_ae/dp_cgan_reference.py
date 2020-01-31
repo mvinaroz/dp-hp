@@ -393,6 +393,10 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
+                print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
+                np.savez(f'dp-cgan-synth-mnist-eps={eps}.npz', data=images, labels=image_labels)
+                print('done saving')
+
                 x_test, y_test = loadlocal_mnist(
                     images_path='data/MNIST/raw/t10k-images.idx3-ubyte',
                     labels_path='data/MNIST/raw/t10k-labels.idx1-ubyte')
