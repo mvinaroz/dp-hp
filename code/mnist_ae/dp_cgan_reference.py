@@ -436,9 +436,10 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
 def main():
     # sigma_clipping_list = [[1.12, 1.1]]
-    sigma_clipping_list = [[0.00001, 1.1]]
+    sigma_clipping_list = [[0.1, 1.1]]
     batchSizeList = [600]
-    epsilon = 9.6
+    # epsilon = 9.6
+    epsilon = 1e10
     delta = 1e-5
 
     for iteration in range(1, 2):
