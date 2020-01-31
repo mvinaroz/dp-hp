@@ -97,35 +97,35 @@ def sample_z(m, n):
     return np.random.uniform(-1., 1., size=[m, n])
 
 
-def generator(z, y, theta_G):
-    G_W1 = theta_G[0]
-    G_W2 = theta_G[1]
-    G_b1 = theta_G[2]
-    G_b2 = theta_G[3]
+def generator(z, y, theta_g):
+    g_w1 = theta_g[0]
+    g_w2 = theta_g[1]
+    g_b1 = theta_g[2]
+    g_b2 = theta_g[3]
 
     """ Function to build the generator network
     """
     inputs = tf.concat(axis=1, values=[z, y])
-    G_h1 = tf.nn.relu(tf.matmul(inputs, G_W1) + G_b1)
-    G_log_prob = tf.matmul(G_h1, G_W2) + G_b2
-    G_prob = tf.nn.sigmoid(G_log_prob)
-    return G_prob
+    g_h1 = tf.nn.relu(tf.matmul(inputs, g_w1) + g_b1)
+    g_log_prob = tf.matmul(g_h1, g_w2) + g_b2
+    g_prob = tf.nn.sigmoid(g_log_prob)
+    return g_prob
 
 
 def discriminator(x, y, theta_d):
     """ Function to build the discriminator network
     """
-    D_W1 = theta_d[0]
-    D_W2 = theta_d[1]
-    D_b1 = theta_d[2]
-    D_b2 = theta_d[3]
+    d_w1 = theta_d[0]
+    d_w2 = theta_d[1]
+    d_b1 = theta_d[2]
+    d_b2 = theta_d[3]
 
     inputs = tf.concat(axis=1, values=[x, y])
-    D_h1 = tf.nn.relu(tf.matmul(inputs, D_W1) + D_b1)
-    D_logit = tf.matmul(D_h1, D_W2) + D_b2
-    D_prob = tf.nn.sigmoid(D_logit)
+    d_h1 = tf.nn.relu(tf.matmul(inputs, d_w1) + d_b1)
+    d_logit = tf.matmul(d_h1, d_w2) + d_b2
+    d_prob = tf.nn.sigmoid(d_logit)
 
-    return D_prob, D_logit
+    return d_prob, d_logit
 
 
 def plot(samples):
@@ -171,7 +171,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     Z_dim = 100
 
     # Initializations for a two-layer discriminator network
-    mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
+    # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
+    mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     x_dim = mnist.train.images.shape[1]
     y_dim = mnist.train.labels.shape[1]
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
@@ -218,7 +219,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 100000  # was 100.000
+    # num_training_steps = 100000
+    num_training_steps = 30000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -260,11 +262,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     lr_pl = tf.placeholder(tf.float32)
     # sigma = FLAGS.sigma
     # Generator optimizer
-    G_solver = tf.train.AdamOptimizer().minimize(g_loss, var_list=theta_g)
+    g_solver = tf.train.AdamOptimizer().minimize(g_loss, var_list=theta_g)
     # Discriminator Optimizer
-    D_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
+    d_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
                                                        batches_per_lot=batches_per_lot)
-    D_solver = D_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
+    d_solver = d_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
     # ------------------------------------------------------------------------------
 
     # Set output directory
@@ -334,11 +336,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
             z_sample = sample_z(batch_size, Z_dim)
 
             # Update the discriminator network
-            _, d_loss_real_curr, d_loss_fake_curr = sess.run([D_solver, d_loss_real, d_loss_fake],
+            _, d_loss_real_curr, d_loss_fake_curr = sess.run([d_solver, d_loss_real, d_loss_fake],
                                                              feed_dict={x_pl: x_mb, z_pl: z_sample, y_pl: y_mb, lr_pl: curr_lr})
 
             # Update the generator network
-            _, g_loss_curr = sess.run([G_solver, g_loss], feed_dict={z_pl: z_sample, y_pl: y_mb, lr_pl: curr_lr})
+            _, g_loss_curr = sess.run([g_solver, g_loss], feed_dict={z_pl: z_sample, y_pl: y_mb, lr_pl: curr_lr})
 
             if eps >= max_target_eps or step >= num_training_steps:
                 print("TERMINATE!!!!")
@@ -394,12 +396,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
-                np.savez(f'dp-cgan-synth-mnist-eps={eps}.npz', data=images, labels=image_labels)
+                np.savez(f'dp-cgan-synth-mnist-eps={max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 
                 x_test, y_test = loadlocal_mnist(
-                    images_path='data/MNIST/raw/t10k-images.idx3-ubyte',
-                    labels_path='data/MNIST/raw/t10k-labels.idx1-ubyte')
+                    images_path='data/MNIST/raw/t10k-images-idx3-ubyte',
+                    labels_path='data/MNIST/raw/t10k-labels-idx1-ubyte')
 
                 y_test = [int(y) for y in y_test]
                 result_file = open(result_path + "/" + "results.txt", "w")
@@ -434,9 +436,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
 
 def main():
-    sigma_clipping_list = [[1.12, 1.1]]
+    # sigma_clipping_list = [[1.12, 1.1]]
+    sigma_clipping_list = [[0.1, 1.1]]
     batchSizeList = [600]
-    epsilon = 9.6
+    # epsilon = 9.6
+    epsilon = 1e10
     delta = 1e-5
 
     for iteration in range(1, 2):
