@@ -831,7 +831,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
                 label_input = label_input.to(device)
 
                 # (2) generate corresponding features
-                feature_input = torch.randn((mini_batch_size, input_size-1)).to(device)
+                feature_input = torch.randn((mini_batch_size+len(weights), input_size-1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input), 1)
                 outputs = model(input_to_model)
 
@@ -1002,10 +1002,10 @@ if __name__ == '__main__':
 
     repetitions = 5  # check
 
-    #check
+    # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
-    for dataset in ["intrusion"]:
+    for dataset in [arguments.dataset]:
+    #for dataset in ["cervical"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
