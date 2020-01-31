@@ -181,7 +181,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     if dataset=='epileptic':
         print("epileptic seizure recognition dataset") # this is homogeneous
 
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = pd.read_csv("../data/Epileptic/data.csv")
         else:
             # (1) load data
@@ -211,7 +211,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("Creditcard fraud detection dataset") # this is homogeneous
 
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
         else:
             # (1) load data
@@ -259,7 +259,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         print("census dataset") # this is heterogenous
 
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = np.load("../data/real/census/train.npy")
         else:
             data = np.load(
@@ -308,7 +308,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("dataset is", dataset) # this is heterogenous
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             df = pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
         else:
             df = pd.read_csv(
@@ -422,7 +422,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("isolet dataset")
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data_features_npy = np.load('../data/Isolet/isolet_data.npy')
             data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
         else:
@@ -502,7 +502,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("dataset is", dataset)
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             train_data = np.load("../data/real/covtype/train.npy")
             test_data = np.load("../data/real/covtype/test.npy")
             # we put them together and make a new train/test split in the following

@@ -19,7 +19,7 @@ arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_
 
 
 
-var=models_priv7_$(dataset)
+var=models_priv8_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
