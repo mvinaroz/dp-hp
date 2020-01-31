@@ -826,6 +826,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
                 # (1) generate labels
                 label_input = torch.multinomial(torch.Tensor([weights]), mini_batch_size, replacement=True).type(torch.FloatTensor)
+                label_input=torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),1) #to avoid no labels
                 label_input = label_input.transpose_(0,1)
                 label_input = label_input.to(device)
 
@@ -1003,8 +1004,8 @@ if __name__ == '__main__':
 
     #check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    for dataset in [arguments.dataset]:
-    #for dataset in ["intrusion"]:
+    #for dataset in [arguments.dataset]:
+    for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
@@ -1032,7 +1033,7 @@ if __name__ == '__main__':
             repetitions=3
         elif dataset == 'intrusion':
             how_many_epochs_arg = [6000, 4000, 2000, 1000]
-            mini_batch_arg = [0.3]
+            mini_batch_arg = [0.1]
             repetitions=3
 
 
