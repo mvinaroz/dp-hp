@@ -181,7 +181,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
     if dataset=='epileptic':
         print("epileptic seizure recognition dataset") # this is homogeneous
 
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = pd.read_csv("../data/Epileptic/data.csv")
         else:
             # (1) load data
@@ -211,7 +211,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("Creditcard fraud detection dataset") # this is homogeneous
 
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
         else:
             # (1) load data
@@ -259,7 +259,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         print("census dataset") # this is heterogenous
 
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data = np.load("../data/real/census/train.npy")
         else:
             data = np.load(
@@ -308,7 +308,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("dataset is", dataset) # this is heterogenous
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             df = pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
         else:
             df = pd.read_csv(
@@ -422,7 +422,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("isolet dataset")
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             data_features_npy = np.load('../data/Isolet/isolet_data.npy')
             data_target_npy = np.load('../data/Isolet/isolet_labels.npy')
         else:
@@ -502,7 +502,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         print("dataset is", dataset)
         print(socket.gethostname())
-        if 'g0' not in socket.gethostname():
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
             train_data = np.load("../data/real/covtype/train.npy")
             test_data = np.load("../data/real/covtype/test.npy")
             # we put them together and make a new train/test split in the following
@@ -556,6 +556,8 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         f1_arr=[]
 
         for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
+
             print('\n', type(model))
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -831,7 +833,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
                 label_input = label_input.to(device)
 
                 # (2) generate corresponding features
-                feature_input = torch.randn((mini_batch_size, input_size-1)).to(device)
+                feature_input = torch.randn((mini_batch_size+len(weights), input_size-1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input), 1)
                 outputs = model(input_to_model)
 
@@ -1002,17 +1004,17 @@ if __name__ == '__main__':
 
     repetitions = 5  # check
 
-    #check
+    # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
-    for dataset in ["intrusion"]:
+    for dataset in [arguments.dataset]:
+    #for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
         if single_run == True:
-            how_many_epochs_arg = [200]
+            how_many_epochs_arg = [500]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [100]
+            n_features_arg = [500]
             mini_batch_arg = [0.3]
         else:
             how_many_epochs_arg = [8000, 6000, 2000, 1000, 4000]
@@ -1021,20 +1023,20 @@ if __name__ == '__main__':
             # n_features_arg = [50000, 80000, 100000]
             mini_batch_arg = [0.5]
 
-        if dataset=='adult':
-            mini_batch_arg=[0.1]
-            n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
-        elif dataset=='census':
-            mini_batch_arg=[0.1]
-            n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        elif dataset=='covtype':
-            how_many_epochs_arg = [6000, 4000, 2000, 1000]
-            mini_batch_arg=[0.05]
-            repetitions=3
-        elif dataset == 'intrusion':
-            how_many_epochs_arg = [6000, 4000, 2000, 1000]
-            mini_batch_arg = [0.1]
-            repetitions=3
+            if dataset=='adult':
+                mini_batch_arg=[0.1]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
+            elif dataset=='census':
+                mini_batch_arg=[0.1]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+            elif dataset=='covtype':
+                how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
+                mini_batch_arg=[0.05]
+                repetitions=3
+            elif dataset == 'intrusion':
+                how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
+                mini_batch_arg = [0.1]
+                repetitions=3
 
 
 
