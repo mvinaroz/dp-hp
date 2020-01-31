@@ -32,7 +32,7 @@ import sys
 import numpy
 import tensorflow as tf
 
-from differential_privacy.dp_sgd.dp_optimizer import utils
+from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
 
 EpsDelta = collections.namedtuple("EpsDelta", ["spent_eps", "spent_delta"])
 
