@@ -218,7 +218,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 10000  # was 100.000
+    num_training_steps = 100000  # was 100.000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
