@@ -297,7 +297,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
         should_terminate = False
 
         # Main loop
-        while step < num_training_steps and should_terminate is False:
+        while step <= num_training_steps and should_terminate is False:
 
             epoch = step
             curr_lr = utils.VaryRate(start_lr, end_lr, lr_saturate_epochs, epoch)
