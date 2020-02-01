@@ -1031,11 +1031,13 @@ if __name__ == '__main__':
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
             elif dataset=='covtype':
                 how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-                mini_batch_arg=[0.05]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+                mini_batch_arg=[0.03]
                 repetitions=3
             elif dataset == 'intrusion':
                 how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-                mini_batch_arg = [0.1]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+                mini_batch_arg = [0.03]
                 repetitions=3
 
 
