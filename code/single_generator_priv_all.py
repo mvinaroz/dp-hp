@@ -570,7 +570,6 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
                 f1score = f1_score(y_te, pred, average='weighted')
 
-                #print(datasettype, ' F1-score (on test data) is ', f1score)
                 print("F1-score on test %s data is %.3f" % (datasettype, f1score))
                 # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
                 f1_arr.append(f1score)
@@ -964,6 +963,9 @@ def sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f %s%s" % (num, 'Yi', suffix)
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 if __name__ == '__main__':
 
@@ -1117,7 +1119,7 @@ if __name__ == '__main__':
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
-                    f1scr  = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     f1score_arr.append(f1scr)
 
                 print("Average over repetitions of running on set of methods")

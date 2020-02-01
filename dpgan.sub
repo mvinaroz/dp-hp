@@ -34,6 +34,7 @@ stream_output=True
 request_memory = 8040
 request_cpus = 1
 request_gpus = 1
+queue 1
 
 # dataset=census
 # queue 1
