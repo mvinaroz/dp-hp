@@ -187,8 +187,8 @@ if __name__ == '__main__':
     user='kamil'
     for digit in digits:
         tf.reset_default_graph()
-        data = importlib.import_module(args.data)  # from parser
-        model = importlib.import_module(args.data + '.' + args.model)
+        #data = importlib.import_module(args.data)  # from parser
+        #model = importlib.import_module(args.data + '.' + args.model)
         xs = data.DataSampler() # mnist/__init__.py, xs is a instance of class DataSampler
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
