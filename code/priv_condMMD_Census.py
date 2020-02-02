@@ -134,7 +134,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
     ##################
     # parameters
     seed_number = 0
-    is_private = True
+    is_private = False
     #n_features_arg2 = 500
     #mini_batch_arg2 = 0.5
     #how_many_epochs_arg2 = 1000
@@ -172,7 +172,7 @@ def main(n_features_arg2, mini_batch_arg2, how_many_epochs_arg2):
 
     # take random 10 percent of the negative labelled data
     in_keep = np.random.permutation(np.sum(idx_negative_label))
-    under_sampling_rate = 0.2
+    under_sampling_rate = 0.4
     in_keep = in_keep[0:np.int(np.sum(idx_negative_label)*under_sampling_rate)]
 
     neg_samps_input = neg_samps_input[in_keep,:]

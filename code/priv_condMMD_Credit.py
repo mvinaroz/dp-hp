@@ -93,7 +93,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
     random.seed(0)
 
     print("Creditcard fraud detection dataset")
-    is_private = True
+    is_private = False
 
     print(socket.gethostname())
 
@@ -126,7 +126,7 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     # take random 10 percent of the negative labelled data
     in_keep = np.random.permutation(np.sum(idx_negative_label))
-    under_sampling_rate = 0.025
+    under_sampling_rate = 0.01
     in_keep = in_keep[0:np.int(np.sum(idx_negative_label)*under_sampling_rate)]
 
     neg_samps_input = neg_samps_input[in_keep,:]
@@ -202,6 +202,9 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
     optimizer = optim.Adam(model.parameters(), lr=1e-3)
     how_many_iter = np.int(n/mini_batch_size)
+    if how_many_iter==0:
+        how_many_iter = 1
+    print('how many iter per epoch is', how_many_iter)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
 
@@ -289,18 +292,18 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
 
 
-    plt.figure(3)
-    plt.plot(training_loss_per_epoch)
-    plt.title('MMD as a function of epoch')
-    plt.yscale('log')
-
-    plt.figure(4)
-    plt.subplot(211)
-    plt.plot(mean_emb1[:, 0].cpu(), 'b')
-    plt.plot(mean_emb2[:, 0].cpu().detach().numpy(), 'b--')
-    plt.subplot(212)
-    plt.plot(mean_emb1[:, 1].cpu(), 'r')
-    plt.plot(mean_emb2[:, 1].cpu().detach().numpy(), 'r--')
+    # plt.figure(3)
+    # plt.plot(training_loss_per_epoch)
+    # plt.title('MMD as a function of epoch')
+    # plt.yscale('log')
+    #
+    # plt.figure(4)
+    # plt.subplot(211)
+    # plt.plot(mean_emb1[:, 0].cpu(), 'b')
+    # plt.plot(mean_emb2[:, 0].cpu().detach().numpy(), 'b--')
+    # plt.subplot(212)
+    # plt.plot(mean_emb1[:, 1].cpu(), 'r')
+    # plt.plot(mean_emb2[:, 1].cpu().detach().numpy(), 'r--')
 
     """ now generate samples from the trained network """
 
@@ -348,9 +351,10 @@ def main(n_features_arg, mini_batch_size_frac, how_many_epochs_arg):
 
 if __name__ == '__main__':
 
-    how_many_epochs_arg=[1000, 2000]
-    n_features_arg=[50, 300, 500, 1000, 5000, 50000, 80000, 100000]
-    mini_batch_arg=[0.2, 0.5]
+    how_many_epochs_arg=[4000]
+    n_features_arg = [500]
+    #n_features_arg=[30, 50, 100, 200, 500, 1000, 5000, 50000, 80000, 100000]
+    mini_batch_arg=[1.0]
 
     grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                           "how_many_epochs_arg": how_many_epochs_arg})
