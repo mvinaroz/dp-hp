@@ -11,7 +11,12 @@ from numpy import arange, random, ceil, mean, array, count_nonzero, zeros, eye
 from utilize import data_readf, c2b, c2bcolwise, splitbycol, gene_check, statistics, dwp, load_MIMICIII, fig_add_noise
 import logging # these 2 lines are used in GPU3
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
+import sys
 
+sys.path.insert(0, "../data")
+sys.path.insert(0, "../code")
+
+from dataloader import load_isolet, test_models, load_credit
 from visualize import *
 
 
@@ -21,7 +26,7 @@ class MIMIC_WGAN(object):
         self.d_net = d_net
         self.ae_net = ae_net
         self.z_sampler = z_sampler
-        self.x_dim = self.d_net.inputDim
+        self.x_dim = 29#617#self.d_net.inputDim
         self.z_dim = self.g_net.randomDim
         self.decompressDims = decompressDims
         self.aeActivation = aeActivation
@@ -42,7 +47,9 @@ class MIMIC_WGAN(object):
         self.x_ = self.g_net(self.z) # G, get generated data
         self.d_loss, self.g_loss, self.y_hat_real, self.y_hat_fake, _ = self.d_net(self.x, self.x_, self.keep_prob, self.decodeVariables, reuse=False) # D, in the beginning, no reuse
         # self.trainX, _, _ = data_readf(self.top) # load whole dataset, self.top is dummy here
-        self.trainX, self.testX, _ = load_MIMICIII(self.dataType, self._VALIDATION_RATIO, self.top) # load whole dataset, self.top is dummy here
+        #self.trainX, self.testX, _ = load_isolet()#load_MIMICIII(self.dataType, self._VALIDATION_RATIO, self.top) # load whole dataset, self.top is dummy here
+        self.trainX, self.trainY, self.testX, self.testY = load_credit()#load_MIMICIII(self.dataType, self._VALIDATION_RATIO, self.top) # load whole dataset, self.top is dummy here
+
         self.nBatches = int(ceil(float(self.trainX.shape[0]) / float(self.batchSize))) # number of batch if using training set
 
         all_regs = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
@@ -132,6 +139,10 @@ class MIMIC_WGAN(object):
         # x_gene_dec = c2bcolwise(self.trainX, x_gene_dec, self.adj) # binarize generated data by setting the same portion of elements to 1 as the training set, these elements have highest original value
         # print "please check this part, make sure it is correct"
         # print self.trainX.shape, x_gene.shape, x_gene_dec.shape, self.testX.shape
+
+        roc, prc = test_models(x_gene_dec, self.trainY, self.testX, self.testY, "generated")
+        print("roc: ", roc)
+
         return self.trainX, x_gene_dec
 
     def decoder(self, x_fake): # this function is specifically to make sure the output of generator goes through the decoder
@@ -326,7 +337,7 @@ if __name__ == '__main__':
 
     # some parameters
     dataType = 'binary'
-    inputDim = 1071 # 1071 for original data, other: 1071 (in paper), 512, 64
+    inputDim = 29#617#1071 # 1071 for original data, other: 1071 (in paper), 512, 64
     embeddingDim = 128
     randomDim = 128
     generatorDims = list((128, 128)) + [embeddingDim]
@@ -335,9 +346,9 @@ if __name__ == '__main__':
     decompressDims = list(()) + [inputDim]
     bnDecay = 0.99
     l2scale = 2.5e-5 # WGAN: 2.5e-5, GAN: 0.001
-    pretrainEpochs = 100 #2, 100
+    pretrainEpochs = 30#100 #2, 100
     pretrainBatchSize = 128
-    nEpochs = 1000 #2, 1000
+    nEpochs = 100#1000 #2, 1000
     batchSize = 1024
     cilpc = 0.01
     n_discriminator_update = 2
@@ -362,3 +373,5 @@ if __name__ == '__main__':
     wgan.train_autoencoder(pretrainEpochs, pretrainBatchSize) # Pre-training autoencoder
     x_train, x_gene = wgan.train(nEpochs, batchSize)
     wgan.loss_store2(x_train, x_gene)
+
+
