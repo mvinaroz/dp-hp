@@ -397,8 +397,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
-                save_str = 'dp-cgan-synth-mnist-eps' if data_save_str is None else data_save_str
-                np.savez(f'{save_str}{max_target_eps}.npz', data=images, labels=image_labels)
+                save_str = 'dp-cgan-synth-mnist' if data_save_str is None else data_save_str
+                np.savez(f'{save_str}-eps{max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 
                 x_test, y_test = loadlocal_mnist(

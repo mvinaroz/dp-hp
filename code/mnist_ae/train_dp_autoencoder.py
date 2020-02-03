@@ -13,7 +13,7 @@ from tensorboardX import SummaryWriter
 
 
 def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
-          summary_writer, noise_up_enc):
+          summary_writer, verbose):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -101,7 +101,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         param.grad = clipped_grad
 
     optimizer.step()
-    if batch_idx % log_interval == 0:
+    if batch_idx % log_interval == 0 and verbose:
       n_data = len(train_loader.dataset)
       n_done = batch_idx * len(data)
       frac_done = 100. * batch_idx / len(train_loader)
@@ -238,6 +238,7 @@ def get_args():
   parser.add_argument('--log-name', type=str, default=None)  # set for custom save subdir
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None (only set thisto completely alter loc)
   parser.add_argument('--n-labels', type=int, default=10)
+  parser.add_argument('--verbose', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
@@ -359,7 +360,7 @@ def main():
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
     train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
-          summary_writer, ar.noise_up_enc)
+          summary_writer, ar.verbose)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
     # print('new lr:', scheduler.get_lr())
