@@ -892,7 +892,10 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
     """ privatizing each column of mean embedding """
     if is_private:
-        sensitivity = 2 / n
+        if dataset in heterogeneous_datasets:
+            sensitivity = 2*np.sqrt(2) / n
+        else:
+            sensitivity = 2 / n
         noise_std_for_privacy = privacy_param['sigma'] * sensitivity
 
         # make sure add noise after rescaling
