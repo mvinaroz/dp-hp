@@ -170,6 +170,30 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
 ############################### beginning of main script ######################
 
+def undersample(raw_input_features, raw_labels, undersampled_rate):
+    """ we take a pre-processing step such that the dataset is a bit more balanced """
+    idx_negative_label = raw_labels == 0
+    idx_positive_label = raw_labels == 1
+
+    pos_samps_input = raw_input_features[idx_positive_label, :]
+    pos_samps_label = raw_labels[idx_positive_label]
+    neg_samps_input = raw_input_features[idx_negative_label, :]
+    neg_samps_label = raw_labels[idx_negative_label]
+
+    # take random 10 percent of the negative labelled data
+    in_keep = np.random.permutation(np.sum(idx_negative_label))
+    under_sampling_rate = undersampled_rate  # 0.4
+    in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
+
+    neg_samps_input = neg_samps_input[in_keep, :]
+    neg_samps_label = neg_samps_label[in_keep]
+
+    feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+    label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+    return feature_selected, label_selected
+
+
 def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg, seed_number):
 
     random.seed(seed_number)
@@ -197,13 +221,47 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
           if data_target.at[i,'y']!=1:
             data_target.at[i,'y'] = 0
 
-        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=seed_number)
+        ####
+
+        raw_labels=np.array(data_target)
+        raw_input_features=np.array(data_features)
+
+        idx_negative_label = raw_labels == 0
+        idx_positive_label = raw_labels == 1
+
+        idx_negative_label=idx_negative_label.squeeze()
+        idx_positive_label=idx_positive_label.squeeze()
+
+        pos_samps_input = raw_input_features[idx_positive_label, :]
+        pos_samps_label = raw_labels[idx_positive_label]
+        neg_samps_input = raw_input_features[idx_negative_label, :]
+        neg_samps_label = raw_labels[idx_negative_label]
+
+        # take random 10 percent of the negative labelled data
+        in_keep = np.random.permutation(np.sum(idx_negative_label))
+        under_sampling_rate = undersampled_rate  # 0.01
+        # under_sampling_rate = 0.3
+        in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
+
+        neg_samps_input = neg_samps_input[in_keep, :]
+        neg_samps_label = neg_samps_label[in_keep]
+
+        feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+        label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+        label_selected=label_selected.squeeze()
+        ####
+
+
+        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30, random_state=seed_number)
+
+        #X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30, random_state=seed_number)
 
         # unpack data
-        X_train = X_train.values
-        y_train = y_train.values.ravel()
-        X_test=np.array(X_test)
-        y_test=np.array(y_test)
+        #X_train = X_train.values
+        #y_train = y_train.values.ravel()
+        #X_test=np.array(X_test)
+        #y_test=np.array(y_test)
         n_classes = 2
 
 
@@ -413,6 +471,8 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         inputs = data[:, :-1]
         target = data[:, -1]
 
+        inputs, target=undersample(inputs, target, undersampled_rate)
+
         X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
                                                             random_state=seed_number)
 
@@ -443,14 +503,47 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         data_features = pd.DataFrame(values, index=index)
         data_target = pd.DataFrame(values_l, index=index_l)
 
-        X_train, X_test, y_train, y_test = train_test_split(data_features, data_target, train_size=0.70, test_size=0.30,
+        ####
+
+        raw_labels = np.array(data_target)
+        raw_input_features = np.array(data_features)
+
+        idx_negative_label = raw_labels == 0
+        idx_positive_label = raw_labels == 1
+
+        idx_negative_label = idx_negative_label.squeeze()
+        idx_positive_label = idx_positive_label.squeeze()
+
+        pos_samps_input = raw_input_features[idx_positive_label, :]
+        pos_samps_label = raw_labels[idx_positive_label]
+        neg_samps_input = raw_input_features[idx_negative_label, :]
+        neg_samps_label = raw_labels[idx_negative_label]
+
+        # take random 10 percent of the negative labelled data
+        in_keep = np.random.permutation(np.sum(idx_negative_label))
+        under_sampling_rate = undersampled_rate  # 0.01
+        # under_sampling_rate = 0.3
+        in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
+
+        neg_samps_input = neg_samps_input[in_keep, :]
+        neg_samps_label = neg_samps_label[in_keep]
+
+        feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+        label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+        label_selected = label_selected.squeeze()
+
+
+        ####
+
+        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30,
                                                             random_state=seed_number)
 
         # unpack data
-        X_train = X_train.values
-        y_train = y_train.values.ravel()
-        X_test = np.array(X_test)
-        y_test = np.array(y_test)
+        #X_train = X_train.values
+        #y_train = y_train.values.ravel()
+        #X_test = np.array(X_test)
+        #y_test = np.array(y_test)
         n_classes = 2
 
 
@@ -533,10 +626,39 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:, :-1]
-        target = data[:, -1]
+        inputs = data[:20000, :-1]
+        target = data[:20000, -1]
 
-        X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.70, test_size=0.30,
+
+        ##################3
+
+        raw_labels=target
+        raw_input_features=inputs
+
+        """ we take a pre-processing step such that the dataset is a bit more balanced """
+        idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
+        idx_positive_label = raw_labels != 1
+
+        pos_samps_input = raw_input_features[idx_positive_label, :]
+        pos_samps_label = raw_labels[idx_positive_label]
+        neg_samps_input = raw_input_features[idx_negative_label, :]
+        neg_samps_label = raw_labels[idx_negative_label]
+
+        # take random 40% of the negative labelled data
+        in_keep = np.random.permutation(np.sum(idx_negative_label))
+        under_sampling_rate = undersampled_rate  # 0.3
+        in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
+
+        neg_samps_input = neg_samps_input[in_keep, :]
+        neg_samps_label = neg_samps_label[in_keep]
+
+        feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
+        label_selected = np.concatenate((pos_samps_label, neg_samps_label))
+
+
+        ###############3
+
+        X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30,
                                                             random_state=seed_number)  # 60% training and 40% test
 
 
@@ -555,8 +677,8 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         prc_arr=[]
         f1_arr=[]
 
-        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
-        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
+        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
 
             print('\n', type(model))
             model.fit(X_tr, y_tr)
@@ -588,7 +710,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         if n_classes > 2:
 
             res1 = np.mean(f1_arr)
-            print("f1 mean across methods is %.3f\n" % res1)
+            print("------\nf1 mean across methods is %.3f\n" % res1)
             res2 = 0  # dummy
         else:
 
@@ -1002,22 +1124,23 @@ if __name__ == '__main__':
 
 
     is_priv_arg = arguments.private  # check
-    single_run = False  # check
+    single_run = True  # check
 
     repetitions = 5  # check
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    for dataset in [arguments.dataset]:
-    #for dataset in ["intrusion"]:
+    #for dataset in [arguments.dataset]:
+    for dataset in ["covtype"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
         if single_run == True:
-            how_many_epochs_arg = [500]
+            how_many_epochs_arg = [200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
             n_features_arg = [500]
             mini_batch_arg = [0.3]
+            undersampling_rates = [.8]  # dummy
         else:
             how_many_epochs_arg = [8000, 6000, 2000, 1000, 4000]
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
@@ -1028,7 +1151,7 @@ if __name__ == '__main__':
             if dataset=='adult':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
-                undersampling_rates = [1.] #dummy
+                undersampling_rates = [.8, .6, .4] #dummy
             elif dataset=='census':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
@@ -1048,11 +1171,11 @@ if __name__ == '__main__':
             elif dataset=='credit':
                 undersampling_rates = [0.01, 0.005, 0.02]
             elif dataset=='cervical':
-                undersampling_rates = [0.1, 0.3, 0.5]
+                undersampling_rates = [0.1, 0.3, 0.5, 0.7, 1.0]
             elif dataset=='isolet':
-                undersampling_rates = [1.] #dummy
+                undersampling_rates = [0.8, 0.6, 0.4, 1.] #dummy
             elif dataset=='epileptic':
-                undersampling_rates = [1.] #dummy
+                undersampling_rates = [0.8, 0.6, 0.4, 1.] #dummy
 
 
 
