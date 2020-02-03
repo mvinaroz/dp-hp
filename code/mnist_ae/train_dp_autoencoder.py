@@ -180,7 +180,6 @@ def select_balaned_plot_batch(data, labels, n_classes, n_samples_per_class):
     ls = labels[idx]
     if len(data_ids[ls]) < n_samples_per_class:
       data_ids[ls].append(idx)
-      print(ls)
       if len(data_ids[ls]) == n_samples_per_class:
         n_full += 1
         if n_full == n_classes:
