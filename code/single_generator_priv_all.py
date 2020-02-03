@@ -677,8 +677,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         prc_arr=[]
         f1_arr=[]
 
-        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
-        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
+        # check
+        for model in [LogisticRegression(solver='lbfgs', max_iter=2000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
 
             print('\n', type(model))
             model.fit(X_tr, y_tr)
@@ -1127,14 +1128,14 @@ if __name__ == '__main__':
 
 
     is_priv_arg = arguments.private  # check
-    single_run = True  # check
+    single_run = False  # check
 
     repetitions = 5  # check
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
-    for dataset in ["covtype"]:
+    for dataset in [arguments.dataset]:
+    #for dataset in ["covtype"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
@@ -1246,7 +1247,7 @@ if __name__ == '__main__':
                     print("\nRepetition: ",ii)
 
                     f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-                    f1score_arr.append(f1scr)
+                    f1score_arr.append(f1scr[0])
 
                 print("Average over repetitions of running on set of methods")
                 print("Average f1 score: ", np.mean(f1score_arr))
