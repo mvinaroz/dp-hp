@@ -170,7 +170,7 @@ class Generative_Model_heterogeneous_data(nn.Module):
 
 ############################### beginning of main script ######################
 
-def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg, seed_number):
+def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_priv_arg, seed_number):
 
     random.seed(seed_number)
 
@@ -239,7 +239,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.01
+        under_sampling_rate = undersampled_rate #0.01
         # under_sampling_rate = 0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
@@ -291,7 +291,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.7
+        under_sampling_rate = undersampled_rate #0.4
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -381,7 +381,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 10 percent of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.5
+        under_sampling_rate = undersampled_rate #0.5
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -485,7 +485,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
         # take random 40% of the negative labelled data
         in_keep = np.random.permutation(np.sum(idx_negative_label))
-        under_sampling_rate = 0.3
+        under_sampling_rate = undersampled_rate#0.3
         in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
         neg_samps_input = neg_samps_input[in_keep, :]
@@ -555,7 +555,7 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
         prc_arr=[]
         f1_arr=[]
 
-        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
+        for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
         #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
 
             print('\n', type(model))
@@ -570,7 +570,6 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
                 f1score = f1_score(y_te, pred, average='weighted')
 
-                #print(datasettype, ' F1-score (on test data) is ', f1score)
                 print("F1-score on test %s data is %.3f" % (datasettype, f1score))
                 # 0.6742486709433465 for covtype data, 0.9677751506935462 for intrusion data
                 f1_arr.append(f1score)
@@ -771,7 +770,10 @@ def main(dataset, n_features_arg, mini_batch_size_arg, how_many_epochs_arg, is_p
 
     """ privatizing each column of mean embedding """
     if is_private:
-        sensitivity = 2 / n
+        if dataset in heterogeneous_datasets:
+            sensitivity = 2*np.sqrt(2) / n
+        else:
+            sensitivity = 2 / n
         noise_std_for_privacy = privacy_param['sigma'] * sensitivity
 
         # make sure add noise after rescaling
@@ -964,6 +966,9 @@ def sizeof_fmt(num, suffix='B'):
         num /= 1024.0
     return "%.1f %s%s" % (num, 'Yi', suffix)
 
+###################################################################################################
+###################################################################################################
+###################################################################################################
 
 if __name__ == '__main__':
 
@@ -1026,21 +1031,35 @@ if __name__ == '__main__':
             if dataset=='adult':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
+                undersampling_rates = [1.] #dummy
             elif dataset=='census':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+                undersampling_rates = [0.2, 0.3, 0.4]
             elif dataset=='covtype':
                 how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-                mini_batch_arg=[0.05]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+                mini_batch_arg=[0.03]
                 repetitions=3
+                undersampling_rates = [1.] #dummy
             elif dataset == 'intrusion':
                 how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-                mini_batch_arg = [0.1]
+                n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+                mini_batch_arg = [0.03]
                 repetitions=3
+                undersampling_rates=[0.1, 0.2, 0.3]
+            elif dataset=='credit':
+                undersampling_rates = [0.01, 0.005, 0.02]
+            elif dataset=='cervical':
+                undersampling_rates = [0.1, 0.3, 0.5]
+            elif dataset=='isolet':
+                undersampling_rates = [1.] #dummy
+            elif dataset=='epileptic':
+                undersampling_rates = [1.] #dummy
 
 
 
-        grid = ParameterGrid({"n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
+        grid = ParameterGrid({"undersampling_rates": undersampling_rates, "n_features_arg": n_features_arg, "mini_batch_arg": mini_batch_arg,
                               "how_many_epochs_arg": how_many_epochs_arg})
 
 
@@ -1057,7 +1076,7 @@ if __name__ == '__main__':
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
-                    roc, prc  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    roc, prc  = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
 
                     # print("Variables: ")
                     # for name, size in sorted(((name, sys.getsizeof(value)) for name, value in locals().items()),
@@ -1103,7 +1122,7 @@ if __name__ == '__main__':
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
-                    f1scr  = main(dataset, elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
                     f1score_arr.append(f1scr)
 
                 print("Average over repetitions of running on set of methods")

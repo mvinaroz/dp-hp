@@ -14,6 +14,7 @@ from utilize import normlization, loaddata, Rsample, MNIST_c
 import logging # these 2 lines ar used in GPU3
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 from visualize import *
+import socket
 
 
 class WassersteinGAN(object):
@@ -127,13 +128,13 @@ class WassersteinGAN(object):
                 self.d_loss_store.append(rd_loss)  # d_loss will increase
                 self.wdis_store.append(rd_loss)  # Wasserstein distance will decrease
 
-                # # generate image
-                # bz = self.z_sampler(1, self.z_dim) # changed, only generate 1 image
-                # bx = self.sess.run(self.x_, feed_dict={self.z: bz}) # bx.shape: (1, 784)
-                # bx = xs.data2img(bx) # data2img is in __init__.py, bx.shape: (1, 28, 28, 1)
-                # fig = plt.figure(self.data + '.' + self.model)
-                # grid_show(fig, bx, xs.shape)
-                # fig.savefig('result/genefig/{}/{}.jpg'.format(self.data, t)) # changed
+                # generate image
+                bz = self.z_sampler(1, self.z_dim) # changed, only generate 1 image
+                bx = self.sess.run(self.x_, feed_dict={self.z: bz}) # bx.shape: (1, 784)
+                bx = xs.data2img(bx) # data2img is in __init__.py, bx.shape: (1, 28, 28, 1)
+                fig = plt.figure(self.data + '.' + self.model)
+                grid_show(fig, bx, xs.shape)
+                fig.savefig('result/genefig/{}/{}.pdf'.format(self.data, t)) # changed
 
             # if t % self.save_size == 0:  # store generator and discriminator, new added
             #     saver = tf.train.Saver()
@@ -183,11 +184,12 @@ if __name__ == '__main__':
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
     digits = ['2', '3', '4', '5']  # MNIST digits need to use
+    user='kamil'
     for digit in digits:
         tf.reset_default_graph()
         data = importlib.import_module(args.data)  # from parser
         model = importlib.import_module(args.data + '.' + args.model)
-        # xs = data.DataSampler() # mnist/__init__.py, xs is a instance of class DataSampler
+        xs = data.DataSampler() # mnist/__init__.py, xs is a instance of class DataSampler
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
@@ -199,9 +201,16 @@ if __name__ == '__main__':
         num_batches = 10000  # 150000
         plot_size = 5
         save_size = 100000
-        d_iters = 5
+        d_iters = 1
         data_name = 'training'
-        data_path = "/home/xieliyan/Desktop/data/MNIST/"
-        path_output = "/home/xieliyan/Dropbox/GPU/GPU3/wgan/result/"
+
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
+            if user == 'kamil':
+                data_path = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/MNIST/raw/"
+                path_output = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/dpgan-master/output/"
+        else:
+            data_path = "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/MNIST/raw/"
+            path_output = "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/dpgan-master/output/"
+
         wgan = WassersteinGAN(g_net, d_net, zs, args.data, args.model, sigma_all, digit, reg, lr, cilpc, batch_size, num_batches, plot_size, save_size, d_iters, data_name, data_path, path_output)
         wgan.train()
