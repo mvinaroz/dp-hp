@@ -15,6 +15,7 @@ from sklearn.naive_bayes import BernoulliNB
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.preprocessing import label_binarize
+from sklearn.preprocessing import OneHotEncoder
 
 # Import the requiered python packages
 import tensorflow as tf
@@ -35,6 +36,19 @@ from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
 from dp_cgan_accounting.privacy_accountant.tf import accountant
 from dp_cgan_accounting.analysis.rdp_accountant import compute_rdp
 from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
+
+
+#tf.enable_eager_execution()
+
+import sys
+
+sys.path.insert(0, "../../data")
+sys.path.insert(0, "../../code")
+
+from dataloader import load_isolet, test_models, load_credit
+
+
+
 
 
 def compute_fpr_tpr_roc(y_test, y_score):
@@ -170,11 +184,22 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     h_dim = 128
     Z_dim = 100
 
+    credit=load_credit()
+
+    train_dataset = tf.data.Dataset.from_tensor_slices((credit[0], credit[1])).batch(50)
+    test_dataset = tf.data.Dataset.from_tensor_slices((credit[2], credit[3])).batch(50)
+
+    iterator = train_dataset.make_initializable_iterator()
+    next_element = iterator.get_next()
+
+
+    #ds_counter = tf.data.Dataset.from_generator(train_dataset, args=[25], output_types=tf.int32, output_shapes=(), )
+
     # Initializations for a two-layer discriminator network
     # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
-    x_dim = mnist.train.images.shape[1]
-    y_dim = mnist.train.labels.shape[1]
+    x_dim = 29#mnist.train.images.shape[1]
+    y_dim = 2#mnist.train.labels.shape[1]
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
     y_pl = tf.placeholder(tf.float32, shape=[None, y_dim])
 
@@ -308,7 +333,9 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
             if step % 50 == 0:
                 print("step :  " + str(step) + "  eps : " + str(eps))
 
-                n_sample = 10
+                #n_sample = 10
+                n_sample = 2
+
                 z_sample = sample_z(n_sample, Z_dim)
                 # y_sample = np.zeros(shape=[n_sample, 10])
                 #
@@ -322,16 +349,26 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 # y_sample[7, 7] = 1
                 # y_sample[8, 8] = 1
                 # y_sample[9, 9] = 1
-                y_sample = np.eye(10)
+                y_sample = np.eye(2)
+                #y_sample = np.eye(10)
 
                 samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
 
-                fig = plot(samples)
-                plt.savefig(
-                    (result_path + "/step_{}.png").format(str(step).zfill(3)), bbox_inches='tight')
-                plt.close(fig)
+                # fig = plot(samples)
+                # plt.savefig(
+                #     (result_path + "/step_{}.png").format(str(step).zfill(3)), bbox_inches='tight')
+                # plt.close(fig)
 
-            x_mb, y_mb = mnist.train.next_batch(batch_size, shuffle=True)
+            #with tf.Session() as sess:
+            sess.run(iterator.initializer)
+                #for i in range(15):
+                  #  val = sess.run(next_element)
+
+
+            x_mb, y_mb_sing = sess.run(next_element)#iterator.get_next() #mnist.train.next_batch(batch_size, shuffle=True)
+            onehot_encoder = OneHotEncoder(sparse=False)
+            y_train = np.expand_dims(y_mb_sing, 1)
+            y_mb = onehot_encoder.fit_transform(y_train)
 
             z_sample = sample_z(batch_size, Z_dim)
 
@@ -348,7 +385,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 should_terminate = True
 
                 for i in range(0, 10):
-                    n_sample = 10
+                    n_sample = 2#10
                     z_sample = sample_z(n_sample, Z_dim)
                     # y_sample = np.zeros(shape=[n_sample, y_dim])
                     #
@@ -362,12 +399,15 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                     # y_sample[7, 7] = 1
                     # y_sample[8, 8] = 1
                     # y_sample[9, 9] = 1
-                    y_sample = np.eye(10)
+                    #y_sample = np.eye(10)
+                    y_sample = np.eye(2)
+
 
                     samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
-                    fig = plot(samples)
-                    plt.savefig((result_path + "/Final_step_{}.png").format(str(i).zfill(3)), bbox_inches='tight')
-                    plt.close(fig)
+                    dummy=8
+                    #fig = plot(samples)
+                    #plt.savefig((result_path + "/Final_step_{}.png").format(str(i).zfill(3)), bbox_inches='tight')
+                    #plt.close(fig)
 
                 n_class = np.zeros(10)
 
@@ -438,8 +478,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
-    batchSizeList = [600]
-    epsilon = 9.6
+    batchSizeList = [50]#[600]
+    epsilon = .5#9.6
     # epsilon = 1e10
     delta = 1e-5
 
