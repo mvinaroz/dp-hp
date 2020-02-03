@@ -149,12 +149,16 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
   siam_loss_agg /= n_data
   full_loss = rec_loss_agg + siam_loss_agg
 
+  reconstruction = reconstruction.cpu().numpy()
+  labels = labels.cpu().numpy()
+  reconstruction, labels = select_balaned_plot_batch(reconstruction, labels, n_classes=10, n_samples_per_class=10)
+
   if label_ae:
-    rec_labels = reconstruction[:100, 784:].cpu().numpy()
+    rec_labels = reconstruction[:, 784:]
     save_gen_labels(rec_labels, 10, 10, log_spec.log_dir + f'rec_ep{epoch}_labels', save_raw=False)
-    reconstruction = reconstruction[:100, :784].reshape(100, 28, 28).cpu().numpy()
+    reconstruction = reconstruction[:, :784].reshape(-1, 28, 28)
   else:
-    reconstruction = reconstruction[:100, ...].cpu().numpy()
+    reconstruction = reconstruction
 
   plot_mnist_batch(reconstruction, 10, 10, log_spec.log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
   if last_epoch:
@@ -165,6 +169,25 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
     plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=not losses.do_ce, save_raw=False)
 
   print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
+
+
+def select_balaned_plot_batch(data, labels, n_classes, n_samples_per_class):
+
+  data_ids = [[] for _ in range(n_classes)]
+  n_total = n_samples_per_class * n_classes
+  n_full = 0
+  for idx in range(data.shape[0]):
+    ls = labels[idx]
+    if len(data_ids[ls]) < n_samples_per_class:
+      data_ids[ls].append(idx)
+      print(ls)
+      if len(data_ids[ls]) == n_samples_per_class:
+        n_full += 1
+        if n_full == n_classes:
+          ids = np.reshape(np.asarray(data_ids), (n_total,))
+          return data[ids], labels[ids]
+  # fail case
+  return data[:n_total], labels[:n_total]
 
 
 def mse_loss(reconstruction, data):  # this could be done directly with backpack but this way is more consistent
