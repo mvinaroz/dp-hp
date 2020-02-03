@@ -19,16 +19,20 @@ def test_model(model, x_trn, y_trn, x_tst, y_tst):
 
 def main():
   parser = argparse.ArgumentParser()
+  parser.add_argument('--data-path', type=str, default=None)  # is computed. only set to override
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/')
   parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
   parser.add_argument('--log-results', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
+  parser.add_argument('--shuffle-data', action='store_true', default=False)
   ar = parser.parse_args()
 
   gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
   log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
   if ar.log_results and not os.path.exists(log_save_dir):
     os.makedirs(log_save_dir)
+  if ar.data_path is None:
+    ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
 
   train_data = datasets.MNIST('../../data', train=True)
   x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
@@ -38,8 +42,18 @@ def main():
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
   x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
 
-  gen_data = np.load(os.path.join(gen_data_dir, 'synthetic_mnist.npz'))
-  x_gen, y_gen = gen_data['data'], gen_data['labels'].ravel()
+  gen_data = np.load(ar.data_path)
+  x_gen, y_gen = gen_data['data'], gen_data['labels']
+  if len(y_gen.shape) == 2:  # remove onehot
+    if y_gen.shape[1] == 1:
+      y_gen = y_gen.ravel()
+    elif y_gen.shape[1] == 10:
+      y_gen = np.argmax(y_gen, axis=1)
+    else:
+      raise ValueError
+  if ar.shuffle_data:
+    rand_perm = np.random.permutation(y_gen.shape[0])
+    x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
 
   print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
         f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')

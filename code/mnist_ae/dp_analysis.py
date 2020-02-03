@@ -18,7 +18,7 @@ def main():
 
     # (5) number of training steps
     batch_size = 1000
-    n_epochs = 40
+    n_epochs = 20
     n_data = 60000
     steps_per_epoch = n_data // batch_size
     n_steps = steps_per_epoch * n_epochs
