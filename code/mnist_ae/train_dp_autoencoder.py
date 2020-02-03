@@ -13,7 +13,7 @@ from tensorboardX import SummaryWriter
 
 
 def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
-          summary_writer, noise_up_enc):
+          summary_writer, verbose):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -29,7 +29,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
     l_enc = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
     if losses.wsiam > 0.:
-      l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+      l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
     # l_enc = pt.mean(v)
     # l_enc = loss_to_backpack_mse(v, losses.l_enc)
 
@@ -67,7 +67,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
         full_loss = rec_loss + siam_loss
       else:
         siam_loss = None
@@ -101,7 +101,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         param.grad = clipped_grad
 
     optimizer.step()
-    if batch_idx % log_interval == 0:
+    if batch_idx % log_interval == 0 and verbose:
       n_data = len(train_loader.dataset)
       n_done = batch_idx * len(data)
       frac_done = 100. * batch_idx / len(train_loader)
@@ -141,7 +141,7 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
       rec_loss_agg += rec_loss.item() * bs
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
         siam_loss_agg += siam_loss.item() * bs
 
   n_data = len(test_loader.dataset)
@@ -149,12 +149,16 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
   siam_loss_agg /= n_data
   full_loss = rec_loss_agg + siam_loss_agg
 
+  reconstruction = reconstruction.cpu().numpy()
+  labels = labels.cpu().numpy()
+  reconstruction, labels = select_balaned_plot_batch(reconstruction, labels, n_classes=10, n_samples_per_class=10)
+
   if label_ae:
-    rec_labels = reconstruction[:100, 784:].cpu().numpy()
+    rec_labels = reconstruction[:, 784:]
     save_gen_labels(rec_labels, 10, 10, log_spec.log_dir + f'rec_ep{epoch}_labels', save_raw=False)
-    reconstruction = reconstruction[:100, :784].reshape(100, 28, 28).cpu().numpy()
+    reconstruction = reconstruction[:, :784].reshape(-1, 28, 28)
   else:
-    reconstruction = reconstruction[:100, ...].cpu().numpy()
+    reconstruction = reconstruction
 
   plot_mnist_batch(reconstruction, 10, 10, log_spec.log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
   if last_epoch:
@@ -164,7 +168,26 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
     save_path = save_dir + log_spec.log_name + f'_rec_ep{epoch}'
     plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=not losses.do_ce, save_raw=False)
 
-  print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
+  print('Test ep {}: Average loss: full {:.4f}, rec {:.4f}, siam {:.4f}'.format(epoch, full_loss, rec_loss_agg,
+                                                                                siam_loss_agg))
+
+
+def select_balaned_plot_batch(data, labels, n_classes, n_samples_per_class):
+
+  data_ids = [[] for _ in range(n_classes)]
+  n_total = n_samples_per_class * n_classes
+  n_full = 0
+  for idx in range(data.shape[0]):
+    ls = labels[idx]
+    if len(data_ids[ls]) < n_samples_per_class:
+      data_ids[ls].append(idx)
+      if len(data_ids[ls]) == n_samples_per_class:
+        n_full += 1
+        if n_full == n_classes:
+          ids = np.reshape(np.asarray(data_ids), (n_total,))
+          return data[ids], labels[ids]
+  # fail case
+  return data[:n_total], labels[:n_total]
 
 
 def mse_loss(reconstruction, data):  # this could be done directly with backpack but this way is more consistent
@@ -177,7 +200,7 @@ def bin_ce_loss(reconstruction, data):
   return pt.mean(pt.sum(pt.reshape(bce, (bce.shape[0], -1)), dim=1), dim=0)
 
 
-def siamese_loss(feats, labels, margin):
+def siamese_loss(feats, labels, margin, match_margin=None):
     """
     :param feats: (bs, nfeats)
     :param labels: (bs)
@@ -196,7 +219,10 @@ def siamese_loss(feats, labels, margin):
     match = pt.eq(labels_a, labels_b).float()
     no_match = 1. - match
     dist = pt.sqrt(pt.sum((feats_a - feats_b) ** 2, dim=1))
-    loss = match * dist + no_match * nnf.relu(margin - dist)
+    if match_margin is not None:
+      loss = match * nnf.relu(dist - margin) + no_match * nnf.relu(margin - dist)
+    else:
+      loss = match * dist + no_match * nnf.relu(margin - dist)
     return pt.mean(loss)
 
 
@@ -215,6 +241,7 @@ def get_args():
   parser.add_argument('--log-name', type=str, default=None)  # set for custom save subdir
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None (only set thisto completely alter loc)
   parser.add_argument('--n-labels', type=int, default=10)
+  parser.add_argument('--verbose', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
@@ -224,6 +251,8 @@ def get_args():
   parser.add_argument('--lr-decay', type=float, default=0.9)
   parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=0.)
   parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=1.)
+  parser.add_argument('--siam-match-margin', '-msiammatch', type=float, default=None)
+  parser.add_argument('--optimizer', '-opt', type=str, default='adam')
 
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
@@ -329,17 +358,32 @@ def main():
     # else:
     dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias).to(device))
 
-  loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam'])
-  losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss, ar.siam_loss_weight, ar.siam_loss_margin)
-  optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam', 'msiam_match'])
+  losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,
+                   ar.siam_loss_weight, ar.siam_loss_margin, ar.siam_match_margin)
+
+  if ar.optimizer == 'adam':
+    optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'rmsprop':
+    optimizer = pt.optim.RMSprop(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'adagrad':
+    optimizer = pt.optim.Adagrad(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'mom':
+    optimizer = pt.optim.SGD(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr, momentum=0.9)
+  else:
+    raise ValueError
+
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
     train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
-          summary_writer, ar.noise_up_enc)
+          summary_writer, ar.verbose)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
     # print('new lr:', scheduler.get_lr())
+    if epoch == 1:
+      optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+      scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')

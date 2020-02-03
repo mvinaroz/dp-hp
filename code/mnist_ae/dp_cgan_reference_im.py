@@ -24,6 +24,7 @@ import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 import os
 import sys
+import argparse
 
 # Import required Differential Privacy packages
 baseDir = "../"
@@ -168,7 +169,7 @@ def compute_epsilon(batch_size, steps, sigma):
     return get_privacy_spent(orders, rdp, target_delta=1e-5)[0]
 
 
-def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
+def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, data_save_str):
     h_dim = 128
     Z_dim = 100
 
@@ -399,7 +400,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
-                np.savez(f'dp-cgan-synth-mnist-eps={max_target_eps}.npz', data=images, labels=image_labels)
+                save_str = 'dp-cgan-synth-mnist' if data_save_str is None else data_save_str
+                np.savez(f'{save_str}-eps{max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 
                 x_test, y_test = loadlocal_mnist(
@@ -446,11 +448,15 @@ def main():
     # epsilon = 1e10
     delta = 1e-5
 
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data-save-str', type=str, default=None)  # set for custom save subdir
+    ar = parser.parse_args()
+
     for iteration in range(1, 2):
         for sigma, clipping in sigma_clipping_list:
             for batchSize in batchSizeList:
                 print("Running TensorFlow with Sigma=%f, Clipping=%d, batchSize=%d\n" % (sigma, clipping, batchSize))
-                runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration)
+                runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration, ar.data_save_str)
 
 
 if __name__ == '__main__':
