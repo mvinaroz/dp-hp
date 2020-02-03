@@ -252,6 +252,7 @@ def get_args():
   parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=0.)
   parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=1.)
   parser.add_argument('--siam-match-margin', '-msiammatch', type=float, default=None)
+  parser.add_argument('--optimizer', '-opt', type=str, default='adam')
 
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
@@ -360,7 +361,18 @@ def main():
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam', 'msiam_match'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,
                    ar.siam_loss_weight, ar.siam_loss_margin, ar.siam_match_margin)
-  optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+
+  if ar.optimizer == 'adam':
+    optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'rmsprop':
+    optimizer = pt.optim.RMSprop(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'adagrad':
+    optimizer = pt.optim.Adagrad(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+  elif ar.optimizer == 'mom':
+    optimizer = pt.optim.SGD(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr, momentum=0.9)
+  else:
+    raise ValueError
+
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
