@@ -381,6 +381,9 @@ def main():
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
     scheduler.step()
     # print('new lr:', scheduler.get_lr())
+    if epoch == 1:
+      optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)
+      scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')
