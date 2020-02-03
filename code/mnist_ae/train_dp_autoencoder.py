@@ -168,7 +168,7 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
     save_path = save_dir + log_spec.log_name + f'_rec_ep{epoch}'
     plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=not losses.do_ce, save_raw=False)
 
-  print('Test set: Average loss: full {:.4f}, rec {}, siam {}'.format(full_loss, rec_loss_agg, siam_loss_agg))
+  print('Test ep {}: Average loss: full {:.4f}, rec {}, siam {}'.format(epoch, full_loss, rec_loss_agg, siam_loss_agg))
 
 
 def select_balaned_plot_batch(data, labels, n_classes, n_samples_per_class):
