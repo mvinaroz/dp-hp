@@ -122,7 +122,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
-def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_spec, last_epoch):
+def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_spec, last_epoch, data_is_normed):
   enc.eval()
   dec.eval()
 
@@ -160,13 +160,13 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
   else:
     reconstruction = reconstruction
 
-  plot_mnist_batch(reconstruction, 10, 10, log_spec.log_dir + f'rec_ep{epoch}', denorm=not losses.do_ce)
+  plot_mnist_batch(reconstruction, 10, 10, log_spec.log_dir + f'rec_ep{epoch}', denorm=data_is_normed)
   if last_epoch:
     save_dir = log_spec.base_dir + '/overview/'
     if not os.path.exists(save_dir):
       os.makedirs(save_dir)
     save_path = save_dir + log_spec.log_name + f'_rec_ep{epoch}'
-    plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=not losses.do_ce, save_raw=False)
+    plot_mnist_batch(reconstruction, 10, 10, save_path, denorm=data_is_normed, save_raw=False)
 
   print('Test ep {}: Average loss: full {:.4f}, rec {:.4f}, siam {:.4f}'.format(epoch, full_loss, rec_loss_agg,
                                                                                 siam_loss_agg))
@@ -243,6 +243,7 @@ def get_args():
   parser.add_argument('--n-labels', type=int, default=10)
   parser.add_argument('--verbose', action='store_true', default=False)
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+  parser.add_argument('--norm-data', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
@@ -319,7 +320,7 @@ def main():
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size,
-                                                    use_cuda, normalize=not ar.ce_loss, dataset=ar.data)
+                                                    use_cuda, normalize=ar.norm_data, dataset=ar.data)
 
   device = pt.device("cuda" if use_cuda else "cpu")
   d_data = 28**2+ar.n_labels if ar.label_ae else 28**2
@@ -332,12 +333,12 @@ def main():
   if ar.conv_ae:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)
     if ar.flat_dec:
-      dec = extend(ConvDecFlat(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
+      dec = extend(ConvDecFlat(ar.d_enc, dec_spec, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias)).to(device)
     else:
-      dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
+      dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias)).to(device)
   else:
     enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
-    dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias).to(device))
+    dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias).to(device))
 
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam', 'msiam_match'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,
@@ -358,7 +359,8 @@ def main():
   for epoch in range(1, ar.epochs + 1):
     train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
           summary_writer, ar.verbose)
-    test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec, epoch == ar.epochs)
+    test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec,
+         epoch == ar.epochs, ar.norm_data)
     scheduler.step()
     # print('new lr:', scheduler.get_lr())
     if epoch == 1:
