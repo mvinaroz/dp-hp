@@ -31,6 +31,8 @@ def main():
   parser.add_argument('--print-conf-mat', action='store_true', default=False)
   parser.add_argument('--compute-real-to-real', action='store_true', default=False)
   parser.add_argument('--compute-gen-to-real', action='store_true', default=False)
+  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+
 
   ar = parser.parse_args()
 
@@ -40,12 +42,15 @@ def main():
     os.makedirs(log_save_dir)
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
-
-  train_data = datasets.MNIST('../../data', train=True)
+  if ar.data == 'digits':
+    train_data = datasets.MNIST('../../data', train=True)
+    test_data = datasets.MNIST('../../data', train=False)
+  else:
+    train_data = datasets.FashionMNIST('../../data', train=True)
+    test_data = datasets.FashionMNIST('../../data', train=False)
   x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
-  test_data = datasets.MNIST('../../data', train=False)
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
   x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
 
