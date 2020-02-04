@@ -99,8 +99,6 @@ def main():
     if ar.skip_slow_models and key in slow_models:
       continue
 
-<<<<<<< HEAD
-    # print(f'Model: {key}', end='')
     print('we are testing now', key)
 
     print(f'Model: {key}', end='')
@@ -109,9 +107,6 @@ def main():
     base_acc, base_f1, base_conf = test_model(model, x_real_train, y_real_train, x_real_test, y_real_test)
     print('.', end='')
 
-=======
-    print(f'Model: {key}')
->>>>>>> 486717ee08026e8f05d9dac9f12c23d692a3da64
     model = models[key](**model_specs[key])
     g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
 
