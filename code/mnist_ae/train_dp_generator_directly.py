@@ -136,6 +136,7 @@ def get_args():
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
   parser.add_argument('--synth-mnist', action='store_true', default=False)
+  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
@@ -192,8 +193,10 @@ def preprocess_args(args):
   if args.seed is None:
     args.seed = np.random.randint(0, 1000)
 
+  assert args.data in {'digits', 'fashion'}
   assert args.gen_labels or not args.uniform_labels
   assert not (args.gen_labels and args.real_mmd)
+
 
 
 def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -221,7 +224,8 @@ def main():
   pt.manual_seed(ar.seed)
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
-  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, normalize=False)
+  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, normalize=False,
+                                                    dataset=ar.data)
 
   device = pt.device("cuda" if use_cuda else "cpu")
 

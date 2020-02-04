@@ -37,18 +37,26 @@ def expand_vector(v, tgt_vec):
     return ValueError
 
 
-def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True):
-  transforms_list = [transforms.ToTensor()]
-  if normalize:
-    mnist_mean = 0.1307
-    mnist_sdev = 0.3081
-    transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
-  prep_transforms = transforms.Compose(transforms_list)
+def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True, dataset='digits'):
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-  train_loader = pt.utils.data.DataLoader(datasets.MNIST('../../data', train=True, transform=prep_transforms),
-                                          batch_size=batch_size, shuffle=True, **kwargs)
-  test_loader = pt.utils.data.DataLoader(datasets.MNIST('../../data', train=False, transform=prep_transforms),
-                                         batch_size=test_batch_size, shuffle=True, **kwargs)
+  transforms_list = [transforms.ToTensor()]
+  if dataset == 'digits':
+    if normalize:
+      mnist_mean = 0.1307
+      mnist_sdev = 0.3081
+      transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
+    prep_transforms = transforms.Compose(transforms_list)
+    trn_data = datasets.MNIST('../../data', train=True, transform=prep_transforms)
+    tst_data = datasets.MNIST('../../data', train=False, transform=prep_transforms)
+    train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+    test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
+  elif dataset == 'fashion':
+    assert not normalize
+    prep_transforms = transforms.Compose(transforms_list)
+    trn_data = datasets.FashionMNIST('../../data', train=True, download=True, transform=prep_transforms)
+    tst_data = datasets.FashionMNIST('../../data', train=False, transform=prep_transforms)
+    train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+    test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   return train_loader, test_loader
 
 
