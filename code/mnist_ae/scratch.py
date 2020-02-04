@@ -2,8 +2,8 @@ import numpy as np
 from aux import plot_mnist_batch
 
 # loads = np.load('dp_cgan_synth_mnist_eps9.6.npz')
-# loads = np.load('dp-cgan-synth-mnist-eps9.60.npz')
-loads = np.load('ref_dpcgan_fashion1-eps9.6.npz')
+loads = np.load('reference_dpcgan1_9.6.npz')
+# loads = np.load('ref_dpcgan_fashion5-eps9.6.npz')
 data, labels = loads['data'], loads['labels']
 
 print(np.sum(labels, axis=0))
@@ -28,4 +28,4 @@ for idx in range(data.shape[0]):
 data_ids = np.asarray(data_ids)
 data_ids = np.reshape(data_ids, (100,))
 plot_mat = data[data_ids]
-plot_mnist_batch(plot_mat, 10, 10, 'dp_cgan_plot', denorm=False, save_raw=False)
+plot_mnist_batch(plot_mat, 10, 10, 'dp_cgan_digit_plot', denorm=False, save_raw=False)
