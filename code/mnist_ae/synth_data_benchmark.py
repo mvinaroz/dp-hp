@@ -118,7 +118,7 @@ def main():
 
   for key in run_keys:
     print(f'Model: {key}')
-    if not ar.skip_real_to_gen:
+    if not ar.skip_gen_to_real:
       model = models[key](**model_specs[key])
       g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
     else:
