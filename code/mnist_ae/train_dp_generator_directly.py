@@ -77,7 +77,7 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   if uniform_labels:
     ordered_labels = pt.repeat_interleave(pt.arange(10), 10)[:, None].to(device)
     gen_code, gen_labels = gen.get_code(100, device, labels=ordered_labels)
-    gen_samples = gen(gen_code)
+    gen_samples = gen(gen_code).detach()
 
   plot_samples = gen_samples[:100, ...].cpu().numpy()
   plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
