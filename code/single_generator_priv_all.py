@@ -1134,8 +1134,8 @@ if __name__ == '__main__':
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    for dataset in [arguments.dataset]:
-    #for dataset in ["covtype"]:
+    #for dataset in [arguments.dataset]:
+    for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
