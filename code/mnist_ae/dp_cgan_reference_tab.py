@@ -26,6 +26,12 @@ import matplotlib.gridspec as gridspec
 import os
 import sys
 
+
+import warnings
+warnings.filterwarnings('ignore')
+
+
+
 # Import required Differential Privacy packages
 baseDir = "../"
 sys.path.append(baseDir)
@@ -47,10 +53,14 @@ sys.path.insert(0, "../../code")
 sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
 sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
 
-from dataloader import load_isolet, test_models, load_credit
+from dataloader import load_isolet, test_models, load_credit, load_census, load_epileptic, load_intrusion, load_covtype, load_adult, load_cervical
 
 
+import argparse
 
+arguments=argparse.ArgumentParser()
+arguments.add_argument("--dataset", default='cervical')
+args=arguments.parse_args()
 
 
 def compute_fpr_tpr_roc(y_test, y_score):
@@ -188,7 +198,22 @@ def compute_epsilon(batch_size, steps, sigma):
     return get_privacy_spent(orders, rdp, target_delta=1e-5)[0]
 
 #credit=load_credit()
-tab_dataset=load_isolet()
+if args.dataset=='credit':
+    tab_dataset=load_credit()
+elif args.dataset=='adult':
+    tab_dataset=load_adult()
+elif args.dataset=='epileptic':
+    tab_dataset=load_epileptic()
+elif args.dataset=='isolet':
+    tab_dataset=load_isolet()
+elif args.dataset=='census':
+    tab_dataset=load_census()
+elif args.dataset=='cervical':
+    tab_dataset=load_cervical()
+elif args.dataset=='intrusion':
+    tab_dataset=load_intrusion()
+elif args.dataset=='covtype':
+    tab_dataset=load_covtype()
 
 
 def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
@@ -209,7 +234,14 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     #mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     x_dim = tab_dataset[0].shape[1] #mnist.train.images.shape[1]
-    y_dim = 2#mnist.train.labels.shape[1]
+
+    if (args.dataset=="covtype"):
+        y_dim = 7#mnist.train.labels.shape[1]
+    elif (args.dataset=="intrusion"):
+        y_dim = 5
+    else:
+        y_dim=2
+
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
     y_pl = tf.placeholder(tf.float32, shape=[None, y_dim])
 
@@ -254,8 +286,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 100000
-    # num_training_steps = 30000
+    #num_training_steps = 100000
+    num_training_steps = 10000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -344,22 +376,13 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 print("step :  " + str(step) + "  eps : " + str(eps))
 
                 #n_sample = 10
-                n_sample = 2
+                n_sample = y_dim
 
                 z_sample = sample_z(n_sample, Z_dim)
                 # y_sample = np.zeros(shape=[n_sample, 10])
                 #
-                # y_sample[0, 0] = 1
-                # y_sample[1, 1] = 1
-                # y_sample[2, 2] = 1
-                # y_sample[3, 3] = 1
-                # y_sample[4, 4] = 1
-                # y_sample[5, 5] = 1
-                # y_sample[6, 6] = 1
-                # y_sample[7, 7] = 1
-                # y_sample[8, 8] = 1
-                # y_sample[9, 9] = 1
-                y_sample = np.eye(2)
+
+                y_sample = np.eye(y_dim)
                 #y_sample = np.eye(10)
 
                 samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
@@ -395,11 +418,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 should_terminate = True
 
                 for i in range(0, 10):
-                    n_sample = 2#10
+                    n_sample = y_dim#10
                     z_sample = sample_z(n_sample, Z_dim) #numerb fo samples
 
                     #y_sample = np.eye(10)
-                    y_sample = np.eye(2)
+                    y_sample = np.eye(y_dim)
 
 
                     samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
@@ -426,10 +449,30 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 n_class[0]=2270
                 n_class[1]=398
 
-                #isolet
-                n_class=np.zeros(2)
-                n_class[0]=len(np.where(tab_dataset[1]==0)[0])
-                n_class[1]=len(np.where(tab_dataset[1]==1)[0])
+                if (args.dataset == "covtype"):
+                    n_class = np.zeros(7)
+                    n_class[0] = len(np.where(tab_dataset[1] == 0)[0])
+                    n_class[1] = len(np.where(tab_dataset[1] == 1)[0])
+                    n_class[2] = len(np.where(tab_dataset[1] == 2)[0])
+                    n_class[3] = len(np.where(tab_dataset[1] == 3)[0])
+                    n_class[4] = len(np.where(tab_dataset[1] == 4)[0])
+                    n_class[5] = len(np.where(tab_dataset[1] == 5)[0])
+                    n_class[6] = len(np.where(tab_dataset[1] == 6)[0])
+                elif (args.dataset == "intrusion"):
+                    n_class = np.zeros(5)
+                    n_class[0] = len(np.where(tab_dataset[1] == 0)[0])
+                    n_class[1] = len(np.where(tab_dataset[1] == 1)[0])
+                    n_class[2] = len(np.where(tab_dataset[1] == 2)[0])
+                    n_class[3] = len(np.where(tab_dataset[1] == 3)[0])
+                    n_class[4] = len(np.where(tab_dataset[1] == 4)[0])
+                else:
+                    n_class = np.zeros(2)
+                    n_class[0] = len(np.where(tab_dataset[1] == 0)[0])
+                    n_class[1] = len(np.where(tab_dataset[1] == 1)[0])
+
+
+
+
 
                 n_image = int(sum(n_class))
                 image_labels = np.zeros(shape=[n_image, len(n_class)])
@@ -449,7 +492,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 #np.where(image_labels[:, 0] == 0)
                 labels[np.where(image_labels[:, 1] == 1)]=1
 
-                roc, prc = test_models(images, labels, tab_dataset[2], tab_dataset[3], "generated")
+                roc, prc = test_models(images, labels, tab_dataset[2], tab_dataset[3], "generated", y_dim)
                 print("roc: ", roc)
                 print("prc: ", prc)
 
@@ -491,14 +534,16 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 break  # out of while loop, ending the function
 
             step = step + 1
-
-batchSizeList = [500]#[600] #check
+if args.dataset!='cervical':
+    batchSizeList = [400]#[600] #check
+else:
+    batchSizeList=[20]
 
 def main():
-    sigma_clipping_list = [[1.12, 1.1]]
+    sigma_clipping_list = [[0.01, 3.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
 
-    epsilon = 9.6#9.6 #check
+    epsilon = 10000000.0#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
