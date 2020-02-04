@@ -19,7 +19,7 @@ arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczew
 
 
 
-var=dpcgan9.6_100_$(dataset)
+var=dpcgan9.6_500_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
@@ -41,14 +41,14 @@ request_gpus = 1
 # dataset=epileptic
 # queue 1
 
-dataset=credit
-queue 1
+#dataset=credit
+#queue 1
 #
 # dataset=cervical
 # queue 1
 #
-# dataset=isolet
-# queue 1
+dataset=isolet
+queue 1
 #
 # dataset=covtype
 # queue 1
