@@ -221,7 +221,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
           if data_target.at[i,'y']!=1:
             data_target.at[i,'y'] = 0
 
-        ####
+        ###################
 
         raw_labels=np.array(data_target)
         raw_input_features=np.array(data_features)
@@ -727,10 +727,10 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
     # As a reference, we first test logistic regression on the real data
 
-    # if dataset in heterogeneous_datasets:
-    #     roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
-    # else:
-    #     f1_real = test_models(X_train, y_train, X_test, y_test, "real")
+    if dataset in heterogeneous_datasets:
+        roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
+    else:
+        f1_real = test_models(X_train, y_train, X_test, y_test, "real")
 
 
 
@@ -1130,7 +1130,7 @@ if __name__ == '__main__':
     is_priv_arg = arguments.private  # check
     single_run = False  # check
 
-    repetitions = 5  # check
+    repetitions = 1  # check
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
@@ -1155,11 +1155,11 @@ if __name__ == '__main__':
             if dataset=='adult':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
-                undersampling_rates = [.8, .6, .4] #dummy
+                undersampling_rates = [.4]#[.8, .6, .4] #dummy
             elif dataset=='census':
                 mini_batch_arg=[0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-                undersampling_rates = [0.2, 0.3, 0.4]
+                undersampling_rates = [0.4]#[0.2, 0.3, 0.4]
             elif dataset=='covtype':
                 how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
@@ -1171,15 +1171,15 @@ if __name__ == '__main__':
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
                 mini_batch_arg = [0.03]
                 repetitions=3
-                undersampling_rates=[0.1, 0.2, 0.3]
+                undersampling_rates=[0.3]#[0.1, 0.2, 0.3]
             elif dataset=='credit':
-                undersampling_rates = [0.01, 0.005, 0.02]
+                undersampling_rates = [0.005]#[0.01, 0.005, 0.02]
             elif dataset=='cervical':
-                undersampling_rates = [0.1, 0.3, 0.5, 0.7, 1.0]
+                undersampling_rates = [1.]#[0.1, 0.3, 0.5, 0.7, 1.0]
             elif dataset=='isolet':
-                undersampling_rates = [0.8, 0.6, 0.4, 1.] #dummy
+                undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
             elif dataset=='epileptic':
-                undersampling_rates = [0.8, 0.6, 0.4, 1.] #dummy
+                undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
 
 
 
