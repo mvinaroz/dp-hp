@@ -41,6 +41,7 @@ def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interva
 
 def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_labels, uniform_labels, log_dir):
   test_loss = 0
+  gen_labels, ordered_labels = None, None
   with pt.no_grad():
     for data, labels in test_loader:
       data = data.to(device)
@@ -73,9 +74,14 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   med_dist = meddistance(data_enc_batch)
   print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
 
+  if uniform_labels:
+    ordered_labels = pt.repeat_interleave(pt.arange(10), 10)[:, None].to(device)
+    gen_code, gen_labels = gen.get_code(100, device, labels=ordered_labels)
+    gen_samples = gen(gen_code)
+
   plot_samples = gen_samples[:100, ...].cpu().numpy()
   plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
-  if gen_labels is not None:
+  if gen_labels is not None and ordered_labels is None:
     save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
   # bs = plot_samples.shape[0]
   # lit_samples = plot_samples - np.min(np.reshape(plot_samples, (bs, -1)), axis=1)[:, None, None, None]
@@ -129,6 +135,7 @@ def get_args():
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
+  parser.add_argument('--synth-mnist', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
@@ -187,6 +194,25 @@ def preprocess_args(args):
 
   assert args.gen_labels or not args.uniform_labels
   assert not (args.gen_labels and args.real_mmd)
+
+
+def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
+  gen.eval()
+  assert n_data % gen_batch_size == 0
+  assert gen_batch_size % n_labels == 0
+  n_iterations = n_data // gen_batch_size
+
+  data_list = []
+  ordered_labels = pt.repeat_interleave(pt.arange(n_labels), gen_batch_size // n_labels)[:, None].to(device)
+  labels_list = [ordered_labels] * n_iterations
+
+  with pt.no_grad():
+    for idx in range(n_iterations):
+      gen_code, gen_labels = gen.get_code(gen_batch_size, device, labels=ordered_labels)
+      gen_samples = gen(gen_code)
+      data_list.append(gen_samples)
+  return pt.cat(data_list, dim=0).cpu().numpy(), pt.cat(labels_list, dim=0).cpu().numpy()
+
 
 def main():
   # Training settings
@@ -251,8 +277,6 @@ def main():
 
   print("Composition of subsampled Gaussian mechanisms gives ", (acct.get_eps(delta), delta))
 
-
-
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
@@ -263,6 +287,10 @@ def main():
     scheduler.step()
 
   pt.save(gen.state_dict(), ar.log_dir + 'gen.pt')
+  if ar.synth_mnist:
+    assert ar.uniform_labels
+    syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, device)
+    np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
 
 
 if __name__ == '__main__':
