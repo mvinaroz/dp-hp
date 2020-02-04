@@ -60,6 +60,7 @@ import argparse
 
 arguments=argparse.ArgumentParser()
 arguments.add_argument("--dataset", default='cervical')
+arguments.add_argument("--clipping", default='1.1')
 args=arguments.parse_args()
 
 
@@ -238,7 +239,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     if (args.dataset=="covtype"):
         y_dim = 7#mnist.train.labels.shape[1]
     elif (args.dataset=="intrusion"):
-        y_dim = 5
+        y_dim = 4
     else:
         y_dim=2
 
@@ -286,8 +287,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    #num_training_steps = 100000
-    num_training_steps = 10000
+    num_training_steps = 100000
+    #num_training_steps = 10000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -459,12 +460,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                     n_class[5] = len(np.where(tab_dataset[1] == 5)[0])
                     n_class[6] = len(np.where(tab_dataset[1] == 6)[0])
                 elif (args.dataset == "intrusion"):
-                    n_class = np.zeros(5)
+                    n_class = np.zeros(4)
                     n_class[0] = len(np.where(tab_dataset[1] == 0)[0])
                     n_class[1] = len(np.where(tab_dataset[1] == 1)[0])
                     n_class[2] = len(np.where(tab_dataset[1] == 2)[0])
                     n_class[3] = len(np.where(tab_dataset[1] == 3)[0])
-                    n_class[4] = len(np.where(tab_dataset[1] == 4)[0])
                 else:
                     n_class = np.zeros(2)
                     n_class[0] = len(np.where(tab_dataset[1] == 0)[0])
@@ -534,16 +534,18 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 break  # out of while loop, ending the function
 
             step = step + 1
+
+
 if args.dataset!='cervical':
     batchSizeList = [400]#[600] #check
 else:
     batchSizeList=[20]
 
 def main():
-    sigma_clipping_list = [[0.01, 3.1]]
-    # sigma_clipping_list = [[0.1, 1.1]]
+    #sigma_clipping_list = [[0.01, 3.1]]
+    sigma_clipping_list = [[1.12, args.clipping]]
 
-    epsilon = 10000000.0#9.6#check
+    epsilon = 1.0#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
