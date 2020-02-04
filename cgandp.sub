@@ -1,0 +1,64 @@
+#executable = /home/kadamczewski/miniconda3/envs/BayesianNeuralNetwork/bin/python
+executable = /usr/bin/unbuffer
+
+#arguments =/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/Generator_census_multi.py
+#arguments =/home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Isolet.py
+#arguments =/home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Epileptic.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_covtype.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Credit.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_Census.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/test_condMMD_CervicalCancer.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/condMMD_binary_priv.py --dataset $(dataset)
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/condMMD_multicat.py --dataset $(dataset)
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/priv_condMMD_intrusion.py
+#arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/separate_generators_binary_priv_pretr_heter.py --dataset $(dataset)
+arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/mnist_ae/dp_cgan_reference_tab.py
+
+
+
+
+
+
+var=dpcgan_$(dataset)
+#var=credit_mijung_all_fin_fuller
+#var=census_mijung_all_right
+#var=covtype_mijung_allnew
+#var=isolet_mijung_all_fin_aver_right
+#var=epileptic_mijung_all_fin
+error = clust/clust_err/$(var).$(Process).err
+output = clust/clust_out/$(var).$(Process).out
+log = clust/clust_log/$(var).$(Process).log
+requirements = TARGET.CUDAGlobalMemoryMb > 30000
+#buffer_size = 1000
+stream_output=True
+request_memory = 8040
+request_cpus = 1
+request_gpus = 1
+
+# dataset=census
+# queue 1
+#
+# dataset=epileptic
+# queue 1
+
+dataset=credit
+queue 1
+#
+# dataset=cervical
+# queue 1
+#
+# dataset=isolet
+# queue 1
+#
+# dataset=covtype
+# queue 1
+#
+# dataset=adult
+# queue 1
+#
+# dataset=intrusion
+# queue 1
+#
+#
+
+
