@@ -242,6 +242,7 @@ def get_args():
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None (only set thisto completely alter loc)
   parser.add_argument('--n-labels', type=int, default=10)
   parser.add_argument('--verbose', action='store_true', default=False)
+  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)
@@ -318,7 +319,7 @@ def main():
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size,
-                                                    use_cuda, normalize=not ar.ce_loss)
+                                                    use_cuda, normalize=not ar.ce_loss, dataset=ar.data)
 
   device = pt.device("cuda" if use_cuda else "cpu")
   d_data = 28**2+ar.n_labels if ar.label_ae else 28**2

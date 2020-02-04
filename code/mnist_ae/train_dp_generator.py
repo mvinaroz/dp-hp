@@ -170,6 +170,7 @@ def get_args():
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
+  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
   parser.add_argument('--synth-mnist', action='store_true', default=False)
 
   # OPTIMIZATION
@@ -259,7 +260,7 @@ def main():
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda,
-                                                    normalize=not ar.ae_ce_loss)
+                                                    normalize=not ar.ae_ce_loss, dataset=ar.data)
 
   device = pt.device("cuda" if use_cuda else "cpu")
 
