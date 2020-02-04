@@ -21,6 +21,12 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None)  # is computed. only set to override
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/')
+<<<<<<< HEAD
+  parser.add_argument('--data-log-name', type=str, default='uniform_labeled_gen100,50_sig0.447_dcode5_drff1000_rffsig100.0_bs500/')
+  parser.add_argument('--log-results', action='store_true', default=True)
+  parser.add_argument('--skip-slow-models', action='store_true', default=True)
+  parser.add_argument('--shuffle-data', action='store_true', default=True)
+=======
   parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
   parser.add_argument('--log-results', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
@@ -28,6 +34,7 @@ def main():
   parser.add_argument('--print-conf-mat', action='store_true', default=False)
   parser.add_argument('--compute-real-to-real', action='store_true', default=False)
   parser.add_argument('--compute-gen-to-real', action='store_true', default=False)
+>>>>>>> 486717ee08026e8f05d9dac9f12c23d692a3da64
   ar = parser.parse_args()
 
   gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
@@ -84,11 +91,22 @@ def main():
   model_specs['linear_svc'] = {'max_iter': 5000}  # still not enough??
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
 
+  model_specs['lda'] = {'solver': 'eigen', 'n_components':9, 'tol': 1e-8, 'shrinkage':0.5}
+
   for key in models.keys():
+
+
     if ar.skip_slow_models and key in slow_models:
       continue
 
-    print(f'Model: {key}')
+    print('we are testing now', key)
+
+    print(f'Model: {key}', end='')
+
+    model = models[key](**model_specs[key])
+    base_acc, base_f1, base_conf = test_model(model, x_real_train, y_real_train, x_real_test, y_real_test)
+    print('.', end='')
+
     model = models[key](**model_specs[key])
     g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
 
