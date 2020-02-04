@@ -30,7 +30,11 @@ def main():
   parser.add_argument('--shuffle-data', action='store_true', default=False)
   parser.add_argument('--print-conf-mat', action='store_true', default=False)
   parser.add_argument('--compute-real-to-real', action='store_true', default=False)
-  parser.add_argument('--compute-gen-to-real', action='store_true', default=False)
+  parser.add_argument('--compute-real-to-gen', action='store_true', default=False)
+  parser.add_argument('--skip-gen-to-real', action='store_true', default=False)  # only one on by default
+
+  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+
 
   ar = parser.parse_args()
 
@@ -40,12 +44,18 @@ def main():
     os.makedirs(log_save_dir)
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+  if ar.data == 'digits':
+    train_data = datasets.MNIST('../../data', train=True)
+    test_data = datasets.MNIST('../../data', train=False)
+  elif ar.data == 'fashion':
+    train_data = datasets.FashionMNIST('../../data', train=True)
+    test_data = datasets.FashionMNIST('../../data', train=False)
+  else:
+    raise ValueError
 
-  train_data = datasets.MNIST('../../data', train=True)
   x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
-  test_data = datasets.MNIST('../../data', train=False)
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
   x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
 
@@ -85,7 +95,7 @@ def main():
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
-  model_specs['linear_svc'] = {'max_iter': 5000, 'penalty':'l1', 'tol':1e-8}  # still not enough??
+  model_specs['linear_svc'] = {'max_iter': 5000, 'tol':1e-8, 'loss':'hinge'}  # still not enough??
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
   model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
   model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion':'gini', 'splitter':'best', 'min_samples_split':2, 'min_samples_leaf':1, 'min_weight_fraction_leaf':0.0, 'min_impurity_decrease':0.0}
@@ -108,8 +118,11 @@ def main():
 
   for key in run_keys:
     print(f'Model: {key}')
-    model = models[key](**model_specs[key])
-    g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
+    if not ar.skip_real_to_gen:
+      model = models[key](**model_specs[key])
+      g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
+    else:
+      g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 
     if ar.compute_real_to_real:
       model = models[key](**model_specs[key])
@@ -117,7 +130,7 @@ def main():
     else:
       base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
 
-    if ar.compute_gen_to_real:
+    if ar.compute_real_to_gen:
       model = models[key](**model_specs[key])
       r_to_g_acc, r_to_g_f1, r_to_g_conv = test_model(model, x_real_train, y_real_train, x_gen[:10000], y_gen[:10000])
     else:

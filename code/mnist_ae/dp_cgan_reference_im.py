@@ -169,13 +169,19 @@ def compute_epsilon(batch_size, steps, sigma):
     return get_privacy_spent(orders, rdp, target_delta=1e-5)[0]
 
 
-def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, data_save_str):
+def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, data_save_str,
+                  dataset_key, run_auc_test):
     h_dim = 128
     Z_dim = 100
 
     # Initializations for a two-layer discriminator network
     # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
-    #mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
+    if dataset_key == 'digits':
+        mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
+    elif dataset_key == 'fashion':
+        mnist = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)
+    else:
+        raise ValueError
 
     x_dim = mnist.train.images.shape[1]
     y_dim = mnist.train.labels.shape[1]
@@ -196,28 +202,6 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     g_w2 = tf.Variable(xavier_init([h_dim, x_dim]))
     g_b2 = tf.Variable(tf.zeros(shape=[x_dim]))
     theta_g = [g_w1, g_w2, g_b1, g_b2]
-
-    # Delete all Flags
-    # del_all_flags(tf.flags.FLAGS)
-
-    # Set training parameters
-    # tf.flags.DEFINE_string('f', '', 'kernel')
-    # tf.flags.DEFINE_float("lr", 0.1, "start learning rate")
-    # tf.flags.DEFINE_float("end_lr", 0.052, "end learning rate")
-    # tf.flags.DEFINE_float("lr_saturate_epochs", 10000,
-    #                       "learning rate saturate epochs; set to 0 for a constant learning rate of --lr.")
-    # tf.flags.DEFINE_integer("batch_size", batch_size, "The training batch size.")
-    # tf.flags.DEFINE_integer("batches_per_lot", 1, "Number of batches per lot.")
-    # tf.flags.DEFINE_integer("num_training_steps", 100000, "The number of training steps. This counts number of lots.")
-    #
-    # # Flags that control privacy spending during training
-    # tf.flags.DEFINE_float("target_delta", delta, "Maximum delta for --terminate_based_on_privacy.")
-    # tf.flags.DEFINE_float("sigma", sigma, "Noise sigma, used only if accountant_type is Moments")
-    # tf.flags.DEFINE_string("target_eps", str(epsilon),
-    #                        "Log the privacy loss for the target epsilon's. Only used when accountant_type is Moments.")
-    # tf.flags.DEFINE_float("default_gradient_l2norm_bound", clipping_value, "norm clipping")
-    #
-    # FLAGS = tf.flags.FLAGS
 
     start_lr = 0.1
     end_lr = 0.052
@@ -314,18 +298,6 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
 
                 n_sample = 10
                 z_sample = sample_z(n_sample, Z_dim)
-                # y_sample = np.zeros(shape=[n_sample, 10])
-                #
-                # y_sample[0, 0] = 1
-                # y_sample[1, 1] = 1
-                # y_sample[2, 2] = 1
-                # y_sample[3, 3] = 1
-                # y_sample[4, 4] = 1
-                # y_sample[5, 5] = 1
-                # y_sample[6, 6] = 1
-                # y_sample[7, 7] = 1
-                # y_sample[8, 8] = 1
-                # y_sample[9, 9] = 1
                 y_sample = np.eye(10)
 
                 samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
@@ -354,18 +326,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                 for i in range(0, 10):
                     n_sample = 10
                     z_sample = sample_z(n_sample, Z_dim)
-                    # y_sample = np.zeros(shape=[n_sample, y_dim])
-                    #
-                    # y_sample[0, 0] = 1
-                    # y_sample[1, 1] = 1
-                    # y_sample[2, 2] = 1
-                    # y_sample[3, 3] = 1
-                    # y_sample[4, 4] = 1
-                    # y_sample[5, 5] = 1
-                    # y_sample[6, 6] = 1
-                    # y_sample[7, 7] = 1
-                    # y_sample[8, 8] = 1
-                    # y_sample[9, 9] = 1
+
                     y_sample = np.eye(10)
 
                     samples = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: y_sample})
@@ -404,35 +365,38 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                 np.savez(f'{save_str}-eps{max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 
-                x_test, y_test = loadlocal_mnist(
-                    images_path='data/MNIST/raw/t10k-images-idx3-ubyte',
-                    labels_path='data/MNIST/raw/t10k-labels-idx1-ubyte')
+                if run_auc_test:
+                    assert dataset_key == 'digits'
 
-                y_test = [int(y) for y in y_test]
-                result_file = open(result_path + "/" + "results.txt", "w")
-                print("Binarizing the labels ...")
-                classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-                y_test = label_binarize(y_test, classes=classes)
+                    x_test, y_test = loadlocal_mnist(
+                        images_path='../../data/MNIST/raw/t10k-images-idx3-ubyte',
+                        labels_path='../../data/MNIST/raw/t10k-labels-idx1-ubyte')
 
-                print("\n################# Logistic Regression #######################")
+                    y_test = [int(y) for y in y_test]
+                    result_file = open(result_path + "/" + "results.txt", "w")
+                    print("Binarizing the labels ...")
+                    classes = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+                    y_test = label_binarize(y_test, classes=classes)
 
-                print("  Classifying ...")
-                y_score = classify(images, image_labels, x_test, "lr", random_state_value=30)
+                    print("\n################# Logistic Regression #######################")
 
-                print("  Computing ROC ...")
-                false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
-                print("  AUROC: " + str(roc_auc["micro"]))
-                result_file.write("LR AUROC:  " + str(roc_auc["micro"]) + "\n")
+                    print("  Classifying ...")
+                    y_score = classify(images, image_labels, x_test, "lr", random_state_value=30)
 
-                print("\n################# Multi-layer Perceptron #######################")
+                    print("  Computing ROC ...")
+                    false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
+                    print("  AUROC: " + str(roc_auc["micro"]))
+                    result_file.write("LR AUROC:  " + str(roc_auc["micro"]) + "\n")
 
-                print("  Classifying ...")
-                y_score = classify(images, image_labels, x_test, "mlp", random_state_value=30)
+                    print("\n################# Multi-layer Perceptron #######################")
 
-                print("  Computing ROC ...")
-                false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
-                print("  AUROC: " + str(roc_auc["micro"]))
-                result_file.write("MLP AUROC:  " + str(roc_auc["micro"]) + "\n")
+                    print("  Classifying ...")
+                    y_score = classify(images, image_labels, x_test, "mlp", random_state_value=30)
+
+                    print("  Computing ROC ...")
+                    false_positive_rate, true_positive_rate, roc_auc = compute_fpr_tpr_roc(y_test, y_score)
+                    print("  AUROC: " + str(roc_auc["micro"]))
+                    result_file.write("MLP AUROC:  " + str(roc_auc["micro"]) + "\n")
 
                 step = num_training_steps
                 break  # out of while loop, ending the function
@@ -450,13 +414,15 @@ def main():
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-save-str', type=str, default=None)  # set for custom save subdir
+    parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
     ar = parser.parse_args()
 
     for iteration in range(1, 2):
         for sigma, clipping in sigma_clipping_list:
             for batchSize in batchSizeList:
                 print("Running TensorFlow with Sigma=%f, Clipping=%d, batchSize=%d\n" % (sigma, clipping, batchSize))
-                runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration, ar.data_save_str)
+                runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration, ar.data_save_str,
+                              ar.data, run_auc_test=False)
 
 
 if __name__ == '__main__':
