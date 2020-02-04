@@ -193,7 +193,7 @@ if __name__ == '__main__':
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
-        sigma_all = 800.0  # total noise std added
+        sigma_all =0.001  # total noise std added
         reg = 2.5e-5
         lr = 5e-5
         cilpc = 0.02
