@@ -21,7 +21,8 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None)  # is computed. only set to override
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/')
-  parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
+  # parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
+  parser.add_argument('--data-log-name', type=str, default='uniform_labeled_gen100,50_sig0.447_dcode5_drff1000_rffsig100.0_bs500_seed4')
   parser.add_argument('--log-results', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
   parser.add_argument('--only-slow-models', action='store_true', default=False)
@@ -74,19 +75,38 @@ def main():
             'decision_tree': tree.DecisionTreeClassifier,
             'lda': discriminant_analysis.LinearDiscriminantAnalysis,
             'adaboost': ensemble.AdaBoostClassifier,
+            'mlp': neural_network.MLPClassifier,
             'bagging': ensemble.BaggingClassifier,
             'gbm': ensemble.GradientBoostingClassifier,
-            'mlp': neural_network.MLPClassifier,
             'xgboost': xgboost.XGBClassifier}
 
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
-  model_specs['random_forest'] = {'n_estimators': 100}
+  model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
+<<<<<<< Updated upstream
+  model_specs['linear_svc'] = {'max_iter': 5000, 'penalty':'l1', 'tol':1e-8}  # still not enough??
+=======
   model_specs['linear_svc'] = {'max_iter': 5000}  # still not enough??
+>>>>>>> Stashed changes
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
   model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
+
+<<<<<<< Updated upstream
+=======
+  model_specs['lda'] = {'solver': 'eigen', 'n_components':9, 'tol': 1e-8, 'shrinkage':0.5}
+  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion':'gini', 'splitter':'best', 'min_samples_split':2, 'min_samples_leaf':1, 'min_weight_fraction_leaf':0.0, 'min_impurity_decrease':0.0}
+  model_specs['adaboost'] = {'algorithm': 'SAMME.R'}
+
+  for key in models.keys():
+>>>>>>> Stashed changes
+
+  model_specs['lda'] = {'solver': 'eigen', 'n_components':9, 'tol': 1e-8, 'shrinkage':0.5}
+  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion':'gini', 'splitter':'best', 'min_samples_split':2, 'min_samples_leaf':1, 'min_weight_fraction_leaf':0.0, 'min_impurity_decrease':0.0}
+  model_specs['adaboost'] = {'n_estimators': 500, 'algorithm': 'SAMME.R'}
+
+
 
   if ar.custom_keys is not None:
     run_keys = ar.custom_keys.split(',')
@@ -97,12 +117,11 @@ def main():
   else:
     run_keys = models.keys()
 
-
-  for key in models.keys():
-
-
-    if ar.skip_slow_models and key in slow_models:
-      continue
+  # for key in models.keys():
+  #
+  #
+  #   if ar.skip_slow_models and key in slow_models:
+  #     continue
 
   for key in run_keys:
     print(f'Model: {key}')

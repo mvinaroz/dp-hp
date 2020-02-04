@@ -489,7 +489,7 @@ def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
     batchSizeList = [50]#[600]
-    epsilon = 1.0#9.6
+    epsilon = 9.6#9.6
     # epsilon = 1e10
     delta = 1e-5
 
