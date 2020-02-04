@@ -44,6 +44,8 @@ import sys
 
 sys.path.insert(0, "../../data")
 sys.path.insert(0, "../../code")
+sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
+sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
 
 from dataloader import load_isolet, test_models, load_credit
 
@@ -487,7 +489,7 @@ def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
     batchSizeList = [50]#[600]
-    epsilon = 1.0#9.6
+    epsilon = 9.6#9.6
     # epsilon = 1e10
     delta = 1e-5
 

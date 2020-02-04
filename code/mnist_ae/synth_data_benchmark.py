@@ -25,6 +25,8 @@ def main():
   parser.add_argument('--data-log-name', type=str, default='uniform_labeled_gen100,50_sig0.447_dcode5_drff1000_rffsig100.0_bs500_seed4')
   parser.add_argument('--log-results', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
+  parser.add_argument('--only-slow-models', action='store_true', default=False)
+  parser.add_argument('--custom-keys', type=str, default=None)
   parser.add_argument('--shuffle-data', action='store_true', default=False)
   parser.add_argument('--print-conf-mat', action='store_true', default=False)
   parser.add_argument('--compute-real-to-real', action='store_true', default=False)
