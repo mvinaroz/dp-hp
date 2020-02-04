@@ -35,8 +35,10 @@ def main():
 
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
 
-
   ar = parser.parse_args()
+
+  if ar.data_log_name is not None:
+    print(f'processing {ar.data_log_name}')
 
   gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
   log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
