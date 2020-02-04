@@ -264,10 +264,6 @@ def get_args():
   parser.add_argument('--dec-spec', '-s-dec', type=str, default='100,300')
   parser.add_argument('--no-bias', action='store_true', default=False)
   parser.add_argument('--batch-norm', action='store_true', default=False)
-  # parser.add_argument('--enc-spec', type=str, default='1,8,16,16')
-  # parser.add_argument('--dec-spec', type=str, default='16,16,8,1')
-  # parser.add_argument('--enc-spec', type=str, default='1,4,8,8')
-  # parser.add_argument('--dec-spec', type=str, default='8,8,4,1')
 
   # DP SPEC
   parser.add_argument('--clip-norm', '-clip', type=float, default=None)
@@ -277,14 +273,6 @@ def get_args():
 
   parser.add_argument('--noise-up-enc', action='store_true', default=False)
   ar = parser.parse_args()
-
-  # python3 train_dp_autoencoder.py --log-name tb0_1 -bs 500 -ep 20 -lr 1e-3 --lr-decay 0.9 -denc 5 -s-enc 300,100 -s-dec 100,300 -clip 0.1 -noise 2.0
-  # HACKS FOR QUICK ACCESS
-  # ar.ce_loss = True
-  # ar.conv_ae = True
-  # ar.label_ae = True
-  # ar.siam_loss_weight = 10.
-  # ar.siam_loss_margin = 10.
 
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
@@ -347,15 +335,7 @@ def main():
     else:
       dec = extend(ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
   else:
-    # if ar.flat_enc:
-    #   enc = FCEncFlat(d_data, enc_spec, ar.d_enc).to(device)
-    # else:
     enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
-    # if ar.flat_dec:
-    #   dec = extend(FCDecFlat(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
-    # elif ar.lin_dec:
-    #   dec = extend(FCDecLin(ar.d_enc, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias)).to(device)
-    # else:
     dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=ar.ce_loss, use_bias=not ar.no_bias).to(device))
 
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam', 'msiam_match'])
@@ -372,7 +352,6 @@ def main():
     optimizer = pt.optim.SGD(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr, momentum=0.9)
   else:
     raise ValueError
-
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
