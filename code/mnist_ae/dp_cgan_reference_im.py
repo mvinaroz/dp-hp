@@ -179,6 +179,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     if dataset_key == 'digits':
         mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     elif dataset_key == 'fashion':
+        print('using FashionMNIST')
         mnist = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)
     else:
         raise ValueError
