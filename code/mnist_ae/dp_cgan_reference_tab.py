@@ -543,7 +543,7 @@ else:
 
 def main():
     #sigma_clipping_list = [[0.01, 3.1]]
-    sigma_clipping_list = [[1.12, float(args.clipping)]]
+    sigma_clipping_list = [[0.01, float(args.clipping)]]
 
     epsilon = 1.0#9.6#check
     # epsilon = 1e10
