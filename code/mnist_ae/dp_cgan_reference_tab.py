@@ -44,6 +44,8 @@ import sys
 
 sys.path.insert(0, "../../data")
 sys.path.insert(0, "../../code")
+sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
+sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
 
 from dataloader import load_isolet, test_models, load_credit
 
