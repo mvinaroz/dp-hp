@@ -286,8 +286,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 100000
-    # num_training_steps = 30000
+    #num_training_steps = 100000
+    num_training_steps = 10000
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -540,10 +540,10 @@ else:
     batchSizeList=[20]
 
 def main():
-    sigma_clipping_list = [[1.12, 1.1]]
+    sigma_clipping_list = [[0.01, 3.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
 
-    epsilon = 1.0#9.6#check
+    epsilon = 10000000.0#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
