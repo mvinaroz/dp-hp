@@ -194,8 +194,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     Z_dim = 100
 
 
-    train_dataset = tf.data.Dataset.from_tensor_slices((credit[0], credit[1])).batch(50)
-    test_dataset = tf.data.Dataset.from_tensor_slices((credit[2], credit[3])).batch(50)
+    train_dataset = tf.data.Dataset.from_tensor_slices((credit[0], credit[1])).batch(batchSizeList[0])
+    test_dataset = tf.data.Dataset.from_tensor_slices((credit[2], credit[3])).batch(batchSizeList[0])
 
     iterator = train_dataset.make_initializable_iterator()
     next_element = iterator.get_next()
@@ -484,11 +484,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
             step = step + 1
 
+batchSizeList = [600]#[600]
 
 def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
-    batchSizeList = [50]#[600]
+
     epsilon = 9.6#9.6
     # epsilon = 1e10
     delta = 1e-5
