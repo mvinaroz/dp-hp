@@ -44,7 +44,7 @@ def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_in
         epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label, ae_ce,
+def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label, ae_norm_data,
          do_gen_labels, uniform_labels, log_dir):
   gen.eval()
   gen_samples, gen_labels = None, None
@@ -103,7 +103,7 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
 
     if ae_label:
       plot_samples = gen_samples[:, :784]
-    plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=not ae_ce)
+    plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=ae_norm_data)
 
     if gen_labels is not None:
       save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
@@ -207,15 +207,10 @@ def get_args():
   parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=1.)
   parser.add_argument('--ae-no-bias', action='store_true', default=False)
   parser.add_argument('--ae-bn', action='store_true', default=False)
+  parser.add_argument('--ae-norm-data', action='store_true', default=False)
 
   ar = parser.parse_args()
 
-  # HACKS FOR QUICK ACCESS
-  # ar.ae_label = True
-  # ar.ae_ce_loss = True
-  # ar.ae_conv = True
-  # ar.gen_labels = True
-  # ar.uniform_labels = True
 
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
@@ -244,12 +239,7 @@ def preprocess_args(args):
     args.seed = np.random.randint(0, 1000)
 
   assert args.gen_labels or not args.uniform_labels
-
-  if args.ae_load_dir is None:
-    spec_str = f'd{args.d_enc}_enc{args.ae_enc_spec}_dec{args.ae_dec_spec}_clip{args.ae_clip}_sig{args.ae_noise}'
-    type_str = f'{"label_" if args.ae_label else ""}{"ce_" if args.ae_ce_loss else "mse_"}'
-    args.ae_load_dir = 'logs/ae/' + type_str + spec_str + '/'
-
+  assert args.ae_load_dir is not None
 
 def main():
   # Training settings
@@ -260,7 +250,7 @@ def main():
 
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda,
-                                                    normalize=not ar.ae_ce_loss, dataset=ar.data)
+                                                    normalize=ar.ae_norm_data, dataset=ar.data)
 
   device = pt.device("cuda" if use_cuda else "cpu")
 
@@ -271,14 +261,12 @@ def main():
 
   if ar.ae_conv:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True)
-    dec = ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ae_ce_loss)
+    dec = ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ae_norm_data)
     # print(list(enc.layers[0].parameters()), list(enc.parameters()))
   else:
     enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc, batch_norm=ar.ae_bn)
-    dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ae_ce_loss, use_bias=not ar.ae_no_bias)
+    dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ae_norm_data, use_bias=not ar.ae_no_bias)
 
-  # enc = FCEnc(d_data, parse_n_hid(ar.ae_enc_hid), ar.d_enc)
-  # dec = FCDec(ar.d_enc, parse_n_hid(ar.ae_dec_hid), d_data, use_sigmoid=ar.ae_ce_loss)
   enc.load_state_dict(pt.load(ar.ae_load_dir + 'enc.pt'))
   dec_extended_dict = pt.load(ar.ae_load_dir + 'dec.pt')
   dec_reduced_dict = {k: dec_extended_dict[k] for k in dec.state_dict().keys()}
@@ -306,7 +294,7 @@ def main():
     train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
           ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels)
     test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
-         ar.ae_conv, ar.ae_label, ar.ae_ce_loss, ar.gen_labels, ar.uniform_labels, ar.log_dir)
+         ar.ae_conv, ar.ae_label, ar.ae_norm_data, ar.gen_labels, ar.uniform_labels, ar.log_dir)
     scheduler.step()
 
   pt.save(gen.state_dict(), ar.log_dir + 'gen.pt')
