@@ -103,6 +103,7 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
 
     if ae_label:
       plot_samples = gen_samples[:, :784]
+    print('norm data:', ae_norm_data)
     plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=ae_norm_data)
 
     if gen_labels is not None:
@@ -198,13 +199,13 @@ def get_args():
   parser.add_argument('--ae-conv', action='store_true', default=False)
   parser.add_argument('--ae-label', action='store_true', default=False)
   parser.add_argument('--ae-ce-loss', action='store_true', default=False)
-  parser.add_argument('--ae-clip', type=float, default=1e-5)
-  parser.add_argument('--ae-noise', type=float, default=2.0)
+  parser.add_argument('--ae-clip', type=float, default=None)
+  parser.add_argument('--ae-noise', type=float, default=None)
   parser.add_argument('--ae-enc-spec', type=str, default=None)
   parser.add_argument('--ae-dec-spec', type=str, default=None)
   parser.add_argument('--ae-load-dir', type=str, default=None)
-  parser.add_argument('--ae-siam-weight', '-wsiam', type=float, default=0.)
-  parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=1.)
+  parser.add_argument('--ae-siam-weight', '-wsiam', type=float, default=None)
+  parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=None)
   parser.add_argument('--ae-no-bias', action='store_true', default=False)
   parser.add_argument('--ae-bn', action='store_true', default=False)
   parser.add_argument('--ae-norm-data', action='store_true', default=False)
@@ -248,6 +249,7 @@ def main():
 
   pt.manual_seed(ar.seed)
 
+  print('norm data:', ar.ae_norm_data)
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda,
                                                     normalize=ar.ae_norm_data, dataset=ar.data)
@@ -261,11 +263,12 @@ def main():
 
   if ar.ae_conv:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True)
-    dec = ConvDec(ar.d_enc, dec_spec, use_sigmoid=ar.ae_norm_data)
+    dec = ConvDec(ar.d_enc, dec_spec, use_sigmoid=not ar.ae_norm_data)
     # print(list(enc.layers[0].parameters()), list(enc.parameters()))
   else:
     enc = FCEnc(d_in=d_data, d_hid=enc_spec, d_enc=ar.d_enc, batch_norm=ar.ae_bn)
-    dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data, use_sigmoid=ar.ae_norm_data, use_bias=not ar.ae_no_bias)
+    dec = FCDec(d_enc=ar.d_enc, d_hid=dec_spec, d_out=d_data,
+                use_sigmoid=not ar.ae_norm_data, use_bias=not ar.ae_no_bias)
 
   enc.load_state_dict(pt.load(ar.ae_load_dir + 'enc.pt'))
   dec_extended_dict = pt.load(ar.ae_load_dir + 'dec.pt')
