@@ -24,16 +24,12 @@ def main():
   parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
   parser.add_argument('--log-results', action='store_true', default=False)
   parser.add_argument('--skip-slow-models', action='store_true', default=False)
-  parser.add_argument('--only-slow-models', action='store_true', default=False)
-  parser.add_argument('--custom-keys', type=str, default=None)
   parser.add_argument('--shuffle-data', action='store_true', default=False)
   parser.add_argument('--print-conf-mat', action='store_true', default=False)
   parser.add_argument('--compute-real-to-real', action='store_true', default=False)
   parser.add_argument('--compute-gen-to-real', action='store_true', default=False)
 
   ar = parser.parse_args()
-
-  assert not (ar.skip_slow_models and ar.only_slow_models)
 
   gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
   log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
@@ -88,6 +84,7 @@ def main():
   model_specs['random_forest'] = {'n_estimators': 100}
   model_specs['linear_svc'] = {'max_iter': 5000}  # still not enough??
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
+  model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
 
   if ar.custom_keys is not None:
     run_keys = ar.custom_keys.split(',')
@@ -97,6 +94,13 @@ def main():
     run_keys = [k for k in models.keys() if k in slow_models]
   else:
     run_keys = models.keys()
+
+
+  for key in models.keys():
+
+
+    if ar.skip_slow_models and key in slow_models:
+      continue
 
   for key in run_keys:
     print(f'Model: {key}')
