@@ -439,7 +439,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
                 labels=np.zeros(credit[0].shape[0])
                 #np.where(image_labels[:, 0] == 0)
-                labels[np.where(image_labels[:, 0] == 1)]=1
+                labels[np.where(image_labels[:, 1] == 1)]=1
 
                 roc, prc = test_models(images, labels, credit[2], credit[3], "generated")
                 print("roc: ", roc)
@@ -490,7 +490,7 @@ def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
 
-    epsilon = 9.6#9.6
+    epsilon = 0.6#9.6
     # epsilon = 1e10
     delta = 1e-5
 
