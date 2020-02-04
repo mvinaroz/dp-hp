@@ -19,7 +19,7 @@ arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczew
 
 
 
-var=dpcgan9.6_$(dataset)
+var=dpcgan9.6_600_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
