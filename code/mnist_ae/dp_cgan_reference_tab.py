@@ -95,7 +95,7 @@ def classify(x_train, y_train, y_test, classifer_name, random_state_value=0):
         exit()
 
     onehot_encoder = OneHotEncoder(sparse=False)
-    y_test = np.expand_dims(credit[3], 1)
+    y_test = np.expand_dims(tab_dataset[3], 1)
     y_mb_test = onehot_encoder.fit_transform(y_test)
 
     y_score = classifier.fit(x_train, y_train).predict_proba(y_mb_test)  # gets class probabilities for each class here
@@ -187,15 +187,17 @@ def compute_epsilon(batch_size, steps, sigma):
     # Delta is set to 1e-5 because MNIST has 60000 training points.
     return get_privacy_spent(orders, rdp, target_delta=1e-5)[0]
 
-credit=load_credit()
+#credit=load_credit()
+tab_dataset=load_isolet()
+
 
 def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     h_dim = 128
     Z_dim = 100
 
 
-    train_dataset = tf.data.Dataset.from_tensor_slices((credit[0], credit[1])).batch(batchSizeList[0])
-    test_dataset = tf.data.Dataset.from_tensor_slices((credit[2], credit[3])).batch(batchSizeList[0])
+    train_dataset = tf.data.Dataset.from_tensor_slices((tab_dataset[0], tab_dataset[1])).batch(batchSizeList[0])
+    test_dataset = tf.data.Dataset.from_tensor_slices((tab_dataset[2], tab_dataset[3])).batch(batchSizeList[0])
 
     iterator = train_dataset.make_initializable_iterator()
     next_element = iterator.get_next()
@@ -206,7 +208,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     # Initializations for a two-layer discriminator network
     # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     #mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
-    x_dim = 29#mnist.train.images.shape[1]
+    x_dim = tab_dataset[0].shape[1] #mnist.train.images.shape[1]
     y_dim = 2#mnist.train.labels.shape[1]
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
     y_pl = tf.placeholder(tf.float32, shape=[None, y_dim])
@@ -424,6 +426,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 n_class[0]=2270
                 n_class[1]=398
 
+                #isolet
+                n_class=np.zeros(2)
+                n_class[0]=len(np.where(tab_dataset[1]==0)[0])
+                n_class[1]=len(np.where(tab_dataset[1]==1)[0])
+
                 n_image = int(sum(n_class))
                 image_labels = np.zeros(shape=[n_image, len(n_class)])
 
@@ -438,11 +445,11 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 #testing generated data
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
-                labels=np.zeros(credit[0].shape[0])
+                labels=np.zeros(tab_dataset[0].shape[0])
                 #np.where(image_labels[:, 0] == 0)
                 labels[np.where(image_labels[:, 1] == 1)]=1
 
-                roc, prc = test_models(images, labels, credit[2], credit[3], "generated")
+                roc, prc = test_models(images, labels, tab_dataset[2], tab_dataset[3], "generated")
                 print("roc: ", roc)
                 print("prc: ", prc)
 
@@ -485,13 +492,13 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
             step = step + 1
 
-batchSizeList = [600]#[600]
+batchSizeList = [100]#[600] #check
 
 def main():
     sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
 
-    epsilon = 9.6#9.6
+    epsilon = 9.6#9.6 #check
     # epsilon = 1e10
     delta = 1e-5
 
