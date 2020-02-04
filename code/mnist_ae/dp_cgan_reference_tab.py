@@ -435,6 +435,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
                 z_sample = sample_z(n_image, Z_dim)
 
+                #testing generated data
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 labels=np.zeros(credit[0].shape[0])
