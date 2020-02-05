@@ -545,7 +545,7 @@ def main():
     #sigma_clipping_list = [[0.01, 3.1]]
     sigma_clipping_list = [[0.001, float(args.clipping)]]
 
-    epsilon = 1.0#9.6#check
+    epsilon = 100000000.0#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
