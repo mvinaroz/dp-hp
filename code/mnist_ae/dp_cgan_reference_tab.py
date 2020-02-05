@@ -474,7 +474,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
 
 
-
+                print("n_class ", n_class)
                 n_image = int(sum(n_class))
                 image_labels = np.zeros(shape=[n_image, len(n_class)])
 
@@ -487,6 +487,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 z_sample = sample_z(n_image, Z_dim)
 
                 #testing generated data
+                print("z_sample: ", z_sample.shape, " n_image: ", n_image)
+
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
 
