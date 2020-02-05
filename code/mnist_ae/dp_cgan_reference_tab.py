@@ -61,6 +61,7 @@ import argparse
 arguments=argparse.ArgumentParser()
 arguments.add_argument("--dataset", default='intrusion')
 arguments.add_argument("--clipping", default='1.1')
+arguments.add_argument("--noise", default='1.1')
 args=arguments.parse_args()
 
 
@@ -492,7 +493,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 #np.where(image_labels[:, 0] == 0)
                 labels[np.where(image_labels[:, 1] == 1)]=1
 
+                print("generated: ")
+                print("images ", images.shape, ", labels ", labels.shape, "tab_dataset[2] ", tab_dataset[2].shape,
+                      ", tab_dataset[3] ", tab_dataset[3].shape)
+
                 roc, prc = test_models(images, labels, tab_dataset[2], tab_dataset[3], "generated", y_dim)
+
                 print("roc: ", roc)
                 print("prc: ", prc)
 
@@ -543,9 +549,9 @@ else:
 
 def main():
     #sigma_clipping_list = [[0.01, 3.1]]
-    sigma_clipping_list = [[0.001, float(args.clipping)]]
+    sigma_clipping_list = [[float(args.noise), float(args.clipping)]]
 
-    epsilon = 100000000.0#9.6#check
+    epsilon = 0.9#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
