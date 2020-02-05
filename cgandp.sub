@@ -12,14 +12,14 @@ executable = /usr/bin/unbuffer
 #arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/condMMD_multicat.py --dataset $(dataset)
 #arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/priv_condMMD_intrusion.py
 #arguments = /home/kadamczewski/miniconda3/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/separate_generators_binary_priv_pretr_heter.py --dataset $(dataset)
-arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/mnist_ae/dp_cgan_reference_tab.py --dataset $(dataset)
+arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code/mnist_ae/dp_cgan_reference_tab.py --dataset $(dataset) --clipping $(clipping_val)
 
 
 
 
 
-
-var=dpcgan1.0_400_$(dataset)
+clipping_val=10.1
+var=dpcgan_priv_epslarge_0.001_$(clipping_val)_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
 #var=covtype_mijung_allnew
