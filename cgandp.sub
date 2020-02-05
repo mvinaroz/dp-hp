@@ -18,7 +18,7 @@ arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczew
 
 
 
-clipping_val=5.1
+clipping_val=10.1
 var=dpcgan_priv_0.001_$(clipping_val)_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
