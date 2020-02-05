@@ -62,6 +62,7 @@ arguments=argparse.ArgumentParser()
 arguments.add_argument("--dataset", default='intrusion')
 arguments.add_argument("--clipping", default='1.1')
 arguments.add_argument("--noise", default='1.1')
+arguments.add_argument("--epsilon", default='1.0')
 args=arguments.parse_args()
 
 
@@ -552,7 +553,7 @@ def main():
     #sigma_clipping_list = [[0.01, 3.1]]
     sigma_clipping_list = [[float(args.noise), float(args.clipping)]]
 
-    epsilon = 0.9#9.6#check
+    epsilon = args.epsilon#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
