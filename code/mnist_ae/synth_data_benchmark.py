@@ -104,7 +104,7 @@ def main():
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
   model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
-  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 10}  # max_samples==subsample, n_est 10 is default
+  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}  # max_samples==subsample, n_est 10 is default
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
 
