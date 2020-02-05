@@ -16,10 +16,10 @@ arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczew
 
 
 
-epsilon_val=10000000
-#epsilon_val=1
-noise_val=0.001
-#noise_val=0.5
+#epsilon_val=10000000
+epsilon_val=1
+##noise_val=0.001
+noise_val=0.5
 clipping_val=12
 var=dpcgan_2_priv_epslarge_noise-$(noise_val)_clip-$(clipping_val)_eps-$(epsilon_val)_$(dataset)
 #var=credit_mijung_all_fin_fuller
