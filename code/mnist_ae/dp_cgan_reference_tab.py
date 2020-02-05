@@ -489,9 +489,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 #testing generated data
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
-                labels=np.zeros(tab_dataset[0].shape[0])
-                #np.where(image_labels[:, 0] == 0)
-                labels[np.where(image_labels[:, 1] == 1)]=1
+
+                labels=np.array([np.where(r == 1)[0][0] for r in image_labels]).squeeze()
 
                 print("generated: ")
                 print("images ", images.shape, ", labels ", labels.shape, "tab_dataset[2] ", tab_dataset[2].shape,
