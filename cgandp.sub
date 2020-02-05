@@ -16,11 +16,11 @@ arguments = /home/kadamczewski/miniconda3/envs/tf-gpu/bin/python /home/kadamczew
 
 
 
-#epsilon_val=10000000
-epsilon_val=1
-##noise_val=0.001
-noise_val=0.6
-clipping_val=20.1
+epsilon_val=10000000000
+#epsilon_val=1
+noise_val=0.001
+#noise_val=0.6
+clipping_val=10.1
 var=dpcgan_2repeat_noise-$(noise_val)_clip-$(clipping_val)_eps-$(epsilon_val)_$(dataset)
 #var=credit_mijung_all_fin_fuller
 #var=census_mijung_all_right
@@ -52,8 +52,8 @@ queue 5
 # dataset=isolet
 # queue 1
 # #
-# dataset=covtype
-# queue 1
+dataset=covtype
+queue 5
 #
 # dataset=adult
 # queue 1
