@@ -59,9 +59,10 @@ from dataloader import load_isolet, test_models, load_credit, load_census, load_
 import argparse
 
 arguments=argparse.ArgumentParser()
-arguments.add_argument("--dataset", default='intrusion')
+arguments.add_argument("--dataset", default='epileptic')
 arguments.add_argument("--clipping", default='1.1')
 arguments.add_argument("--noise", default='1.1')
+arguments.add_argument("--epsilon", default='1.0')
 args=arguments.parse_args()
 
 
@@ -474,7 +475,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
 
 
 
-
+                print("n_class ", n_class)
                 n_image = int(sum(n_class))
                 image_labels = np.zeros(shape=[n_image, len(n_class)])
 
@@ -487,11 +488,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 z_sample = sample_z(n_image, Z_dim)
 
                 #testing generated data
+                print("z_sample: ", z_sample.shape, " n_image: ", n_image)
+
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
-                labels=np.zeros(tab_dataset[0].shape[0])
-                #np.where(image_labels[:, 0] == 0)
-                labels[np.where(image_labels[:, 1] == 1)]=1
+
+                labels=np.array([np.where(r == 1)[0][0] for r in image_labels]).squeeze()
 
                 print("generated: ")
                 print("images ", images.shape, ", labels ", labels.shape, "tab_dataset[2] ", tab_dataset[2].shape,
@@ -551,7 +553,7 @@ def main():
     #sigma_clipping_list = [[0.01, 3.1]]
     sigma_clipping_list = [[float(args.noise), float(args.clipping)]]
 
-    epsilon = 0.9#9.6#check
+    epsilon = args.epsilon#9.6#check
     # epsilon = 1e10
     delta = 1e-5
 
