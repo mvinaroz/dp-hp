@@ -6,23 +6,25 @@ import tensorflow as tf
 import tensorflow.contrib as tc
 import matplotlib
 matplotlib.use('Agg')
-import matplotlib.pyplot as plt
 import cPickle as pickle
 from numpy import linalg, argmin, array, arange
-import matplotlib.gridspec as gridspec
 from utilize import normlization, loaddata, Rsample, MNIST_c
-import logging # these 2 lines ar used in GPU3
+import logging  # these 2 lines ar used in GPU3
 logging.getLogger("tensorflow").setLevel(logging.ERROR)
 from visualize import *
 import socket
+# import matplotlib.pyplot as plt
+# import matplotlib.gridspec as gridspec
 
 """
 Copy to make sure I don't interfere with anyone else. please don't make changes here
-- Frederik
+
 """
 
+
 class WassersteinGAN(object):
-    def __init__(self, g_net, d_net, z_sampler, data, model, sigma, digit, reg, lr, cilpc, batch_size, num_batches, plot_size, save_size, d_iters, data_name, data_path, path_output): # changed
+    def __init__(self, g_net, d_net, z_sampler, data, model, sigma, digit, reg, lr, cilpc, batch_size, num_batches,
+                 plot_size, save_size, d_iters, data_name, data_path, path_output):  # changed
         self.model = model
         self.data = data
         self.g_net = g_net
@@ -43,10 +45,15 @@ class WassersteinGAN(object):
         self.data_name = data_name
         self.data_path = data_path
         self.path_output = path_output
-        self.data_td, self.label_td = loaddata(self.digit, self.data_name, self.data_path) # for digit 0: (self.data_td).shape: (5923, 784), (self.label_td).shape: (5923,), type(self.data_td) & type(self.label_td): 'numpy.ndarray'
+        self.data_td, self.label_td = loaddata(self.digit, self.data_name, self.data_path)
+
+        print self.data_td.shape
+        np.save('dpgan_data.npy', self.data_td)
+        # for digit 0: (self.data_td).shape: (5923, 784), (self.label_td).shape: (5923,), type(self.data_td)
+        # & type(self.label_td): 'numpy.ndarray'
         self.data_td = normlization(self.data_td)
 
-        self.x = tf.placeholder(tf.float32, [None, self.x_dim], name='x') # [None, 784]
+        self.x = tf.placeholder(tf.float32, [None, self.x_dim], name='x')  # [None, 784]
         self.z = tf.placeholder(tf.float32, [None, self.z_dim], name='z')
         self.x_ = self.g_net(self.z)
 
@@ -88,13 +95,13 @@ class WassersteinGAN(object):
         self.d_loss_store = [] # store loss of discriminator
         self.wdis_store = []  # store Wasserstein distance, new added
 
-    def train(self): # batch_size*ite should be euough to use whole dataset for
+    def train(self, xs, path_output):  # batch_size*ite should be euough to use whole dataset for
         plt.ion()
         self.sess.run(tf.initialize_all_variables())
         start_time = time.time()
         for t in range(0, self.num_batches):
             self.d_iters = 5
-            if t % 500 == 0 or t < 25: # make the discriminator more accurate at certain iterations
+            if t % 500 == 0 or t < 25:  # make the discriminator more accurate at certain iterations
                 self.d_iters = 100
 
             for _ in range(0, self.d_iters): # train discriminator
@@ -108,18 +115,15 @@ class WassersteinGAN(object):
             bz = self.z_sampler(self.batch_size, self.z_dim) # train generator, another batch of z sample
             self.sess.run(self.g_rmsprop, feed_dict={self.z: bz, self.x: data_td})
 
-            if t % self.plot_size == 0: # evaluate loss and norm of gradient vector
+            if t % self.plot_size == 0:  # evaluate loss and norm of gradient vector
                 # bx,l = self.x_sampler(self.batch_size) # the reason we generate another batch of sample is that we want to see if the distance of 2 distributions are indeed pulled closer
                 bx, l = Rsample(self.data_td, self.label_td, self.batch_size)
 
                 bz = self.z_sampler(self.batch_size, self.z_dim)
 
-                rd_loss = self.sess.run(
-                    self.d_loss, feed_dict={self.x: bx, self.z: bz}
-                )
-                rg_loss = self.sess.run(
-                    self.g_loss, feed_dict={self.z: bz, self.x: bx}
-                )
+                rd_loss = self.sess.run(self.d_loss, feed_dict={self.x: bx, self.z: bz})
+                rg_loss = self.sess.run(self.g_loss, feed_dict={self.z: bz, self.x: bx})
+
                 d_net_var_grad_val = self.sess.run(self.d_net_var_grad, feed_dict={self.x: bx, self.z: bz})
                 if type(d_net_var_grad_val) != type([0]):
                     d_net_var_grad_val = [d_net_var_grad_val]
@@ -133,12 +137,15 @@ class WassersteinGAN(object):
                 self.wdis_store.append(rd_loss)  # Wasserstein distance will decrease
 
                 # generate image
-                bz = self.z_sampler(1, self.z_dim) # changed, only generate 1 image
+                bz = self.z_sampler(1, self.z_dim)  # changed, only generate 1 image
+
                 bx = self.sess.run(self.x_, feed_dict={self.z: bz}) # bx.shape: (1, 784)
-                bx = xs.data2img(bx) # data2img is in __init__.py, bx.shape: (1, 28, 28, 1)
+                bx = xs.data2img(bx)  # data2img is in __init__.py, bx.shape: (1, 28, 28, 1)
                 fig = plt.figure(self.data + '.' + self.model)
                 grid_show(fig, bx, xs.shape)
-                fig.savefig('result/genefig/{}/{}.pdf'.format(self.data, t)) # changed
+                if not os.path.exists('result/genefig/{}/'.format(self.data)):
+                    os.makedirs('result/genefig/{}/'.format(self.data))
+                fig.savefig('result/genefig/{}/{}.png'.format(self.data, t)) # changed
 
             # if t % self.save_size == 0:  # store generator and discriminator, new added
             #     saver = tf.train.Saver()
@@ -146,7 +153,7 @@ class WassersteinGAN(object):
             #     print("Session saved in file: %s" % save_path)
 
         z_sample = self.z_sampler(len(self.label_td), self.z_dim)
-        x_gene = self.sess.run(self.x_, feed_dict={self.z: z_sample}) # type(x_gene): <type 'numpy.ndarray'>, x_gene[0].shape: (784,)
+        x_gene = self.sess.run(self.x_, feed_dict={self.z: z_sample})  # type(x_gene): <type 'numpy.ndarray'>, x_gene[0].shape: (784,)
         x_gene = array(x_gene) * 255  # to 0-255 scale
 
         # store generated data
@@ -158,6 +165,8 @@ class WassersteinGAN(object):
         plt.plot(t, self.wdis_store, 'b--')
         plt.xlabel('Generator iterations')
         plt.ylabel('Wasserstein distance')
+        if not os.path.exists('result/lossfig/'):
+            os.makedirs('result/lossfig/')
         plt.savefig('result/lossfig/wdis.jpg')
         plt.close()
 
@@ -170,9 +179,9 @@ class WassersteinGAN(object):
         print("Training finished, session saved in file: %s" % save_path)
 
     def dpnoise(self, tensor, batch_size):
-        '''add noise to tensor'''
+        # add noise to tensor
         s = tensor.get_shape().as_list()  # get shape of the tensor
-        rt = tf.random_normal(s, mean=0.0, stddev= self.sigma)
+        rt = tf.random_normal(s, mean=0.0, stddev=self.sigma)
         t = tf.add(tensor, tf.scalar_mul((1.0 / batch_size), rt))
         return t
 
@@ -180,41 +189,46 @@ class WassersteinGAN(object):
         return sum([linalg.norm(i) for i in v])
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser('')
     parser.add_argument('--data', type=str, default='mnist')
     parser.add_argument('--model', type=str, default='mlp')
     parser.add_argument('--gpus', type=str, default='0')
     args = parser.parse_args()
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
-    digits = ['2', '3', '4', '5']  # MNIST digits need to use
-    user='frederik'
+    # digits = ['2', '3', '4', '5']  # MNIST digits need to us
+    digits = ['0']  # MNIST digits need to us
+
     for digit in digits:
         tf.reset_default_graph()
         data = importlib.import_module(args.data)  # from parser
         model = importlib.import_module(args.data + '.' + args.model)
-        xs = data.DataSampler() # mnist/__init__.py, xs is a instance of class DataSampler
+        xs = data.DataSampler()  # mnist/__init__.py, xs is a instance of class DataSampler
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
-        sigma_all =0.001  # total noise std added
+        sigma_all = 0.001  # total noise std added
+        # sigma_all = 0.0000000001  # total noise std added
         reg = 2.5e-5
         lr = 5e-5
         cilpc = 0.02
+        # cilpc = 10.
         batch_size = 64
         num_batches = 10000  # 150000
-        plot_size = 5
+        plot_size = 50
         save_size = 100000
         d_iters = 1
         data_name = 'training'
 
-        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
-            if user == 'kamil':
-                data_path = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/MNIST/raw/"
-                path_output = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/dpgan-master/output/"
-        else:
-            data_path = "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/MNIST/raw/"
-            path_output = "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/dpgan-master/output/"
+        # if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
 
-        wgan = WassersteinGAN(g_net, d_net, zs, args.data, args.model, sigma_all, digit, reg, lr, cilpc, batch_size, num_batches, plot_size, save_size, d_iters, data_name, data_path, path_output)
-        wgan.train()
+        data_path = "../data/MNIST/raw/"
+        path_output = "mnist_logs"
+
+        wgan = WassersteinGAN(g_net, d_net, zs, args.data, args.model, sigma_all, digit, reg, lr, cilpc, batch_size,
+                              num_batches, plot_size, save_size, d_iters, data_name, data_path, path_output)
+        wgan.train(xs, path_output)
+
+
+if __name__ == '__main__':
+    main()
