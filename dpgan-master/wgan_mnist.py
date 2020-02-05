@@ -207,12 +207,12 @@ def main():
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
-        sigma_all = 0.001  # total noise std added
-        # sigma_all = 0.0000000001  # total noise std added
+        # sigma_all = 0.001  # total noise std added
+        sigma_all = 0.0000000001  # total noise std added
         reg = 2.5e-5
         lr = 5e-5
-        cilpc = 0.02
-        # cilpc = 10.
+        # cilpc = 0.02
+        cilpc = 10.
         batch_size = 64
         num_batches = 10000  # 150000
         plot_size = 50
