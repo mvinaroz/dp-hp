@@ -726,7 +726,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
 
     # As a reference, we first test logistic regression on the real data
-
+    # check
     if dataset in heterogeneous_datasets:
         roc_real, prc_real = test_models(X_train, y_train, X_test, y_test, "real")
     else:

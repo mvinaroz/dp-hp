@@ -59,7 +59,7 @@ from dataloader import load_isolet, test_models, load_credit, load_census, load_
 import argparse
 
 arguments=argparse.ArgumentParser()
-arguments.add_argument("--dataset", default='intrusion')
+arguments.add_argument("--dataset", default='epileptic')
 arguments.add_argument("--clipping", default='1.1')
 arguments.add_argument("--noise", default='1.1')
 arguments.add_argument("--epsilon", default='1.0')

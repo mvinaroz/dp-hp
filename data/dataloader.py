@@ -586,5 +586,5 @@ def test_models(X_tr, y_tr, X_te, y_te, datasettype, n_classes=2):
     return res1, res2
 
 
-load_epileptic()
+#load_epileptic()
 #load_adult()_
