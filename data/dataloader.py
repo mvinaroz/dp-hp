@@ -283,7 +283,7 @@ def load_epileptic():
 
     # take random 10 percent of the negative labelled data
     in_keep = np.random.permutation(np.sum(idx_negative_label))
-    under_sampling_rate = 0.01 #undersampled_rate  # 0.01
+    under_sampling_rate = 1. #undersampled_rate  # 1.
     # under_sampling_rate = 0.3
     in_keep = in_keep[0:np.int(np.sum(idx_negative_label) * under_sampling_rate)]
 
@@ -378,7 +378,7 @@ def load_intrusion():
     data, categorical_columns, ordinal_columns = sdgym.load_dataset('intrusion')
 
     """ some specifics on this dataset """
-    n_classes = 5
+    n_classes = 5 #removed to 5
 
     """ some changes we make in the type of features for applying to our model """
     categorical_columns_binary = [6, 11, 13, 20]  # these are binary categorical columns
@@ -390,6 +390,11 @@ def load_intrusion():
     raw_labels = data[:, -1]
     raw_input_features = data[:, the_rest_columns + categorical_columns_binary]
     print(raw_input_features.shape)
+
+    #we remove the least label
+    non4_tokeep=np.where(raw_labels!=4)[0]
+    raw_labels=raw_labels[non4_tokeep]
+    raw_input_features=raw_input_features[non4_tokeep]
 
     """ we take a pre-processing step such that the dataset is a bit more balanced """
     idx_negative_label = raw_labels == 0  # this is a dominant one about 80%, which we want to undersample
@@ -581,5 +586,5 @@ def test_models(X_tr, y_tr, X_te, y_te, datasettype, n_classes=2):
     return res1, res2
 
 
-load_adult()
+load_epileptic()
 #load_adult()_
