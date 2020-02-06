@@ -80,7 +80,7 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
     gen_samples = gen(gen_code).detach()
 
   plot_samples = gen_samples[:100, ...].cpu().numpy()
-  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}')
+  plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=False)
   if gen_labels is not None and ordered_labels is None:
     save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
   # bs = plot_samples.shape[0]
