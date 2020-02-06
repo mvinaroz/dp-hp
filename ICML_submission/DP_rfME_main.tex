@@ -1,0 +1,978 @@
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+%\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{bm,amsbsy} % for bold symbols
+ \usepackage{amsfonts,amsmath,amssymb,amsthm,mathtools}
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+\usepackage{standalone}
+%\usepackage{tikz}
+%\usetikzlibrary{bayesnet}
+%\usepackage{pgf}
+
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line andreplace
+% \usepackage{icml2020} with \usepackage[nohyperref]{icml2020} above.
+\usepackage{hyperref}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2020}
+
+% If accepted, instead use the following line for the camera-ready submission:
+%\usepackage[accepted]{icml2020}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Submission and Formatting Instructions for ICML 2020}
+
+\input{notation}
+\usepackage{arydshln}
+
+\usepackage{xcolor}
+\newcommand{\mpsay}[1]{[\textbf{MP:} \textcolor{red!60!black}{#1}]}
+
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{
+Differentially Private Mean Embeddings with  Random Features (DP-MERF) \\for Simple \& Practical Synthetic Data Generation}
+
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Aeiau Zzzz}{equal,to}
+\icmlauthor{Bauiu C.~Yyyy}{equal,to,goo}
+\icmlauthor{Cieua Vvvvv}{goo}
+\icmlauthor{Iaesut Saoeu}{ed}
+\icmlauthor{Fiuea Rrrr}{to}
+\icmlauthor{Tateu H.~Yasehe}{ed,to,goo}
+\icmlauthor{Aaoeu Iasoh}{goo}
+\icmlauthor{Buiui Eueu}{ed}
+\icmlauthor{Aeuia Zzzz}{ed}
+\icmlauthor{Bieea C.~Yyyy}{to,goo}
+\icmlauthor{Teoau Xxxx}{ed}
+\icmlauthor{Eee Pppp}{ed}
+\end{icmlauthorlist}
+
+\icmlaffiliation{to}{Department of Computation, University of Torontoland, Torontoland, Canada}
+\icmlaffiliation{goo}{Googol ShallowMind, New London, Michigan, USA}
+\icmlaffiliation{ed}{School of Computation, University of Edenborrow, Edenborrow, United Kingdom}
+
+\icmlcorrespondingauthor{Cieua Vvvvv}{c.vvvvv@googol.com}
+\icmlcorrespondingauthor{Eee Pppp}{ep@eden.co.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\begin{abstract}
+We present a differentially private data generation paradigm using random feature representations of kernel mean embeddings when comparing the  distribution of true data with that of synthetic data.
+%
+We exploit the random feature representations for two  important benefits. 
+%
+First, we require a very low privacy cost for training deep generative models. This is because unlike kernel-based distance metrics that require computing the kernel matrix on all pairs of true and synthetic data points, we can detach the data-dependent term from the term solely dependent on synthetic data. 
+%
+Hence, we need to perturb the data-dependent term once-for-all and then use it until the end of the training. %
+%
+Second, we can obtain an \textit{analytic} sensitivity of the kernel mean embedding as the random features are norm bounded by construction. This removes the necessity of hyper-parameter search for a clipping norm to handle the unknown sensitivity of an encoder network when dealing with high-dimensional data. 
+%
+We provide several variants of our algorithm, \textit{differentially-private mean embeddings with random features} (DP-MERF) to generate (a) heterogeneous tabular data, (b) input features and corresponding labels jointly; and (c) high-dimensional image data.  
+%
+Our algorithm achieves better privacy-utility trade-offs than existing methods tested on several datasets. 
+\end{abstract}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%   Introduction %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Introduction}
+\label{sec:Introduction}
+
+
+Classical approaches to differentially private (DP) data generation typically assumes a certain class of pre-specified queries. These DP algorithms produce a privacy-preserving synthetic database that is \textit{similar} to the privacy-sensitive original data for that fixed query class
+%
+\cite{Mohammed:2011:DPD:2020408.2020487, 10.1007/978-3-642-15546-8_11, NIPS2012_4548, 7911185}.
+%
+However, specifying a query class upfront significantly limits the flexibility of the synthetic data, if data analysts hope to perform other machine learning tasks.
+
+To overcome this inflexibility, many papers on DP data generation have utilized the recent advance in deep generative modeling. %
+The majority of these approaches is based on
+the generative adversarial networks (GAN) \cite{NIPS2014_5423} framework, where a discriminator and a generator play a  min-max form of game to optimize for 
+%
+ the \textit{Jensen-Shanon divergence} between the true and  synthetic data distributions.   
+%
+The Jensen-Shanon divergence belongs to the family of divergence, known as \textit{Ali-Silvey distance}, \textit{Csisz\'ar's $\phi$-divergence} \cite{CIT-004}, defined as
+$D_{\phi}(\mathbb{P},\mathbb{Q}) = \int_{M} \phi \left(\frac{\mathbb{P}}{\mathbb{Q}}\right) d\mathbb{Q}$
+where $M$ is a measurable space and $P,Q$ are probability distributions.
+% , $\phi:[0,\infty) \mapsto (-\infty, \infty]$ is a convex function, and the distance is defined where $\mathbb{P}$ is absolutely continuous with respect to $\mathbb{Q}$.
+% (otherwise, $ D_{\phi}(\mathbb{P},\mathbb{Q}) =+\infty$)
+Depending on the form of $\phi$, $D_{\phi}(\mathbb{P},\mathbb{Q})$ recovers popular divergences\footnote{See Table 1 in \citep{nowozin2016} for various $\phi$ divergences in the context of GANs.} such as the Kullback-Liebler (KL) divergence ($\phi(t)=t\log t$).
+% and Hellinger distance ($\phi(t)= (\sqrt{t} -1)^2$).
+% total variatoin distance ($\phi(t)= |t-1|$), and $\chi^2$-divergence ($\phi(t)=(t -1)^2$).
+%
+The GAN framework with the Jensen-Shanon divergence was also used for DP data generation \cite{10.14778/3231751.3231757, DP_CGAN, PATE_GAN}.
+
+  
+% \mpsay{List DP GAN with the JS distance here}
+
+
+Another popular family of distance measure is \textit{integral probability metrics (IPMs)}, which is defined by 
+$D(\mathbb{P},\mathbb{Q}) = \mbox{sup}_{f \in \mathcal{F}} \left| \int_{M} f d \mathbb{P} - \int_{M} f d\mathbb{Q} \right|$ where  $\mathcal{F}$ is a class of real-valued bounded measurable functions on $M$. 
+%
+Depending on the class of functions, there are several popular choices of IPMs.
+%
+%\paragraph{Wasserstein distance}
+For instance, when $\mathcal{F} = \{f: \Vert f \Vert_L \leq 1 \}$, where $\Vert f \Vert_L := \mbox{sup}\{|f(x)-f(y)|/\rho(x,y): x\neq y \in M \}$ for a metric space $(M, \rho)$, 
+$D(\mathbb{P},\mathbb{Q})$ yields the \textit{Kantorovich} metric, and when $M$ is separable, the Kantorovich metric 
+% is the dual representation of the 
+recovers the
+\textit{Wasserstein} distance, a popular choice for generative modelling such as Wasserstein-GAN and Wasserstein-VAE \citep{Arjovsky2017WassersteinG, tolstikhin2018wasserstein}. The GAN framework with the Wasserstein distance was also used for DP data generation \cite{DPGAN, DBLP:conf/sec/FrigerioOGD19}.
+
+
+%\paragraph{Maximum mean discrepancy (MMD)} 
+As another example of IPMs, when $\mathcal{F} = \{f: \Vert f \Vert_{\mathcal{H}} \leq 1 \}$, i.e., the function class is a unit ball in reproducing kernel Hilbert space (RKHS) associated with a positive-definite kernel $k$,  $D(\mathbb{P},\mathbb{Q})$ yields the \textit{maximum mean discrepancy} (MMD), 
+% \begin{align}
+$MMD(P,Q) =  \mbox{sup}_{f \in \mathcal{F}} \left| \int_{M} f d \mathbb{P} - \int_{M} f d\mathbb{Q} \right|$.
+% \end{align} 
+In this case finding a supremum is analytically tractable and the solution is represented by the difference in the mean embeddings of each probability measure: $MMD(P,Q) =  \Vert \mu_{\mathbb{P}} - \mu_{\mathbb{Q}} \Vert_{\mathcal{H}}$, where 
+$ \mu_{\mathbb{P}}  = \mathbb{E}_{\vx \sim \mathbb{P}}[k(\vx, \cdot)]$ and
+$ \mu_{\mathbb{Q}}  = \mathbb{E}_{\vy \sim \mathbb{Q}}[k(\vy, \cdot)]$. 
+For a characteristic kernel $k$, the squared MMD forms a metric, i.e., $MMD^2  = 0$, if and only if $P=Q$. 
+% In practice, MMD estimators are used  
+%
+MMD is also a popular choice for generative modelling in the GAN frameworks \cite{GMMN, NIPS2017_6815}, as MMD compares two probability measures in terms of all possible moments (no information loss due to a selection of a certain set of moments); and the MMD estimator is in closed form (\eqref{MMD_full}) and easy to compute by the pair-wise evaluations of a kernel function using the points drawn from $P$ and $Q$.
+ 
+Here, we propose to use a particular form of MMD via \textit{random Fourier feature} representations \cite{rahimi2008random} of kernel mean embeddings for differentially private data generation. Our contributions are summarized below. 
+% We  accommodate the diverse needs in privacy-preserving data generation.
+%
+
+\textbf{(1) We provide a simple, computationally efficient, and highly practical algorithm for DP data generation.}
+    \begin{itemize}
+    \item \textit{Simple:} This random feature representation of mean embedding (\eqref{MMD_rf}) separates the mean embedding of the true data distribution (data-dependent) from that of the synthetic data distribution (data-independent). Hence, only the data-dependent term needs privatization. Random features provide an analytic sensitivity of the mean embedding, with which we simply adjust the noise level of a DP mechanism to produce DP data.  
+    \item \textit{Computationally efficient:} As we have an analytic sensitivity, we do not need to search for the ``right" clipping bound\footnote{Nobody reports how much computational power they used to find the right clipping norm in the existing DP GAN-based methods. From our experience, this step requires a significant amount of compute power as in each clipping norm candidate we need to train an entire generative model coupled with a discriminator.} which is necessary in many existing DP GAN-based methods. This reduces computational cost significantly, i.e., the computational cost of our method reduces to the usual SGD-based training of a generator.
+    \item \textit{Highly practical:}  As the only term that needs privatization is simply the  mean embedding of the true data distribution, we  perturb the term once-for-all and then use it until the end of the training, resulting in a very low privacy loss for training deep generative models. Hence, our method achieves better privacy-utility trade-offs compared to existing GAN-based methods.  
+    \end{itemize}
+    
+\textbf{(2) Our algorithm accommodates several needs in privacy-preserving data generation.} 
+    \begin{itemize}
+        \item \textit{Generating input and output pairs jointly}:
+        We treat both input and output to be privacy-sensitive.  This is different from the conditional-GAN type of methods. %
+        \item \textit{Generating imbalanced and heterogeneous tabular data}: This is an extremely important condition for a DP method to be useful, as real world datasets frequently exhibit class-imbalance and heterogeneity.
+        \item \textit{Generating high-dimensional image data} using a low-dimensional-code based framework.  %
+    % The random feature mean embeddings directly computed on the high-dimensional pixels are less useful due the curse of dimensionality. 
+    % following the convention for image data generation in machine learning. 
+    % The norm-bounded random features help us to remove the necessity of hyper-parameter search for a clipping norm to handle the unknown sensitivity of an encoder network when dealing with high-dimensional data.
+    \end{itemize}
+    % A framework for \textit{generating input and output pairs jointly}, which does not assume the information on labels to be public. %
+    % % We provide a formulation to compute  random feature mean embeddings on the joint distribution for the  input and output pairs. 
+    % \item A formulation to properly handle \textit{heterogeneous tabular data}, as real world datasets often exhibit heterogeneity. 
+    % % We provide a formulation to take into account such an heterogeneity of datasets. 
+    
+\textbf{(3) We raise a question whether we really benefit from the DP versions of heavy machineary such as GAN and auto-encoder-based methods to generate the datasets that we typically consider in the DP literature.}
+% share an interesting finding} that the existing DP GAN-based methods or our DP-auto-encoder-based method for image data perform worse than our vanilla algorithm that does not involve any dimensionality reduction. 
+    %
+\begin{itemize}
+    \item We consider $8$ commonly-used  tabular datasets and relatively simple image data (MNIST and FashionMNIST). For more complex data, it is necessary to use larger networks. However,   
+    the typical size of the classifiers in the DP literature todate is limited by 3-layer neural networks due to the challenge in finding a good privacy-utility trade-off.  \footnote{With access to public data the privacy-accuracy trade-off can be drastically improved, e.g.,  \cite{papernot:private-training}.}.
+    \item Our vanilla method without the dimensionality reduction significantly outperforms other DP-GAN and our DP-auto-encoder-based methods for these data.
+    % : our vanilla method with $\epsilon=1.3$ outperforms both an existing GAN-based method and our DP-auto-encoder-based method with $\epsilon=9.6$, which sets a new state-of-the-art in DP data generation.
+    % \textit{Datasets we consider are MNIST and FashionMNIST.} 
+    % \item  Gradient-perturbation algorithms (\subsecref{DP} for details) for \textit{privatizing the discriminator or the auto-encoder of a typical size of three-layer neural networks perform poorly compared to our vanilla method.} For both datasets, our vanilla method with $\epsilon=1.3$ outperforms an existing GAN-based method with $\epsilon=9.6$.
+    \item  As we are limited to these datasets and relatively small networks, we wonder if we truly benefit from the complicated-and-expensive-to-train GAN or auto-encoder type of DP data generation methods. If we can generate these datasets using much simpler methods like ours, the answer would be no. 
+\end{itemize}
+    
+    
+    % , without relying on public data (with access to public data the privacy-accuracy trade-off can be drastically improved [16]).
+    % %
+  
+    %
+
+        % The auto-encoder maps between the low-dimensional codes and the high-dimensional pixels, while the generator produces low dimensional code  
+        % Unlike other existing methods, our framework requires privatizing the decoder only while keeping the encoder non-private to make the  \textit{required noise level by half for the same privacy guarantee}. 
+        % The generator in this framework produces differentially private codes which we transform into data space through a differentially private decoder. 
+         
+
+
+
+We start by describing necessary background information before introducing our method. 
+
+\section{Background}
+
+In the following, we describe the kernel mean embeddings with random features, and introduce differential privacy. 
+
+\subsection{Random feature mean embeddings}\label{subsec:RFME}
+
+% Assume that the data $Y\subset\mathcal{X}$
+% and let $k\colon\mathcal{X}\times\mathcal{X}$ be a positive definite
+% kernel. The MMD between two distributions $P,Q$ is defined as 
+% \begin{align}
+%  \mathrm{MMD}(P,Q):&=\nonumber \\
+%  & (\mathbb{E}_{x,x'\sim P}k(x,x')+\mathbb{E}_{y,y'\sim Q}k(y,y') \nonumber \\
+%  &-2\mathbb{E}_{x\sim P}\mathbb{E}_{y\sim Q}k(x,y))^{\frac{1}{2}}.\label{eq:pop_mmd}
+% \end{align}
+% %
+
+Given the samples drawn from two probability distributions: $X_{m}=\{x_{i}\}_{i=1}^{m} \sim P$ and $X'_{n}=\{x'_{i}\}_{i=1}^{n} \sim Q$, the MMD estimator is defined as   \cite{Gretton2012}:
+\begin{align}\label{eq:MMD_full}
+% \mathrm{MMD}^2(P,Q)
+%   &:= \mathbb{E}_{x,x'\sim P}k(x,x')+\mathbb{E}_{y,y'\sim Q}k(y,y') \nonumber \\ &-2\mathbb{E}_{x\sim P}\mathbb{E}_{y\sim Q}k(x,y), \\
+ \widehat{\mathrm{MMD}}^2(X_{m},X'_{n}) &= \tfrac{1}{m^2}\sum_{i,j=1}^{m}k(x_{i},x_{j}) +\tfrac{1}{n^2}\sum_{i,j=1}^{n}k(x'_{i},x'_{j}) \nonumber \\
+ & \qquad -\tfrac{2}{mn}\sum_{i=1}^{m}\sum_{j=1}^{n}k(x_{i},x'_{j}).
+\end{align}
+%
+% When applied in the ABC setting, one input set to $\widehat{\mathrm{MMD}}$ is
+% $Y^{*}$ and the other is a pseudo dataset $Y_{t}\sim p(\cdot|\theta_{t})$ generated
+% from the simulator, for some $\theta_{t}\sim\pi(\theta)$.
+%
+The total computational cost of $
+\widehat{\mathrm{MMD}}(X_{m},X'_{n}) $ is $O(mn)$, which is prohibitive for large-scale datasets. 
+%
+% To reduce the complexity, 
+% sub-quadratic time MMD estimators exist e.g., an
+% unbiased linear-time estimator \citep[Section 6]{Gretton2012}. 
+%
+% unbiased linear-time estimators exist \citep[Section 6]{Gretton2012}. 
+
+A fast linear-time MMD estimator can be achieved by considering an
+approximation to the kernel function $k(x,x')$ with an inner product
+of finite dimensional feature vectors, i.e.,  $k(x,x')\approx \hat{\phi}(x)^{\top}\hat{\phi}(x')$
+where $\hat{\phi}(x)\in\mathbb{R}^{D}$ and $D$ is the number of
+features. 
+% Given the feature map $\hat{\phi}(\cdot)$ such that,
+% $k(x,y)\approx\hat{\phi}(x)^{\top}\hat{\phi}(y)$,
+% MMD$^2$ can be approximated as
+% %
+% \begin{align*}
+% & \mathrm{MMD}_{rf}^{2}(F_{x},F_{y})   \\
+% %=& \mathbb{E}_{X}\mathbb{E}_{X'}k(X,X')+\mathbb{E}_{Y}\mathbb{E}_{Y'}
+% %k(Y,Y')-2\mathbb{E}_{X}\mathbb{E}_{Y}k(X,Y)\\
+% %
+% & \approx \mathbb{E}_{X}\hat{\phi}(X)^{\top}\mathbb{E}_{X'}
+%   \hat{\phi}(X')+\mathbb{E}_{Y}\hat{\phi}(Y)^{\top}\mathbb{E}_{Y'}
+%   \hat{\phi}(Y') \\
+%   & \quad -2\mathbb{E}_{X}\hat{\phi}(X)^{\top}\mathbb{E}_{Y}\hat{\phi}(Y)
+%  :=\|\mathbb{E}_{X}\hat{\phi}(X)-\mathbb{E}_{Y}\hat{\phi}(Y)\|_{2}^{2}.
+% \end{align*}
+The resulting MMD estimator is 
+\begin{align}\label{eq:MMD_rf}
+\widehat{\mathrm{MMD}}_{rf}^{2}(P,Q)=\bigg\|\tfrac{1}{m}\sum_{i=1}^{m}\hat{\phi}(x
+_i)-\tfrac{1}{n}\sum_{i=1}^{n}\hat{\phi}(x'_i)\bigg\|_{2}^{2},  
+\end{align}
+which can be computed in $O(m+n)$, i.e., linear in the sample size. 
+%
+%\paragraph{Random Fourier features}
+One popular
+approach to obtaining such $\hat{\phi}(\cdot)$
+is based on random Fourier
+features \citep{rahimi2008random} which can be applied to any
+translation invariant kernel, 
+i.e., $k(x,x')=\tilde{k}(x-x')$ for some function $\tilde{k}$. According
+to Bochner's theorem \citep{Rudin2013}, $\tilde{k}$ can be written
+as
+$
+\tilde{k}(x-x') =\int e^{i\omega^{\top}(x-x')}\,\mathrm{d}\Lambda(\omega)
+ =\mathbb{E}_{\omega\sim\Lambda}\cos(\omega^{\top}(x-x')),
+$
+%
+where $i=\sqrt{-1}$ and due to positive-definiteness of $\tilde k$, its Fourier transform
+$\Lambda$ is nonnegative and can be treated as a probability measure. By drawing
+random frequencies $\{\omega_{i}\}_{i=1}^{D}\sim\Lambda$, where $\Lambda$ depends on the kernel,
+% (e.g., a Gaussian kernel $k$ corresponds to
+% normal distribution $\Lambda$), 
+% and $\{b_{i}\}_{i=1}^{D}\sim U[0,2\pi]$,
+$\tilde{k}(x-x')$ can be
+approximated with a Monte Carlo average. 
+The vector of random Fourier features is given by 
+\begin{align}\label{eq:RF}
+    \hat{\vphi}(x)=(\hat{\phi}_{1}(x),\ldots,\hat{\phi}_{D}(x))^{\top}
+\end{align} where each coordinate is defined by 
+%
+% the random Fourier features ($J$-dimensional vectors)are given by
+\begin{align}
+    \hat\phi_{j}(x) & = \sqrt{2/D}\;\cos(\omega_j\trp x), \nonumber \\
+       \hat{\phi}_{j+D/2}(x)& =\sqrt{2/D}\sin(\omega_{j}^{\top}x), \nonumber 
+\end{align} for $j=1, \cdots, D/2$.
+%
+% $\hat{\phi}_{j}(x)=\sqrt{2/D}\cos(\omega_{j}^{\top}x)$ and $\hat{\phi}_{j+D/2}(x)=\sqrt{2/D}\sin(\omega_{j}^{\top}x)$ for $j=1, \cdots, D/2$. Notice that by construction $\|\hat{\vphi}(\cdot)\|_2 = 1$, regardless of the frequency, as $\sin^2(\cdot) + \cos^2(\cdot) = 1$.
+%
+%\Lambda is normalized whenever k(0)=1, so Gaussian RBF has a normalized \Lambda!
+%
+The approximation error of these random features is studied in  \cite{Dougal_UAI}. 
+% \mpsay{Mention Dougal's paper here}
+
+
+\subsection{Differential privacy}\label{subsec:DP}
+
+% \textbf{Differential Privacy}
+% A mechanism is called $\epsilon$-differentially private if
+Given neighbouring datasets $\Dat$, $\Dat'$ differing by a single entry, a mechanism $\mathcal{M}$ is  $\epsilon$-DP if and only if
+$|L^{(o)}| \leq \epsilon, \forall o, \Dat, \Dat'$, where $L^{(o)}$ is the \emph{privacy loss} of an outcome $o$ defined by
+$
+L^{(o)} = \log \frac{Pr(\mathcal{M}(\Dat) = o)}{Pr(\mathcal{M}(\Dat') = o)}.
+$
+%
+% %
+A mechanism $\mathcal{M}$ is ($\epsilon, \delta$)-DP, if and only if
+$|L^{(o)}| \leq \epsilon$, with probability at least $1-\delta$.
+% %
+DP guarantees a limited amount of information the algorithm reveals about any one individual.
+%
+%
+A DP algorithm adds randomness to the algorithms' outputs. Let a function $h: \Dat \mapsto \mathbb{R}^p$ computed on sensitive data $\Dat$ outputs a $p$-dimensional vector. We can add noise to $h$ for privacy, where the level of noise is calibrated to the {\it{global sensitivity}}
+\citep{dwork2006our}, $\Delta_h$, defined by the maximum difference in terms of $L_2$-norm $||h(\Dat)-h(\Dat') ||_2$, for neighboring $\Dat$ and $\Dat'$ (i.e. differ by one data sample). 
+The \textit{Gaussian mechanism} that we will use in this paper outputs $\tilde{h}(\Dat) = h(\Dat) + \Nrm(0, \sigma^2 \Delta_h^2\mathbf{I}_p)$. 
+The perturbed function $\tilde{h}(\Dat) $ is $(\epsilon, \delta)$-DP, where $\sigma$ is a function of $\epsilon, \delta$. 
+
+% \propto \frac{\Delta_h}{\epsilon} \sqrt{2\log(1.25/\delta)}/\epsilon$, for $\epsilon \in (0,1)$ (See the proof of  Theorem 3.22 in \cite{Dwork14} why $\sigma$ has such a form). 
+
+There are two important properties of DP.
+The \textit{composability} theorem \cite{dwork2006our} states that the strength of privacy guarantee degrades with repeated use of DP-algorithms. 
+% In particular, when two differentially private subroutines are combined, where each one guarantees $(\epsilon_1,\delta_1)$-DP and $(\epsilon_2,\delta_2)$-DP respectively by adding independent noise, the parameters are simply linearly summed up by $(\epsilon_1+\epsilon_2, \delta_1+\delta_2)$. 
+Furthermore,  the \textit{post-processing invariance} property \citep{dwork2006our} tells us that the composition of any arbitrary data-independent mapping with an $(\epsilon,\delta)$-DP algorithm is also $(\epsilon,\delta)$-DP. 
+
+% Going back to the composibility theorem, as many machine learning algorithms are iterative in nature, 
+%  the strength of privacy guarantee degrades withrepeated use of DP-algorithms
+ 
+\textbf{Differentially private stochastic gradient descent}
+
+Existing DP data generation algorithms under the GAN framework follow the two steps iteratively \cite{10.14778/3231751.3231757, DP_CGAN, DPGAN, 
+DBLP:conf/sec/FrigerioOGD19}. The discriminator is updated by \textit{differentially private stochastic gradient descent} (DP-SGD) \cite{DP_SGD}, where the gradients computed on the data are altered by the Gaussian mechanism to limit the influence that each sample has on the model.
+%
+The generator update is data-indepdent, as the generator update only requires accessing the privatized loss of the discriminator. 
+%
+Due to the post-processing invariance of DP, the resulting generator produces differentially private synthetic data.
+%
+As DP-SGD requires accessing data numerously during training, 
+a refined composition method to compute 
+the cumulative privacy loss is proposed 
+using the notion of R\'{e}nyi Differential Privacy (RDP) \citep{46029, pmlr-v89-wang19b}. 
+%
+% \textbf{R\'{e}nyi differential privacy}
+%
+\begin{defn}[$(\alpha, \epsilon)$-RDP]\label{defn:RDP} A mechanism is called $\epsilon$ Renyi differentially private with an order $\alpha$ if for all neighbouring datasets $\Dat, \Dat'$ the following holds:
+	\begin{align}
+	D_\alpha(\mathcal{M}(\Dat)||\mathcal{M}(\Dat')) \leq \epsilon(\alpha).
+	\end{align}
+\end{defn} $D_\alpha(P||Q)$ is the $\alpha$-R\'{e}nyi divergence defined in Appendix.
+%
+RDP takes an expectation over the outcomes of the DP mechanism, rather than taking a single worst case as in pure DP. Also, the RDP definition can benefit from the privacy amplification effect due to subsampling of data (See Theorem 9 \cite{pmlr-v89-wang19b}).
+%
+%
+A repeated use of RDP mechanisms composes by 
+\begin{thm}[Composition of RDP mechanisms]\label{thm:RDP_composition}
+	Let $f: \Dat \mapsto \mathcal{R}_1$ be $(\alpha, \epsilon_1)$-RDP. Let $g: \mathcal{R}_1 \times \Dat \mapsto  \mathcal{R}_2 $ be $(\alpha, \epsilon_2)$-RDP. Then, the mechanism releasing $(X, Y)$, where $X \sim f(\Dat)$ and $Y \sim g(\Dat, X)$ satisfies $(\alpha, \epsilon_1 + \epsilon_2)$-RDP.
+\end{thm} 
+% \citep{2016arXiv160700133A, pmlr-v89-wang19b}
+%
+Once the cumulative privacy loss using the RDP composition is computed, the RDP notion can be converted to the original definition of DP by the following proposition. 
+\begin{prop}\label{prop:RDPtoDP}[From RDP to DP \citep{46029}
+	If $\mathcal{M}$ is a $(\alpha, \epsilon)$-RDP mechanism, then 
+	it also satisfies $\left(\epsilon + \frac{\log 1/\delta}{\alpha-1}, \delta \right)$-DP for any $0<\delta<1$. 
+\end{prop}
+The RDP-based composition yields a significantly smaller cumulative privacy loss than that by the linear sum of worst cases in the pure DP case.  
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%   Methods %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% \mpsay{Add the Algorithms}
+
+\section{Differentially private mean embeddings with random features (DP-MERF)}
+\label{sec:Methods}
+
+% For simplicity, we start by presenting a vanilla form of our algorithm, which obtains a generator that minimizes  % 
+% \begin{align}
+%     \hat{\vtheta} &= \argmin_\vtheta \widehat{\mathrm{MMD}}_{rf}^{2}(P_\vx, Q_{\tilde{\vx}_\vtheta})
+% \end{align} where $P_\vx$ denotes the true data distribution. The samples from $Q$ denoted by $\tilde{\vx}$ are drawn from a generative model $G$, and $\tilde\vx = G_{\vtheta}(\vz)$ parameterized by $\vtheta$, and the input to the generative model is random samples from a known, data-independent distribution, $\vz \sim p(\vz)$. 
+% %
+% Using the random Fourier features, we arrive at
+% %
+% \begin{align}\label{eq:MMD_rf_vanilla}
+% \widehat{\mathrm{MMD}}_{rf}^{2}(P_\vx, Q_{\tilde{\vx}_\vtheta}) = \bigg\|\widehat{\vmu}_P-\widehat{\vmu}_Q\bigg\|_{2}^{2}
+% \end{align} where the random feature mean embedding $\hat\vphi(\cdot)$ of each distribution is denoted by $\widehat{\vmu}_P = \frac{1}{m}\sum_{i=1}^{m}\hat{\vphi}(\vx_i)$, and $\widehat{\vmu}_Q = \frac{1}{n}\sum_{i=1}^{n}\hat{\vphi}(G_{\vtheta}(\vz_i))$. 
+% %
+% Notice that $\widehat{\vmu}_P$ is the only data-dependent term. Hence, we privatize this term by adding an appropriate amount of noise.
+
+
+%  The sensitivity of $\widehat{\vmu}_P$ is analytically tractable: 
+% \begin{align}
+%   \Delta_{\widehat{\vmu}_P} &= \max_{\Dat, \Dat'} \left\| \tfrac{1}{m}\sum_{i=1}^{m}\hat{\vphi}(\vx_i) - \tfrac{1}{m}\sum_{i=1}^{m}\hat{\vphi}(\vx'_i) \right\|_2, \\
+%   &= \max_{\vx_n, \vx_n'}\left\| \tfrac{1}{m}\hat{\vphi}(\vx_n) - \tfrac{1}{m}\hat{\vphi}(\vx'_n) \right\|_2  \leq \tfrac{2}{m},
+% \end{align} where the last line is due to the Triangle inequality and also the L2 norm of the random features is bounded by $\|\hat\vphi(\cdot) \|_2 =1$ by construction of the random feature vector given in \eqref{RF}.
+% %
+% With this sensitivity, we noise up $\widehat{\vmu}_P$  by 
+% \begin{align}\label{eq:noise_up_rf_me}
+% \widehat{\vmu}_P  + \Nrm(0, \Delta_{\widehat{\vmu}_P}^2\sigma^2 I)
+% \end{align}
+% where $\sigma$ is the privacy parameter (a function of the privacy budget, $\epsilon, \delta$).
+% Due to the post-processing invariance of DP, we can obtain differentially private generator $G$, as $\widehat{\vmu}_Q$ is data-independent. 
+
+
+% {DP-rfME for generating input/output pairs}\label{sec:Methods_joint}
+We first introduce the DP-MERF algorithm to learn the joint distribution over the input features $\vx$ and output labels $\vy$ (either categorical variables in classification, or continuous variables  in regression). 
+%
+The benefit of learning the joint distribution is that we do not need to assume the information on the output labels to be public. By learning the joint distribution, we keep the ratio of the datapoints across different classes the same in the generated dataset as in the real dataset. This way our generated dataset is truthful to the privacy-sensitive original dataset in terms of both the distribution over the input features and the distribution over the labels.   
+
+% We denote the input and output by $\vx$ and $\vy$, respectively. 
+
+% We attempt to learn the joint distribution over $\vx,\vy$ 
+
+\subsection{DP-MERF for input/output pairs}
+
+Suppose a generator $G_\vtheta$ (parameterized by $\vtheta$) takes a pair of inputs $\vz_\vx, \vz_\vy$ drawn from a known distribution and outputs a pair of samples denoted by $\tilde{\vx}_\vtheta,\tilde{\vy}_\vtheta$ : $G_\vtheta(\vz_\vx, \vz_\vy) \mapsto \{\tilde{\vx}_\vtheta,\tilde{\vy}_\vtheta\}$.
+We consider the following objective function, 
+%
+\begin{align}\label{eq:MMD_rf_joint}
+\widehat{\mathrm{MMD}}_{rf}^{2}(P_{\vx, \vy}, Q_{\tilde\vx_\vtheta, \tilde\vy_\vtheta}) = \bigg\|\widehat{\vmu}_{P_{\vx, \vy}}-\widehat{\vmu}_{Q_{\vx, \vy}}\bigg\|_{F}^{2},
+\end{align}
+where $F$ denotes the Frobenius norm.  This type of joint maximum mean discrepancy was used in other papers \cite{Zhang2019, ijcai2018-293}.  
+The choice of kernel here is important, as now we want to compute the distance in terms of two types of inputs. 
+
+% \textbf{Outer product kernels.}
+Here we consider a kernel from a product of two existing kernels, $k((\vx,\vy), (\vx', \vy')) = k_\vx(\vx, \vx') k_\vy (\vy, \vy')$, where $k_\vx$ is a kernel for input features and $k_\vy$ is a kernel for output. For regression, we could use the Gaussian kernel for both $k_\vx$ and $k_\vy$.  For classification, we could use the Gaussian kernel for $k_\vx$ and the polynomial kernel with order-1, $k_\vy(\vy, \vy') = \vy\trp\vy'+c$ for one-hot-encoded labels $\vy$ and some constant $c$, for instance. 
+In this case, the resulting kernel is also characteristic forming the corresponding MMD as a metric. See \citep{JMLR:v18:17-492} for details. 
+% \mpsay{Add references for other papers using outer product kernels}
+
+We represent the mean embeddings using random features 
+\begin{align}\label{eq:rfME_joint}
+   \widehat{\vmu}_{P_{\vx, \vy}} & =\tfrac{1}{m}\sum_{i=1}^{m} \hat{\vf}(\vx_i, \vy_i), \mbox{for true data}\\
+  \widehat{\vmu}_{Q_{\vx, \vy}}&= \tfrac{1}{n}\sum_{i=1}^{n} \hat{\vf}(G_{\vtheta}(\vz_{\vx_i}, \vz_{\vy_i})), \mbox{ for synthetic data} \nonumber 
+\end{align} where we define 
+\begin{align}
+\hat{\vf}(\vx_i, \vy_i) := \mbox{vec}(\hat{\vphi}(\vx_i) \vf(\vy_i)\trp), 
+\end{align}
+where $\vf(\vy_i) = \vy_i$ for the order-1 polynomial kernel and $\vy_i$ is one-hot-encoded. 
+%
+% This definition $\hat{\vf}(\vx_i, \vy_i)$ is due to that $k(a, b) = \langle \phi(a), \phi(b)\rangle_{\mathcal{H}}$ for a feature map $\phi$ associated with a Hilbert space $\mathcal{H}$. 
+%
+See Appendix for derivation. 
+%
+% the resulting mean embedding is defined by $\hat\vf = \hat{\vf}_\vx(\vx) \vf_\vy(\vy)\trp$. 
+As a matrix notation, the random feature mean embedding in \eqref{rfME_joint} can be also written as 
+\begin{align}
+   \widehat{\vmu}_{P_{\vx, \vy}} &=
+    \begin{bmatrix}
+% | & | & | \\
+\vm_1 & \cdots  & \vm_C  \\
+% | & | & |
+\end{bmatrix} \in \mathbb{R}^{D \times C} \nonumber
+\end{align}\label{eq:rfME_joint_P}
+where the $c$'th column is defined by 
+\begin{align}\label{eq:mc}
+\vm_c = \frac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vphi}(\vx_i)
+\end{align} where $c_c$ is the set for the datapoints that belong to the class $c$, and $m_c$ is the number of those datapoints. Recall $D$ is the number of random features. $C$ is the number of classes in the dataset. 
+Notice that the sum in each column is over the number of instances that belong to the particular class $c$, while the divisor is the number of samples in the entire dataset, $m$. This brings difficulties in learning with this loss function when classes are highly  imbalanced, as for rare classes $m$ can be significantly larger than the sum of the corresponding column. 
+Hence, for class-imbalanced datasets, we modify DP-MERF in \eqref{rfME_joint} with appropriately 
+%
+%
+{weighted one}\footnote{We arrive at this expression if we modify the kernel on the labels by a weighted one, i.e., $k_\vy(\vy,\vy') = \sum_{c=1}^C\frac{1}{\omega_c}\vy_c\trp\vy_c'$.} 
+%
+%
+where weights are denoted by $\{w_1, \cdots, w_C\}$
+\begin{align}
+ \widetilde{\vmu}_{P_{\vx, \vy}} 
+ =
+    \begin{bmatrix}
+% | & | & | \\
+ \frac{1}{\omega_1}\vm_1 & \cdots  &  \frac{1}{\omega_C} \vm_C  \nonumber \\
+% | & | & |
+\end{bmatrix}
+\end{align}\label{eq:rfME_weighted} where the vector of weights is defined by 
+\begin{align}\label{eq:weights}
+    \vomega &= [\omega_1, \cdots, \omega_C  ], 
+\end{align} and $\omega_c = \frac{m_c}{m}$. By dividing by the weights, now each column has a similar order of strength regardless of the number of datapoints belonging to the specific class.  
+
+% \textbf{Privacy analysis.}
+Here we privatize the weights and also the mean embedding of each column separately, using the two mechanisms defined below.
+
+% \textit{$\mathcal{M}_{weights}$: Privatizing the weights.}
+% First, privatizing weight vector is analogous to privatizing the mixing coefficients in \cite{pmlr-v54-park17c}. If there is one datapoint's difference in the neighbouring two datasets, only two elements can differ in the weight vector, resulting in the sensitivity of $\Delta_{\vomega} = \frac{\sqrt{2}}{m}$.
+% We define the weight privatization mechanism: 
+\begin{defn}[$\mathcal{M}_{weights}$]\label{defn:DP_weights}
+The mechanism takes a dataset $\Dat$ and computes \eqref{weights}. It outputs the privatized weights given a privacy parameter $\sigma$ and the sensitivity $\Delta_{\vomega}$, 
+\begin{align}\label{eq:privatize_weights}
+    \tilde\vomega &= \vomega +  \Nrm(0, \sigma^2 (\Delta_{\vomega})^2 \mI_C),
+\end{align} where $C$ is the number of classes. 
+\end{defn}
+Note that privatizing weight vector is analogous to privatizing the mixing coefficients in \cite{pmlr-v54-park17c}. If there is one datapoint's difference in the neighbouring two datasets, only two elements can differ in the weight vector, resulting in the sensitivity of $\Delta_{\vomega} = \frac{\sqrt{2}}{m}$.
+
+
+% \textit{$\mathcal{M}_{\vm_c}$: Privatizing each $\vm_c$.}
+% The $c$'th column of the mean embedding in \eqref{rfME_weighted} with the privatized weight can be written as 
+% \begin{align}\label{eq:privatize_mc}
+%   \tfrac{1}{m} \tfrac{1}{\tilde{w}_c} \sum_{i \in c_c}^{m_c}\hat{\vphi}(\vx_i) &=  \tfrac{1}{\tilde{w}_c} \vm_c
+% \end{align} where the only part that is data-dependent is $\vm_c = \frac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vphi}(\vx_i)$. So here we will privatize $\vm_c$. 
+% Second, for privatizing $\vm_c$, the sensitivity of $\vm_c$ is  $\Delta_{\vm_c} = \frac{2}{m}$ as the norm of $\hat\vphi$ for any input is 1. 
+% %
+% We define the mechanism for privatizing $\vm_c$: 
+\begin{defn}[$\mathcal{M}_{\vm_c}$]\label{defn:DP_mc}
+The mechanism takes a dataset $\Dat$ and computes \eqref{mc}. It outputs the privatized quantity given a privacy parameter $\sigma$ and the sensitivity $\Delta_{\vm_c}$, 
+\begin{align}\label{eq:privatize_mc}
+   \tilde\vm_c &= \vm_c + \Nrm(0, \sigma^2 (\Delta_{\vm_c})^2 \mI_D)
+\end{align} where $D$ is the number of random features.
+\end{defn}  As the norm of $\hat\vphi$ is bounded by 1, the sensitivity of $\vm_c$ (\eqref{mc}) is $\Delta_{\vm_c} = \frac{2}{m}$. 
+
+
+% \textit{Cumulative privacy loss of $\mathcal{M}_{weights}$ and $\mathcal{M}_{\vm_c}$.}
+During the training, we will need to perform $\mathcal{M}_{weights}$ once, and $\mathcal{M}_{\vm_c}$ as many times as the  number of classes. Hence, we divide our privacy budget into $C+1$ compositions of the Gaussian mechanisms. 
+
+
+
+% Hence,  with a privacy parameter $\sigma$,
+% \begin{align}
+%     \tilde\vm_c &= \vm_c + \Nrm(0, \sigma^2 (\Delta_{\vm_c})^2 \mI_D),
+% \end{align} where $D$ is the number of random features. 
+%
+Now the objective function to minimize is modified to 
+\begin{align}\label{eq:MMD_rf_joint_DP}
+\widehat{\mathrm{MMD}}_{rf}^{2}(P_{\vx, \vy}^{DP}, Q_{\tilde\vx_\vtheta, \tilde\vy_\vtheta}) = \bigg\|\widetilde{\vmu}^{DP}_{P_{\vx, \vy}}-\widehat{\vmu}_{Q_{\vx, \vy}}\bigg\|_{2}^{2},
+\end{align} where
+$
+ \widetilde{\vmu}^{DP}_{P_{\vx, \vy}} = \left[\tfrac{1}{\tilde{\omega}_1} \tilde{\vm}_1, \cdots \tfrac{1}{\tilde{\omega}_C} \tilde{\vm}_C \right].
+$
+%
+Our algorithm is summarized in \algoref{rf_ME_joint}.
+
+Note that by privatizing the weights and the mean embedding separately, we can get the benefit of sensitivity being on the order of  $1/m$, rather than on the order of $1/m_c$ where the latter could hamper the training performance as in highly imbalanced datasets $m_c$ can be very small resulting in a high additive noise variance.
+
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Algorithm %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{algorithm}[!t]
+\caption{DP-MERF for generating input/output pairs}\label{algo:rf_ME_joint}
+\begin{algorithmic}
+\vspace{0.1cm}
+\REQUIRE Dataset $\Dat$, and a privacy level $(\epsilon, \delta)$
+\vspace{0.1cm}
+\ENSURE $(\epsilon, \delta)$-DP input output samples for all classes\\
+\STATE \textbf{Step 1}. Given $(\epsilon, \delta)$, compute the privacy parameter $\sigma$ by the RDP composition in \cite{pmlr-v89-wang19b} for the $(C+1)$ repeated use of the Gaussian mechanism. 
+\STATE  \textbf{Step 2}. Privatize the random feature mean embeddings  via $\mathcal{M}_{weights}$ and $\mathcal{M}_{\vm_c}$.
+\STATE  \textbf{Step 3}. Train the generator by minimizing \eqref{MMD_rf_joint_DP}
+\end{algorithmic}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+
+\subsection
+{DP-MERF for heterogeneous data}\label{sec:Methods_hetero}
+
+To handle heterogeneous data consisting of continuous variables denoted by $\vx_{con}$ and discrete variables denoted by $\vx_{dis}$, we consider the sum of two existing kernels, $k((\vx_{con}, \vx_{dis}), (\vx'_{con}, \vx'_{dis})) = k_{con}(\vx_{con}, \vx'_{con}) + k_{dis} (\vx_{dis}, \vx'_{dis})$, where $k_{con}$ is a kernel for continuous variables and $k_{dis}$ is a kernel for discrete variables.
+
+As before, we could use the Gaussian kernel for $k_{con}(\vx_{con}, \vx'_{con})=\hat{\vphi}(\vx_{con})\trp \hat{\vphi}(\vx'_{con})$ and a normalized polynomial kernel with order-1,  $k_{dis} (\vx_{dis}, \vx'_{dis}) = \frac{1}{d_{dis}} \vx_{dis}\trp\vx_{dis}'$ for one-hot-encoded values $\vx_{dis}$ and the length of $\vx_{dis}$ being $d_{dis}$. This normalization is to match the importance of the two kernels in the resulting mean embeddings. 
+%
+Under these kernels, we can approximate the mean embeddings using random features 
+\begin{align}\label{eq:rfME_hetero}
+   \widehat{\vmu}_{P_{\vx}} & =\tfrac{1}{m}\sum_{i=1}^{m} \hat{\vh}(\vx_{con}^{(i)}, \vx_{dis}^{(i)}),
+%   \widehat{\vmu}_{Q_{\vx, \vy}}&= \frac{1}{n}\sum_{i=1}^{n} \hat{\vh}(G_{\vtheta}(\vz_\vx_i, \vz_\vy_i)) 
+\end{align}
+%
+% The MMD can be approximated by using random features as 
+% \begin{align}\label{eq:MMD_RF_sum}
+%   MMD_{rF}(P_{\vx,\vy}, G_{\vphi}(\vz_\vx, \vz_\vy)) &= \left\|\frac{1}{n_x}\sum_{i=1}^{n_x} \hat{\vf}(\vx_i, \vy_i) - \frac{1}{n_z}\sum_{i=1}^{n_z} \hat{\vf}(G_{\vphi}(\vz_\vx_i, \vz_\vy_i)) \right\|_2
+% \end{align} 
+%
+where we define $\hat{\vh}(\vx_{con}^{(i)}, \vx_{dis}^{(i)}):=\begin{bmatrix} 
+    \hat{\vphi}(\vx_{con}^{(i)})  \\
+     \tfrac{1}{\sqrt{d_{dis}}} \vx_{dis}^{(i)}
+    \end{bmatrix}$ 
+    % is the concatenation of the vector $ \hat{\vphi}(\vx_i)$ and $\vh(\vy_i)$, where $\vh(\vy) = \left(\frac{1}{d_\vy}\right)^{\frac{1}{2}} \vy$, when $\vy$ is one-hot-encoded. As before, we arrive at this expression using the definition of kernel: 
+    from the definition of kernel (See Appendix for derivation). 
+%
+In summary, for generating input and output pairs jointly when the input features are heterogeneous, we run  \algoref{rf_ME_joint} with three changes: (a) redefine $\hat{\vf}(\vx, \vy)$ in \eqref{rfME_joint} as $\mbox{vec}(\hat{\vh}(\vx_{con}, \vx_{dis}) \vf(\vy)\trp)$; (b) redefine  $\vm_c$ in \eqref{privatize_mc} as $ \frac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vh}(\vx_i)$; and (c)  
+change the sensitivity of $\vm_c$ to $\Delta_{\vm_c} = \frac{2\sqrt{2}}{m}$ (see Appendix for proof). 
+
+\subsection 
+{DP-MERF for image data}\label{sec:Methods_image}
+
+
+Following the convention of the machine learning literature for image data generation, we introduce an encoder which reduces the dimensionality of the high-dimensional image data, denoted by $\ve_\vtau: \vx \mapsto \vg$, where $\vx \in \mathbb{R}^{D_\vx}$ and $\vg \in \mathbb{R}^{D_\vg}$ and $D_\vx \gg D_\vg$. The encoder is parameterized by $\vtau$. Simiarly, we impose a decoder that can map the low-dimensional code $\vg$ to the data space, $\vd_\vkappa: \vg \mapsto \vx$ where the decoder is parameterized by $\vkappa$. 
+%
+We then introduce a generator that can produce the low-dimensional code which can be transformed to the data space through the decoder. Our method employs  {two mechanisms}
+% \footnote{Training the forementioned auto-encoder and the generator could be done in one-go by adopting the MMD-GAN framework. However, we found the joint training of encoder (discriminator) and the generator  very challenging to find the equilibrium, especially in the presence of additive noise for privacy.}
+%
+below.
+
+
+% \textbf{Privacy analysis.}
+%
+\textit{$\mathcal{M}_{DP-SGD}$:}
+We train an auto-encoder by minimizing the pixel-wise cross-entropy between the raw pixels and the reconstructed pixels. What's important here is that we employ non-private SGD
+for the encoder update, while we employ DP-SGD for the decoder update. In our algorithm, we do not need a private encoder as in the mechanism below we will add noise to the embedding by taking into account any one datapoint's contribution to the trained encoder. Hence, we spend less amount of privacy budget compared to algorithms that require perturbing both encoder and decoder. 
+
+Using a trained encoder, we now match the random feature mean embeddings on the true codes (codes from the true data) and the generated codes through the generator, $G_{\vtheta}(\vz_{\vg_i}, \vz_{\vy_i}) \mapsto (\vg, \vy)$.
+The random feature mean embedding is 
+% \begin{align}\label{eq:rfME_image}
+  $ \widehat{\vmu}_{P_{\vg, \vy}}  =\tfrac{1}{m}\sum_{i=1}^{m} \hat{\vf}(\ve_\vtau(\vx_i), \vy_i).$
+% \end{align}
+%
+% Notice that the data-dependent part is $\widehat{\vmu}_{P_{\vg, \vy}}$ and the mean embedding is a function of $\hat{\vf}(\ve_\vtau(\vx_i), \vy_i)$. 
+%
+
+\begin{defn}[$\mathcal{M}_{\hat\vmu}$]
+The mechanism takes a dataset $\Dat$ and computes \eqref{mc}. It outputs the privatized quantity given a privacy parameter $\sigma_{gen}$ and the sensitivity $\Delta_{\widehat{\vmu}_{P_{\vg, \vy}}}$, 
+\begin{align}
+\widehat{\vmu}^{DP}_{P_{\vg, \vy}} = \widehat{\vmu}_{P_{\vg, \vy}} + \Nrm(0, \sigma_{gen}^2 \Delta_{\widehat{\vmu}_{P_{\vg, \vy}}}^2 \mI). 
+\end{align}\label{eq:DP_rfME_image}
+\end{defn}\label{defn:DP_mu_P} Using the product of two kernels for the joint distribution on the input and output pairs, as before, we arrive at 
+$
+\hat{\vf}(\ve_\vtau(\vx_i), \vy_i):= \mbox{vec}(\hat{\vphi}(\ve_\vtau(\vx_i)) \vf(\vy_i)\trp).$ As the random features $\hat{\vphi}$ are norm bounded (i.e., norm 1), any one datapoint's contribution to the trained encoder $\ve$ is also bounded by 1, resulting in $\Delta_{\widehat{\vmu}_{P_{\vg, \vy}}} = \tfrac{2}{m}$ (See Appendix for proof).
+
+% \textit{$\mathcal{M}_\hat\vmu$.}
+%   With this sensitivity, we add an appropriate amount of noise to $\widehat{\vmu}_{P_{\vg, \vy}} $,
+% \begin{align}\label{eq:Gaussian_mechanism_image}
+% \widehat{\vmu}^{DP}_{P_{\vg, \vy}} = \widehat{\vmu}_{P_{\vg, \vy}} + \Nrm(0, \sigma_{gen}^2 \Delta_{\widehat{\vmu}_{P_{\vg, \vy}}}^2 \mI), 
+% \end{align} where  $\sigma_{gen}$ is the privacy parameter. 
+%
+Now the objective function to minimize is modified to 
+\begin{align}\label{eq:MMD_rf_image_DP}
+\widehat{\mathrm{MMD}}_{rf}^{2}(P_{\vg, \vy}^{DP}, Q_{\tilde\vg_\vtheta, \tilde\vy_\vtheta}) = \bigg\|\widehat{\vmu}^{DP}_{P_{\vg, \vy}} -\widehat{\vmu}_{Q_{\vg, \vy}}\bigg\|_{2}^{2},
+\end{align} where $  \widehat{\vmu}_{Q_{\vg, \vy}}= \tfrac{1}{n}\sum_{i=1}^{n} \hat{\vf}(G_{\vtheta}(\vz_{\vg_i}, \vz_{\vy_i})). $ Our algorithm is summarized in \algoref{rf_ME_image}. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%% Algorithm %%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{algorithm}[ht]
+\caption{DP-MERF for generating image data}\label{algo:rf_ME_image}
+\begin{algorithmic}
+\vspace{0.1cm}
+\REQUIRE Dataset $\Dat$, and a privacy level $(\epsilon, \delta)$
+\vspace{0.1cm}
+\ENSURE $(\epsilon, \delta)$-DP input images and output labels\\
+\STATE  \textbf{Step 1}: Given $(\epsilon, \delta)$, compute the privacy parameters $\sigma_{dec}$ and $\sigma_{gen}$ using the RDP composition by \cite{pmlr-v89-wang19b} for the repeated use of the Gaussian mechanism in $\mathcal{M}_1$ and $\mathcal{M}_2$. %for the two steps (decoder training and generator training). 
+\STATE  \textbf{Step 2}: Train the decoder using $\mathcal{M}_{DP-SGD}$ with $\sigma_{dec}$
+\STATE  \textbf{Step 3}: Train the generator using $\mathcal{M}_{\hat{\vmu}}$ with  $\sigma_{gen}$.
+\end{algorithmic}
+\end{algorithm}
+
+%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%
+
+A corollary of the RDP composition theorem in \thmref{RDP_composition} combined with \propref{RDPtoDP} states that \algoref{rf_ME_image} is DP.
+\begin{cor}
+If $\mathcal{M}_{DP-SGD}$ with $\sigma_{dec}$ is $(\alpha, \epsilon_1(\alpha))$-RDP and 
+$\mathcal{M}_{\hat{\vmu}}$ with $\sigma_{gen}$ is $(\alpha, \epsilon_2(\alpha))$-RDP,
+then the composition of  the two is  $(\alpha, \epsilon_1(\alpha)+\epsilon_2(\alpha))$-RDP.
+\end{cor}
+We convert the RDP level to the DP level by \propref{RDPtoDP}. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%   Related work %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Related work}
+\label{sec:related_work}
+
+%%%% Types of work that is relevant to ours
+
+There are three categories of relevant work to ours.
+The first category is the differentially private GAN framework and its variants
+% DP Wasserstein GAN, DP conditional GAN, and PATE-GAN. 
+\cite{DPGAN, DP_CGAN, DBLP:conf/sec/FrigerioOGD19, PATE_GAN}. 
+The core technique of most of these algorithms is based on DP-SGD, with an exception that \cite{PATE_GAN} is based on the Private Aggregation of Teacher Ensembles (PATE). Unlike these methods, our method does not involve the difficult task of finding the equilibrium between the generator and the discriminator. Our method is not limited to the binary classification problems as in PATE-GAN \cite{PATE_GAN}; nor requires a complicated sensitivity computation as in DP-GAN \cite{DPGAN}. Furthermore, our method can produce input and output pairs jointly for supervised learning problems. DP-CGAN \cite{DP_CGAN} also considered this case, while their generator generates only the input features conditioning on the labels. There is no other methods aiming at generating data for supervised learning that we are aware of other than DP-CGAN. Hence, we will compare our method to DP-CGAN in \secref{experiments}.  
+
+The second category is the differentially private auto-encoder framework \cite{Abay2019, tantipongpipat2019differentially, DBLP:journals/corr/abs-1812-02274}, which reduces the dimensionality of the high-dimensional data into a low-dimensional code space via an auto-encoder training and learns a generator which produces codes. Our method also uses an auto-encoder for image data for dimensionality reduction. However, unlike these methods, we train the generator using the mean embeddings with random features.  
+
+
+
+% (2) Kernel methods with DP data generation
+The third category is the framework of kernel methods with differential privacy. \citet{BalTolSch18} proposed to use the 
+% \mpsay{Ilya's work}
+reduced set method in conjunction with random features for sharing DP mean embeddings, but generative models are not the part of their algorithms.  
+\citet{NIPS2019_9589} also used the random feature representations  for the DP distributed data summarization to take into account covariate shifts, but not for the DP data generation.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%   Experiments %%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% \newpage
+
+\section{Experiments}\label{sec:experiments}
+
+The experiments present robustness of the method in producing a diverse range of data both in private and non-private settings.
+%
+We first train a generator using either DP-MERF or DP-CGAN, and obtain \textit{synthetic} data samples, which we use to train $12$ predictive models (see Table). We then use these trained models to predict the labels of \textit{real} test data.
+%
+As comparison metrics, we use ROC (area under the receiver operating characteristics curve) and ROC (area under the precision recall curve) for binary-labeled data. We use F1 score and prediction accuracy for multiclass-labeled data. 
+%
+As a baseline, we also show the performance of the models trained with the real training data. All the numbers shown in the tables are the average over $5$ independent runs. 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table}[t]
+\caption{Tabular datasets. num refers to numerical, cat refers to categorical, and ord refers to ordinal variables}
+\label{tab:data_description}
+\vskip 0.1in
+\centering
+\scalebox{1.0}{
+\begin{tabular}{l c c c}
+\toprule
+\tabhead{dataset} & \tabhead{$\#$ samps}  & \tabhead{$\#$ classes} & \tabhead{type}  \\
+\midrule
+isolet & 4366 & 2 & homogeneous \\
+covtype & 406698 &  7 & 10 num, 44 cat \\
+epileptic & 11500 & 2 & homogeneous \\
+credit & 284807 & 2 & homogeneous \\
+cervical & 753 & 2 & 11 num, 24 cat \\
+census & 199523 & 2 & 7 num, 33 cat\\
+adult & 22561 & 2 & 6 num, 8 cat\\
+intrusion & 394021 & 5 & 8 cat, 6 ord, 26 num\\
+\bottomrule\\
+\end{tabular}
+}
+\end{table}
+
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{table*}[!h]
+\caption{Performance comparison on Intrusion dataset.}
+\vskip 0.1in
+\centering
+\scalebox{1.0}{
+\begin{tabular}{c c c c c c}
+\toprule
+% \toprule
+% \tabhead{dataset} & \tabhead{num samps}  & \tabhead{num classes} & \tabhead{type}  \\
+% \midrule
+& \tabhead{Real} & \tabhead{DP-CGAN}  & \tabhead{DP-CGAN}  & \tabhead{DP-MERF} & \tabhead{DP-MERF} \\ 
+&  & (non-priv) & ($1,10^{-5}$)-DP &  (non-priv) & ($1,10^{-5}$)-DP \\ 
+% \hline
+\midrule
+Logistic Regression & 0.948 & 0.71 & 0.567 & 0.926 & 0.94 \\
+Gaussian Naive Bayes & 0.757 & 0.503 & 0.215 & 0.804 & 0.736 \\
+Bernoulli Naive Bayes & 0.927 & 0.693 & 0.475 & 0.822 & 0.755 \\
+Linear SVM & 0.983 & 0.639 & 0.915 & 0.922 & 0.937 \\
+Decision Tree & 0.999 & 0.496 & 0.153 & 0.862 & 0.952 \\
+LDA & 0.99 & 0.224 & 0.652 & 0.91 & 0.95 \\
+Adaboost & 0.947 & 0.898 & 0.398 & 0.924 & 0.503 \\
+Bagging & 1 & 0.499 & 0.519 & 0.914 & 0.956 \\
+Random Forest & 1 & 0.497 & 0.676 & 0.941 & 0.943 \\
+GBM & 0.999 & 0.501 & 0.255 & 0.924 & 0.933 \\
+MLP & 0.997 & 0.923 & 0.733 & 0.933 & 0.957 \\
+XGBoost & 0.999 & 0.886 & 0.751 & 0.921 & 0.933 \\
+\midrule
+Average & 0.962 & 0.622 & 0.526 & \textbf{0.9} & \textbf{0.875} \\
+\bottomrule
+\end{tabular}
+}\label{tab:Intrusion}
+\end{table*}
+
+ %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+ %
+ %
+\begin{table*}[!htb]
+\caption{Performance comparison on Tabular datasets.}
+\vskip 0.1in
+\centering
+\scalebox{1.0}{
+\begin{tabular}{c c c c c c }
+\toprule
+% & real & & DP-CGAN (np)  & MERF (np)  & DP-CGAN (p)  & MERF (p)  \\ \midrule
+& \tabhead{Real} & \tabhead{DP-CGAN}  & \tabhead{DP-MERF}  &  \tabhead{DP-CGAN}  & \tabhead{DP-MERF} \\ 
+&  & (non-priv) & (non-priv) &  ($1,10^{-5}$)-DP & ($1,10^{-5}$)-DP \\ 
+\midrule
+& ROC/PRC & ROC/PRC & ROC/PRC & ROC/PRC & ROC/PRC
+\\
+\textbf{adult} & 0.73/0.639 & 0.519/0.451 & 0.653/0.57 & 0.509/0.444 & 0.65/0.564 \\
+\textbf{census}
+& 0.747/0.415 & 0.646/0.2 & 0.692/0.369 & 0.655/0.216 & 0.686/0.358 \\
+\textbf{cervical} & 0.786/0.493 & 0.587/0.251 & 0.896/0.737 & 0.519/0.2 & 0.545/0.184 \\
+\textbf{credit} & 0.923/0.874 & 0.801/0.432 & 0.898/0.774 & 0.664/0.356 & 0.772/0.637 \\
+\textbf{epileptic} & 0.797/0.617 & 0.49/0.19 & 0.616/0.335 &  & 0.611/ 0.34 \\
+\textbf{isolet} & 0.893/0.728 & 0.622/0.264 & 0.733/0.424 & & 0.547/0.404 \\ \midrule
+& F1
+& F1
+& F1
+& F1
+& F1\\ 
+\textbf{covtype} & 0.643 & 0.236 & 0.513 & 0.285 & 0.467 \\
+\textbf{intrusion} & 0.963 & 0.43 & 0.856 & 0.302 & 0.85 \\ \bottomrule
+\end{tabular}}\label{tab:summary_all_tabular}
+\end{table*}
+ 
+ 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\subsection{Heterogeneous and homogenous tabular data}
+
+
+% We begin the experiments with a set of tabular data which contain real-world information. The task is to produce synthetic data which has the same distribution as the real-world data, and thus has the same predictive performance as the real data. The task is challenging due to diversity of tabular data. The datasets contain either only numerical data (homogenous) or both numerical and categorical data (heterogenous datasets, which includes ordinal data such as person's level of education).
+
+% The numerical features are both discrete and continuous values.  The categorical features can have two classes (e.g. whether a person smokes or not) or several classes (e.g. country of origin). The output labels are also categorical;  we include datasets with both binary and multiclass labels. \tabref{data_description} contains a summary of the datasets.
+
+
+% We generate the data for the eight datasets in two settings, non-private and private. Subsequently, we evaluate them on twelve common classification methods. The methods are listed in Table 2 with the results for the most diverse dataset of all we tested, mixed multi-class intrusion dataset. The average results for all the datasets are summarized in Table. For comparison, we include the results of the DP-CGAN (the only benchmark with runnable code that we were able to get). 
+
+We begin the experiments with a set of tabular data which contain real-world information. 
+% The task is to produce synthetic data which has the same distribution as the real-world data, and thus has the same predictive performance as the real data. 
+% The task is challenging due to diversity of tabular data. 
+The datasets we consider contain either only numerical data (homogenous) or both numerical and categorical data (including ordinal data such as education), which we call heterogenous datasets.
+%
+The numerical features which are both discrete and continuous values.  The categorical features can have two classes (e.g. whether a person smokes or not) or several classes (e.g. country of origin). The output labels are also categorical;  we include datasets with both binary and multiclass labels. \tabref{data_description} summarizes the datasets.
+%
+% \begin{tabular}{|c|c|c|c|}\label{tab:data_description}
+% \hline
+% Dataset & $#$ samples &  $#$ classes & type  \\ \hline
+% Isolet  & 4366 & 2 & homogeneous \\ \hline
+% Covtype & 406698 & 7 & heterogeneous \\ \hline
+% \end{tabular}
+%
+%
+\tabref{Intrusion} shows the performance of the $12$ predictive models trained by the sampled from DP-MERF and DP-CGAN at the level of $(1, 10^{-5})$-DP, compared to the real training and test data. \tabref{summary_all_tabular} shows the average across the $12$ predictive models trained by the sampled from DP-MERF and DP-CGAN at the level of $(1, 10^{-5})$-DP.
+%
+DP-MERF produces high-quality samples which are only a few percentage points short of the real-world data. The method works well both with numerical and categorical data. In the private setting, we perturb the mean embedding of the true data once with the privacy budget $\epsilon=1$ and $\delta=10^{-5}$, resulting in a relatively small drop in evaluation metrics. 
+ 
+% Both for our method and DP-CGAN we performed a parameter search and we present the settings in the Appendix.
+%
+% \begin{tabular}{p{1cm}p{0.7cm}p{0.7cm}p{0.7cm}p{0.7cm}p{0.7cm}p{0.7cm}}
+%
+
+ 
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{table*}[!h]
+\caption{Performance on image data. Numbers outside parenthesis are classification accuracy; and those inside parenthesis are F1-score. }
+\vskip 0.1in
+\centering
+\scalebox{1.0}{
+\centering
+\begin{tabular}{ccccccc}
+\toprule
+& Real & DP-CGAN &  DP-MERF+AE & DP-MERF  & DP-MERF & DP-MERF  \\
+& data & $\epsilon=9.6$ & $\epsilon=9.6$ & $\epsilon=9.6$ &
+$\epsilon=2.9$ & $\epsilon=1.3$ \\
+\midrule
+% \textbf{MNIST} & &  & & &  & \\
+ \textbf{MNIST}& 0.87 (0.86) &  0.50 (0.48) & 0.43 (0.41) & \textbf{0.58} (\textbf{0.57}) & 0.55 (0.54) & 0.53 (0.52) \\
+% F1-score & 0.86 & 0.48  & 0.41 & \textbf{0.57} & 0.54 & 0.52 \\
+\midrule
+% \textbf{FashionMNIST} & &   & & \textbf{} &  & \\
+% \textbf{MNIST} & &   & & \textbf{} &  & \\
+\textbf{FashionMNIST} & 0.78 (0.77) & 0.39 (0.37) & 0.44 (0.41) & \textbf{0.52} (\textbf{0.51}) & 0.51 (0.49) & 0.48 (0.46)\\ 
+% F1-score & 0.77 & 0.37  & 0.41 & \textbf{0.51} & 0.49 & 0.46 \\
+\bottomrule
+\end{tabular}}\label{tab:summary_all_image}
+\end{table*}
+
+\begin{figure*}[!htb]
+    \centering
+    \includestandalone[mode=buildnew, scale=1.2]{figs/mnist_samples_wide}
+    \caption{Generated samples with $(9.6, 10^{-5})$-DP }
+    \label{fig:generated_samples}
+\end{figure*}
+
+
+\subsection{High-dimensional image data}
+
+\mpsay{Frederik will add descritions here. }
+\tabref{summary_all_image} shows the performance comparison on the MNIST and FashionMNIST datasets in terms of the prediction performance. Generated samples under each case are shown in \figref{generated_samples}. 
+
+\newpage 
+
+\section{Summary and Discussion}
+We proposed a simple and practical algorithm using the random feature representation of kernel mean embeddings for DP data generation. Our method requires a significantly lower privacy budget to produce quality data samples compared to DP-CGAN, tested on $8$ tabular data and $2$ image data. The metrics we used were targeting at supervised learning tasks. In future work, we plan to test our algorithm in more subtle metrics such as measuring the diversity of generated samples and the ability to cover all the modes of the data distribution.  
+
+% \mpsay{Table similar to the previous one}
+
+% \mpsay{Visualize generated and real data images}
+
+% \begin{figure}
+%     \centering
+%     \includestandalone[mode=buildnew, scale=.6]{figs/mnist_samples}
+%     \caption{Caption}
+%     \label{fig:my_label}
+% \end{figure}
+
+% \begin{table}
+% \begin{tabular}{l|cc}
+% \toprule
+%  & MNIST & Fashion- \\
+%  &  & MNIST \\
+% \midrule
+%  & ACC/F1 & ACC/F1 \\
+%  \midrule 
+% Real Data & 0.87 & 0.78\\
+% \midrule
+% DP-CGAN ($\epsilon=9.6$) & 0.50/ & 0.39 \\
+% DP-MERF+AE ($\epsilon=9.6$) & 0.43/ & 0.44\\
+% DP-MERF ($\epsilon=9.6$)  & \textbf{0.58} & \textbf{0.52} \\
+% DP-MERF ($\epsilon=2.9$)  & 0.55 & 0.51 \\
+% DP-MERF ($\epsilon=1.3$)  & 0.53 & 0.48 \\
+% \bottomrule
+% \end{tabular}
+% \end{table}
+
+
+
+\newpage
+% In the unusual situation where you want a paper to appear in the
+% references without citing it in the main text, use \nocite
+\nocite{langley00}
+
+\bibliography{DP_rfME}
+\bibliographystyle{icml2020}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% DELETE THIS PART. DO NOT PLACE CONTENT AFTER THE REFERENCES!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\input{supplementary.tex}
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2020. Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.

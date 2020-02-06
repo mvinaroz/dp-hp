@@ -1,0 +1,232 @@
+%%%%%%%% ICML 2020 EXAMPLE LATEX SUBMISSION FILE %%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+% Recommended, but optional, packages for figures and better typesetting:
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{subfigure}
+\usepackage{booktabs} % for professional tables
+
+\usepackage{amsmath}
+\usepackage{bbm}
+\usepackage{bm,amsbsy} % for bold
+
+% hyperref makes hyperlinks in the resulting PDF.
+% If your build breaks (sometimes temporarily if a hyperlink spans a page)
+% please comment out the following usepackage line and replace
+% \usepackage{icml2020} with \usepackage[nohyperref]{icml2020} above.
+\usepackage{hyperref}
+
+% Attempt to make hyperref and algorithmic work together better:
+\newcommand{\theHalgorithm}{\arabic{algorithm}}
+
+% Use the following line for the initial blind version submitted for review:
+\usepackage{icml2020}
+
+% If accepted, instead use the following line for the camera-ready submission:
+%\usepackage[accepted]{icml2020}
+
+\input{notation}
+
+% The \icmltitle you define below is probably too long as a header.
+% Therefore, a short form for the running title is supplied here:
+\icmltitlerunning{Submission and Formatting Instructions for ICML 2020}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{ Supplementatry material for \\
+Differentially Private Random Feature Mean    Embeddings \\for Simple \& Practical Synthetic Data Generation}
+
+\icmlsetsymbol{equal}{*}
+
+\begin{icmlauthorlist}
+\icmlauthor{Aeiau Zzzz}{equal,to}
+\icmlauthor{Bauiu C.~Yyyy}{equal,to,goo}
+\icmlauthor{Cieua Vvvvv}{goo}
+\icmlauthor{Iaesut Saoeu}{ed}
+\icmlauthor{Fiuea Rrrr}{to}
+\icmlauthor{Tateu H.~Yasehe}{ed,to,goo}
+\icmlauthor{Aaoeu Iasoh}{goo}
+\icmlauthor{Buiui Eueu}{ed}
+\icmlauthor{Aeuia Zzzz}{ed}
+\icmlauthor{Bieea C.~Yyyy}{to,goo}
+\icmlauthor{Teoau Xxxx}{ed}
+\icmlauthor{Eee Pppp}{ed}
+\end{icmlauthorlist}
+
+\icmlaffiliation{to}{Department of Computation, University of Torontoland, Torontoland, Canada}
+\icmlaffiliation{goo}{Googol ShallowMind, New London, Michigan, USA}
+\icmlaffiliation{ed}{School of Computation, University of Edenborrow, Edenborrow, United Kingdom}
+
+\icmlcorrespondingauthor{Cieua Vvvvv}{c.vvvvv@googol.com}
+\icmlcorrespondingauthor{Eee Pppp}{ep@eden.co.uk}
+
+% You may provide any keywords that you
+% find helpful for describing your paper; these are used to populate
+% the "keywords" metadata in the PDF but will not be shown in the document
+\icmlkeywords{Machine Learning, ICML}
+
+\vskip 0.3in
+]
+
+% this must go after the closing bracket ] following \twocolumn[ ...
+
+% This command actually creates the footnote in the first column
+% listing the affiliations and the copyright notice.
+% The command takes one argument, which is text to display at the start of the footnote.
+% The \icmlEqualContribution command is standard text for equal contribution.
+% Remove it (just {}) if you do not need this facility.
+
+%\printAffiliationsAndNotice{}  % leave blank if no need to mention equal contribution
+\printAffiliationsAndNotice{\icmlEqualContribution} % otherwise use the standard text.
+
+\section{Derivation of feature maps for a product of two kernels}
+
+\begin{align}
+    & k((\vx,\vy), (\vx', \vy')) \nonumber \\
+    &= k_\vx(\vx, \vx') k_\vy (\vy, \vy'), \mbox{ product of two kernels} \nonumber \\
+    &\approx \hat{\vphi}(\vx')\trp \hat{\vphi}(\vx) \vf(\vy)\trp \vf(\vy'),  \mbox{ random features for kernel } k_\vx \nonumber \\
+    &= \mbox{Tr}\left(\hat{\vphi}(\vx')\trp \hat{\vphi}(\vx) \vf(\vy)\trp \vf(\vy')\right), \nonumber \\
+    % &= \mbox{Tr}\left(\vf_\vy(\vy') \hat{\vf}_\vx(\vx')\trp \hat{\vf}_\vx(\vx) \vf_\vy(\vy)\trp \right), \\
+    &= \mbox{vec}( \hat{\vphi}(\vx') \vf(\vy')\trp)\trp \mbox{vec}( \hat{\vphi}(\vx) \vf(\vy)\trp) = \hat{\vf}(\vx', \vy') \trp \hat{\vf}(\vx, \vy) \nonumber 
+\end{align} 
+
+
+
+\section{Derivation of feature maps for a sum of two kernels}
+
+\begin{align}
+     &k((\vx_{con}, \vx_{dis}), (\vx'_{con}, \vx'_{dis})) \nonumber \\
+     &= k_{con}(\vx_{con}, \vx'_{con}) + k_{dis} (\vx_{dis}, \vx'_{dis}), \nonumber \\
+    &\approx \hat{\vphi}(\vx_{con})\trp \hat{\vphi}(\vx'_{con}) + \tfrac{1}{\sqrt{d_{dis}}} \vx_{dis}\trp\vx_{dis}', \nonumber \\
+    &= \begin{bmatrix} 
+    \hat{\vphi}(\vx_{con})  \nonumber \\
+     \frac{1}{\sqrt{d_{dis}}} \vx_{dis}
+    \end{bmatrix}^T
+    \begin{bmatrix} 
+    \hat{\vphi}(\vx_{con})  \nonumber \\
+     \frac{1}{\sqrt{d_{dis}}} \vx_{dis}
+    \end{bmatrix} \nonumber  \\
+    &= \hat{\vh}(\vx_{con}, \vx_{dis})^T \hat{\vh}(\vx_{con}, \vx_{dis}).
+\end{align} 
+
+\section{Sensitivity of $\vm_c$ with heterogeneous data}
+
+Recall that
+$\hat{\vh}(\vx^{(i)}_{con}, \vx^{(i)}_{dis})=\begin{bmatrix} 
+    \hat{\vphi}(\vx_{con}^{(i)})  \\
+     \frac{1}{\sqrt{d_{dis}}} \vx_{dis}^{(i)}
+    \end{bmatrix}
+$ and $\vm_c = \frac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vh}(\vx_i)$ where $\vx_i $ is the concatenation of $\vx_{con}^{(i)}$ and $\vx_{dis}^{(i)}$,  the sensitivity of $\vm_c$ is
+%
+\begin{align}
+    \Delta_{\vm_c} &= 
+    \max_{\Dat, \Dat'} \left\| \tfrac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vh}(\vx_i) - \tfrac{1}{m}\sum_{i \in c_c}^{m_c}\hat{\vh}(\vx'_i) \right\|_2, \nonumber \\
+  &= \max_{\vx_n, \vx_n'}\left\| \tfrac{1}{m}\begin{bmatrix} 
+    \hat{\vphi}(\vx_{con}^{(n)}) \nonumber \\
+     \frac{1}{\sqrt{d_{dis}}} \vx_{dis}^{(n)}
+    \end{bmatrix} - \tfrac{1}{m}\begin{bmatrix} 
+    \hat{\vphi}(\vx'_{con}^{(n)}) \nonumber \\
+     \frac{1}{\sqrt{d_{dis}}} \vx'_{dis}^{(n)}
+    \end{bmatrix} \right\|_2, \nonumber \\
+    & \leq
+    %
+    \max_{\vx_n} \tfrac{2}{m} \left\| \begin{bmatrix} 
+    \hat{\vphi}(\vx_{con}^{(n)}) \nonumber \\
+     \frac{1}{\sqrt{d_{dis}}} \vx_{dis}^{(n)}
+    \end{bmatrix} \right\|_2, \\
+    &\leq \max_{\vx_{dis}^{(n)}}  \tfrac{2}{m} \sqrt{1 + \tfrac{1}{d_{dis}} \sum_{j=1}^{d_{dis}} (\vx_{dis, j}^{(n)}})^2, \mbox{ since} \|\hat\vphi(\cdot) \|_2=1 \nonumber\\ 
+    & \leq \frac{2\sqrt{2}}{m}, 
+\end{align} where the list line is because $\vx_{dis}$ is a vector of binary variables. 
+
+
+\section{Sensitivity of $\widehat{\vmu}_{P_{\vg, \vy}} $ for image data }
+%
+%
+Using the product of two kernels
+\begin{align}
+  &\Delta_{\widehat{\vmu}_{P_{\vg, \vy}}}\nonumber \\
+  &= \max_{\Dat, \Dat'} \left\| \tfrac{1}{m}\sum_{i=1}^{m}\hat{\vf}(\ve_\vtau(\vx_i), \vy_i)- \tfrac{1}{m}\sum_{i=1}^{m}\hat{\vf}(\ve_\vtau(\vx'_i), \vy'_i)\right\|_2, \nonumber \\
+&= \max_{\vx_n, \vx_n'}\left\| \begin{bmatrix}
+\mathbf{0} & \cdots \frac{1}{m}\hat{\vphi}(\ve_\vtau(\vx_n)) & \cdots & \frac{1}{m}\hat{\vphi}(\ve_\vtau(\vx'_n)) \cdots \mathbf{0} 
+\end{bmatrix} \right\| \nonumber
+\end{align} where only two columns are non-zero, as there are only two datapoints difference in two datasets if the labels of these two points are different.  
+As the random features are norm bounded (by 1), the sensitivity is $\frac{\sqrt{2}}{m}$.
+If the labels of those two points are the same, only one column is non-zero, where the value is $\frac{1}{m}\hat{\vphi}(\ve_\vtau(\vx_n)) - \frac{1}{m}\hat{\vphi}(\ve_\vtau(\vx'_n))$. Hence, the sensitivity is $\frac{2}{m}$. Therefore the worse case upper bound is $\Delta_{\widehat{\vmu}_{P_{\vg, \vy}}} = \frac{2}{m}$.
+
+
+
+
+\section{R\'{e}nyi differential privacy}
+
+\begin{defn}[$\alpha$-R\'{e}nyi Divergence] For two probability distributions $P, Q$ that have the same support, the $\alpha$ R\'{e}nyi divergence is 
+	\begin{align}
+	D_\alpha(P||Q) &= \frac{1}{\alpha-1} \log \Em_{x \sim Q(x)} \left(\frac{P(x)}{Q(x)}\right)^\alpha
+	\end{align} for $\alpha \in (1, \infty)$.
+\end{defn} 
+
+
+
+\section{Description of the datasets}
+\label{submission}
+
+\subsection{Covtest}
+******************
+covtype
+
+The number of attributes is 55, out of which 10 are numerical 45 are categorical. The number of samples is 581012.
+Notes:
+n_features good between 100 and 5000, with bathc 0.01 and trained 1000
+0.563, 'how_many_epochs_arg': 1000, 'mini_batch_arg': 0.05, 'n_features_arg': 500}
+******************
+epileptic
+ROC on real test data is 0.5569809947080179
+PRC on real test data is 0.2860654400815256
+
+{'how_many_epochs_arg': 2000, 'mini_batch_arg': 500, 'n_features_arg': 500}
+av best
+
+{'how_many_epochs_arg': 1000, 'mini_batch_arg': 1000, 'n_features_arg': 50}
+ROC is 0.6571148022863209
+PRC is 0.3312778660464996
+sing best
+
+**************
+credit card fraud
+(284807, 29)
+ROC on real test data is 0.9365079365079365
+PRC on real test data is 0.8835421888053467
+
+
+best single
+{'how_many_epochs_arg': 2000, 'mini_batch_arg': 0.5, 'n_features_arg': 500}
+ROC is 0.9285714285714286
+PRC is 0.868984962406015
+**********
+census
+(199523, 40) features
+
+
+**********************
+cervical
+raw input features (753, 34)
+
+\medskip
+
+
+\end{document}
+
+
+% This document was modified from the file originally made available by
+% Pat Langley and Andrea Danyluk for ICML-2K. This version was created
+% by Iain Murray in 2018, and modified by Alexandre Bouchard in
+% 2019 and 2020. Previous contributors include Dan Roy, Lise Getoor and Tobias
+% Scheffer, which was slightly modified from the 2010 version by
+% Thorsten Joachims & Johannes Fuernkranz, slightly modified from the
+% 2009 version by Kiri Wagstaff and Sam Roweis's 2008 version, which is
+% slightly modified from Prasad Tadepalli's 2007 version which is a
+% lightly changed version of the previous year's version by Andrew
+% Moore, which was in turn edited from those of Kristian Kersting and
+% Codrina Lauth. Alex Smola contributed to the algorithmic style files.
