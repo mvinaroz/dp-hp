@@ -10,7 +10,7 @@ python3 synth_data_benchmark.py --data-log-name dp_merf_digits --data digits
 
 # DP-MERF+AE (first autoencoder training, then generator training, then evaluation
 python3 train_dp_autoencoder.py --log-name dp_merf_ae_digits --data digits
-python3 train_dp_generator.py --ae-load-dir logs/ae/dp_merf_ae_digits/ --log-name d0_1_0 --data digits
+python3 train_dp_generator.py --ae-load-dir logs/ae/dp_merf_ae_digits/ --log-name dp_merf_ae_digits --data digits
 python3 synth_data_benchmark.py --data-log-name dp_merf_ae_digits --data digits
 
 # DP-CGAN
@@ -24,7 +24,7 @@ python3 synth_data_benchmark.py --data-log-name dp_merf_fashion --data fashion
 
 # DP-MERF+AE
 python3 train_dp_autoencoder.py --log-name dp_merf_ae_fashion --data fashion
-python3 train_dp_generator.py --ae-load-dir logs/ae/dp_merf_ae_fashion/ --log-name f0_1_0 --data fashion
+python3 train_dp_generator.py --ae-load-dir logs/ae/dp_merf_ae_fashion/ --log-name dp_merf_ae_fashion --data fashion
 python3 synth_data_benchmark.py --data-log-name dp_merf_ae_fashion --data fashion
 
 # DP-CGAN
