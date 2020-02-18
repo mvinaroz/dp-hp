@@ -164,42 +164,42 @@ def get_args():
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-  parser.add_argument('--synth-mnist', action='store_true', default=False)
+  parser.add_argument('--synth-mnist', action='store_true', default=True)
 
   # OPTIMIZATION
-  parser.add_argument('--batch-size', '-bs', type=int, default=200)
+  parser.add_argument('--batch-size', '-bs', type=int, default=500)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
-  parser.add_argument('--epochs', '-ep', type=int, default=5)
-  parser.add_argument('--lr', '-lr', type=float, default=0.001)
+  parser.add_argument('--epochs', '-ep', type=int, default=7)
+  parser.add_argument('--lr', '-lr', type=float, default=1e-3)
   parser.add_argument('--lr-decay', type=float, default=0.9)
 
   # MODEL DEFINITION
   # parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--d-enc', '-denc', type=int, default=5)
-  parser.add_argument('--d-code', '-dcode', type=int, default=5)
+  parser.add_argument('--batch-norm', action='store_true', default=True)
+  parser.add_argument('--gen-labels', action='store_true', default=True)
+  parser.add_argument('--uniform-labels', action='store_true', default=True)
+  parser.add_argument('--d-enc', '-denc', type=int, default=10)
+  parser.add_argument('--d-code', '-dcode', type=int, default=10)
   parser.add_argument('--gen-spec', type=str, default='100,100')
-  parser.add_argument('--gen-labels', action='store_true', default=False)
-  parser.add_argument('--uniform-labels', action='store_true', default=False)
-  parser.add_argument('--batch-norm', action='store_true', default=False)
 
   # DP SPEC
-  parser.add_argument('--d-rff', type=int, default=100)
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=50.0)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.0)
+  parser.add_argument('--d-rff', type=int, default=10000)
+  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=80.0)
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7)
 
   # AE info
+  parser.add_argument('--ae-no-bias', action='store_true', default=True)
+  parser.add_argument('--ae-bn', action='store_true', default=True)
+  parser.add_argument('--ae-enc-spec', type=str, default='300,100')
+  parser.add_argument('--ae-dec-spec', type=str, default='100')
   parser.add_argument('--ae-conv', action='store_true', default=False)
   parser.add_argument('--ae-label', action='store_true', default=False)
   parser.add_argument('--ae-ce-loss', action='store_true', default=False)
   parser.add_argument('--ae-clip', type=float, default=None)
   parser.add_argument('--ae-noise', type=float, default=None)
-  parser.add_argument('--ae-enc-spec', type=str, default=None)
-  parser.add_argument('--ae-dec-spec', type=str, default=None)
   parser.add_argument('--ae-load-dir', type=str, default=None)
   parser.add_argument('--ae-siam-weight', '-wsiam', type=float, default=None)
   parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=None)
-  parser.add_argument('--ae-no-bias', action='store_true', default=False)
-  parser.add_argument('--ae-bn', action='store_true', default=False)
   parser.add_argument('--ae-norm-data', action='store_true', default=False)
 
   ar = parser.parse_args()

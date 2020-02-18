@@ -9,7 +9,7 @@ import matplotlib.cm as cm
 
 
 def rff_gauss(x, w):
-  """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
+  """ this is a Pytorch version of anon's code for RFFKGauss"""
   # Fourier transform formula from
   # http://mathworld.wolfram.com/FourierTransformGaussian.html
 
@@ -72,7 +72,7 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw
   # print(mnist_mat_flat.shape)
   # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
   if denorm:
-    mnist_mat_flat = denormalize(mnist_mat_flat)
+     mnist_mat_flat = denormalize(mnist_mat_flat)
   # print(mnist_mat_flat.shape)
   # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
   # print(mnist_mat_flat.dtype)

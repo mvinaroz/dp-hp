@@ -29,7 +29,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
     l_enc = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
     if losses.wsiam > 0.:
-      l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
+      l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
     # l_enc = pt.mean(v)
     # l_enc = loss_to_backpack_mse(v, losses.l_enc)
 
@@ -67,7 +67,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
 
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
         full_loss = rec_loss + siam_loss
       else:
         siam_loss = None
@@ -141,7 +141,7 @@ def test(enc, dec, device, test_loader, epoch, losses, label_ae, conv_ae, log_sp
       rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
       rec_loss_agg += rec_loss.item() * bs
       if losses.wsiam > 0.:
-        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam, losses.msiam_match)
+        siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
         siam_loss_agg += siam_loss.item() * bs
 
   n_data = len(test_loader.dataset)
@@ -200,7 +200,7 @@ def bin_ce_loss(reconstruction, data):
   return pt.mean(pt.sum(pt.reshape(bce, (bce.shape[0], -1)), dim=1), dim=0)
 
 
-def siamese_loss(feats, labels, margin, match_margin=None):
+def siamese_loss(feats, labels, margin):
     """
     :param feats: (bs, nfeats)
     :param labels: (bs)
@@ -219,10 +219,7 @@ def siamese_loss(feats, labels, margin, match_margin=None):
     match = pt.eq(labels_a, labels_b).float()
     no_match = 1. - match
     dist = pt.sqrt(pt.sum((feats_a - feats_b) ** 2, dim=1))
-    if match_margin is not None:
-      loss = match * nnf.relu(dist - margin) + no_match * nnf.relu(margin - dist)
-    else:
-      loss = match * dist + no_match * nnf.relu(margin - dist)
+    loss = match * nnf.relu(dist - margin) + no_match * nnf.relu(margin - dist)
     return pt.mean(loss)
 
 
@@ -246,30 +243,29 @@ def get_args():
   parser.add_argument('--norm-data', action='store_true', default=False)
 
   # OPTIMIZATION
-  parser.add_argument('--batch-size', '-bs', type=int, default=200)
+  parser.add_argument('--batch-size', '-bs', type=int, default=500)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=10)
-  parser.add_argument('--lr', '-lr', type=float, default=0.001)
-  parser.add_argument('--lr-decay', type=float, default=0.9)
-  parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=0.)
-  parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=1.)
-  parser.add_argument('--siam-match-margin', '-msiammatch', type=float, default=None)
+  parser.add_argument('--lr', '-lr', type=float, default=1e-3)
+  parser.add_argument('--lr-decay', type=float, default=0.8)
+  parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=100.)
+  parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=5.)
   parser.add_argument('--optimizer', '-opt', type=str, default='adam')
 
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=5)
+  parser.add_argument('--no-bias', action='store_true', default=True)
+  parser.add_argument('--batch-norm', action='store_true', default=True)
+  parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
+  parser.add_argument('--dec-spec', '-s-dec', type=str, default='100')
   parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--flat-dec', action='store_true', default=False)
   parser.add_argument('--ce-loss', action='store_true', default=False)
   parser.add_argument('--label-ae', action='store_true', default=False)
-  parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
-  parser.add_argument('--dec-spec', '-s-dec', type=str, default='100,300')
-  parser.add_argument('--no-bias', action='store_true', default=False)
-  parser.add_argument('--batch-norm', action='store_true', default=False)
 
   # DP SPEC
-  parser.add_argument('--clip-norm', '-clip', type=float, default=None)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=None)
+  parser.add_argument('--clip-norm', '-clip', type=float, default=0.01)
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7)
   parser.add_argument('--clip-per-layer', action='store_true', default=False)
   parser.add_argument('--layer-clip-norms', '-layer-clip', type=str, default=None)
 
@@ -340,9 +336,9 @@ def main():
     enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
     dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias).to(device))
 
-  loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam', 'msiam_match'])
+  loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,
-                   ar.siam_loss_weight, ar.siam_loss_margin, ar.siam_match_margin)
+                   ar.siam_loss_weight, ar.siam_loss_margin)
 
   if ar.optimizer == 'adam':
     optimizer = pt.optim.Adam(list(enc.parameters()) + list(dec.parameters()), lr=ar.lr)

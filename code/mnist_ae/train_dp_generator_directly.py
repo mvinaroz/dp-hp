@@ -135,8 +135,8 @@ def get_args():
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
-  parser.add_argument('--synth-mnist', action='store_true', default=False)
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+  parser.add_argument('--synth-mnist', action='store_true', default=True)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
@@ -147,12 +147,12 @@ def get_args():
 
   # MODEL DEFINITION
   # parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--d-code', '-dcode', type=int, default=5)
-  parser.add_argument('--gen-spec', type=str, default='100,50')
   parser.add_argument('--gen-labels', action='store_true', default=True)
   parser.add_argument('--uniform-labels', action='store_true', default=True)
-  parser.add_argument('--big-gen', action='store_true', default=False)
   parser.add_argument('--batch-norm', action='store_true', default=True)
+  parser.add_argument('--d-code', '-dcode', type=int, default=5)
+  parser.add_argument('--gen-spec', type=str, default='100,50')
+  parser.add_argument('--big-gen', action='store_true', default=False)
   parser.add_argument('--real-mmd', action='store_true', default=False)
 
   # DP SPEC
