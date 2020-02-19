@@ -54,11 +54,19 @@ import os
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
+
+
 args=argparse.ArgumentParser()
-args.add_argument("--dataset", default="adult")
-args.add_argument("--private", default=False)
+args.add_argument("--dataset", default="credit")
+args.add_argument("--private", type=int, default=0)
+args.add_argument("--epochs", type=int, default=5000)
+args.add_argument("--batch", type=float, default=0.5)
+args.add_argument("--num_features", type=int, default=10000)
+args.add_argument("--undersample", type=float, default=0.4)
+args.add_argument("--repeat", type=int, default=5)
+args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 arguments=args.parse_args()
-print("arg", arguments.dataset)
+print("arg", arguments)
 
 ############################### kernels to use ###############################
 """ we use the random fourier feature representation for Gaussian kernel """
@@ -277,7 +285,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
                 '/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
 
         feature_names = data.iloc[:, 1:30].columns
-        target = data.iloc[:1, 30:].columns
+        target = data.iloc[:, 30:].columns
 
         data_features = data[feature_names]
         data_target = data[target]
@@ -673,13 +681,20 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
     def test_models(X_tr, y_tr, X_te, y_te, datasettype):
 
+        print("\n",  datasettype, "data\n")
+
         roc_arr=[]
         prc_arr=[]
         f1_arr=[]
 
+        aa=np.array([1,3])
+
+        models=np.array([LogisticRegression(solver='lbfgs', max_iter=2000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()])
+        models_to_test=models[np.array(arguments.classifiers)]
+
         # check
-        for model in [LogisticRegression(solver='lbfgs', max_iter=2000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(), DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(), RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()]:
-        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), BernoulliNB(alpha=0.02)]:
+        for model in models_to_test:
+        #for model in [LogisticRegression(solver='lbfgs', max_iter=1000), GaussianNB(), BernoulliNB(alpha=0.02)]:
 
             print('\n', type(model))
             model.fit(X_tr, y_tr)
@@ -717,6 +732,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
             res1=np.mean(roc_arr)
             res2=np.mean(prc_arr)
+            print("-"*40)
             print("roc mean across methods is %.3f" % res1)
             print("prc mean across methods is %.3f\n" % res2)
 
@@ -804,7 +820,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         sigma2 = sigma_array**2
         sigma2[sigma2==0] = 1.0
         # sigma2[sigma2>500] = 500
-        print('sigma values are ', sigma2)
+        #print('sigma values are ', sigma2)
         # sigma2 = np.mean(sigma2)
 
     elif dataset=='credit':
@@ -818,7 +834,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         sigma2 = sigma_array**2
         sigma2[sigma2==0] = 1.0
 
-        print('sigma values are ', sigma2)
+        #print('sigma values are ', sigma2)
 
     else:
 
@@ -847,13 +863,14 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
     """ specifying ratios of data to generate depending on the class lables """
     unnormalized_weights = np.sum(true_labels,0)
     weights = unnormalized_weights/np.sum(unnormalized_weights)
-    print('weights before privatization are', weights)
+    print('\nweights with no privatization are', weights, '\n'  )
 
     ####################################################
     # Privatising quantities if necessary
 
     """ privatizing weights """
     if is_private:
+        print("lalalalala")
         # desired privacy level
         epsilon = 1.0
         delta = 1e-5
@@ -1128,23 +1145,23 @@ if __name__ == '__main__':
 
 
     is_priv_arg = arguments.private  # check
-    single_run = False  # check
+    single_run = True  # check
 
-    repetitions = 1  # check
+    repetitions = arguments.repeat  # check
 
     # check
     #for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    #for dataset in [arguments.dataset]:
-    for dataset in ["intrusion"]:
+    for dataset in [arguments.dataset]:
+    #for dataset in ["intrusion"]:
         print("\n\n")
         print('is private?', is_priv_arg)
 
         if single_run == True:
-            how_many_epochs_arg = [200]
+            how_many_epochs_arg = [arguments.epochs]#[200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [500]
-            mini_batch_arg = [0.3]
-            undersampling_rates = [.8]  # dummy
+            n_features_arg = [arguments.num_features]#[500]
+            mini_batch_arg = [arguments.batch]#[0.3]
+            undersampling_rates = [arguments.undersample] #[.8]  # dummy
         else:
             how_many_epochs_arg = [8000, 6000, 2000, 1000, 4000]
             n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000, 100000]
