@@ -22,7 +22,7 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 ## Repository Structure
 
-###Tabular data
+### Tabular data
 
 `code/single_generator_priv_all.py` contains the code for the tabular experiments
 
