@@ -1,8 +1,0 @@
-These are the models I arrived at on monday. The siamese loss settings may not be optimal and there is a problem with the generator not learning the digit 5. Hopefully a parameter search can improve this.
-
-python3 train_dp_autoencoder.py --log-name example_ae -lr 1e-3 --lr-decay 0.8 -clip 0.03 -noise .5 -s-enc 300,100 -s-dec 100 -bs 500 -ep 20 -denc 5 --ce-loss --flat-dec --no-bias --batch-norm -wsiam 30. -msiam 10.
-
-python3 train_dp_generator.py --log-name example_gen -bs 200 -lr 1e-3 -denc 5 -dcode 10 -ep 10 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 250 --batch-norm --gen-labels --uniform-labels -noise 0.5 --ae-bn --ae-ce-loss --ae-clip 0.03 --ae-noise 0.5 --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/example_ae/
-
-
-python3 train_dp_generator.py --log-name example_gen -bs 500 -lr 1e-3 -denc 5 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 150 --batch-norm --gen-labels --uniform-labels -noise 0.7 --ae-bn --ae-ce-loss --ae-clip 0.01 --ae-noise 0.7 --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/example_ae/
