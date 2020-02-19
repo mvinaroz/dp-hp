@@ -1,6 +1,6 @@
 """" test a simple generating training using MMD for relatively simple datasets """
 """ with generating labels together with the input features """
-# Mijung wrote on Dec 20, 2019
+
 
 import numpy as np
 import matplotlib.pyplot as plt

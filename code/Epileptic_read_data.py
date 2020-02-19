@@ -20,11 +20,11 @@ from sklearn.metrics import average_precision_score
 
 import os
 
-user='kamil'
+user='anon_k'
 
-if user=='mijung':
+if user=='anon_m':
     Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
-elif user =='kamil':
+elif user =='anon_k':
     Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
 def RFF_Gauss(n_features, X, W):

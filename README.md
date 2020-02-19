@@ -2,6 +2,8 @@
 
 
 ### Dependencies
+Versions numbers are based on our system and may not need to be exact matches. 
+
     python 3.6
     torch 1.3.1              
     torchvision 0.4.2
@@ -15,6 +17,7 @@
     autodp 0.1 (privacy analysis)
     backpack-for-pytorch 1.0.1 (efficient DP-SGD for DP-MERF+AE)
     tensorboardX 1.7 (some logging)
+    tensorflow-gpu 1.14.0 (DP-CGAN)
 
 
 ## Repository Structure

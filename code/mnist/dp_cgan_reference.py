@@ -38,8 +38,6 @@ from dp_cgan_accounting.analysis.rdp_accountant import compute_rdp
 from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
 
 
-
-
 def compute_fpr_tpr_roc(y_test, y_score):
     n_classes = y_score.shape[1]
     false_positive_rate = dict()
@@ -176,10 +174,10 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
 
     # Initializations for a two-layer discriminator network
     if dataset_key == 'digits':
-        mnist = input_data.read_data_sets("../../data/MNIST/raw", one_hot=True)
+        mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     elif dataset_key == 'fashion':
         print('using FashionMNIST')
-        mnist = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)
+        mnist = input_data.read_data_sets("data/FashionMNIST/raw", one_hot=True)
     else:
         raise ValueError
 

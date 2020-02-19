@@ -37,12 +37,12 @@ import os
 
 from sdgym import load_dataset
 
-user='mijung'
+user='anon_m'
 save_results = False
 
-if user=='mijung':
+if user=='anon_m':
     Results_PATH = "/".join([os.getenv("HOME"), "separate_Cervical/"])
-elif user =='kamil':
+elif user =='anon_k':
     Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
 def RFF_Gauss(n_features, X, W):

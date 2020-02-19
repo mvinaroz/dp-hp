@@ -35,12 +35,12 @@ data, categorical_columns, ordinal_columns = load_dataset('adult')
 device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
-user='kamil'
+user='anon_k'
 save_results = False
 
-if user=='mijung':
+if user=='anon_m':
     Results_PATH = "/".join([os.getenv("HOME"), "separate_Isolet/"])
-elif user =='kamil':
+elif user =='anon_k':
     Results_PATH = "/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/results/separate_isolet"
 
         #n_features - random Fourier features

@@ -1,6 +1,5 @@
 
 # """ for generating input features for each class separately"""
-# Mijung wrote on Jan 24, 2020
 
 import numpy as np
 import matplotlib.pyplot as plt

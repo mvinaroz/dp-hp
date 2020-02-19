@@ -1,6 +1,6 @@
 # majority of this code is copied from the tutorial
 # https://github.com/pytorch/examples/blob/master/mnist/main.py#L91
-# Mijung made small modifications for using MMD and privacy variation
+
 
 from __future__ import print_function
 import argparse

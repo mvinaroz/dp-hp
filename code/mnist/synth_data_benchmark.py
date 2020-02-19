@@ -49,11 +49,11 @@ def main():
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
   if ar.data == 'digits':
-    train_data = datasets.MNIST('../../data', train=True)
-    test_data = datasets.MNIST('../../data', train=False)
+    train_data = datasets.MNIST('data', train=True)
+    test_data = datasets.MNIST('data', train=False)
   elif ar.data == 'fashion':
-    train_data = datasets.FashionMNIST('../../data', train=True)
-    test_data = datasets.FashionMNIST('../../data', train=False)
+    train_data = datasets.FashionMNIST('data', train=True)
+    test_data = datasets.FashionMNIST('data', train=False)
   else:
     raise ValueError
 

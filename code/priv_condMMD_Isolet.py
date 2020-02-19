@@ -1,6 +1,5 @@
 """" test a simple generating training using MMD for relatively simple datasets """
 """ for generating input features given random noise and the label for ISOLET data """
-# Mijung wrote on Jan 09, 2020
 
 import numpy as np
 import matplotlib.pyplot as plt

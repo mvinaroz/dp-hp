@@ -39,7 +39,7 @@ def expand_vector(v, tgt_vec):
 
 
 def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True,
-                          dataset='digits', data_dir='../../data'):
+                          dataset='digits', data_dir='data'):
   if not os.path.exists(data_dir):
     os.makedirs(data_dir)
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}

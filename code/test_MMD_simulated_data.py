@@ -1,5 +1,4 @@
 """" test a simple generating training using MMD for relatively simple datasets """
-# Mijung wrote on Nov 6, 2019
 
 import numpy as np
 import matplotlib.pyplot as plt
