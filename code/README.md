@@ -1,4 +1,8 @@
+# Tabular data experiments
+
 To run the tabular experiments it is enough to run the script single_generator_priv_all.py with some of the arguments.
+
+## Arguments
 
 The arguments are following:
 
@@ -24,7 +28,7 @@ classifiers - a list of methods to test, by default all methods are run.
 10 - MLP
 11 - XGBoost
 
-
+## Example
 
 Example:
 python single_generator_priv_all.py --dataset credit --private 0 --epochs 2000 --batch 0.3 --num_features 1000 --undersample 0.5 --repeat 2 --classifiers 1 2 5

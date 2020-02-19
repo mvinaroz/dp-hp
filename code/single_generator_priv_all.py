@@ -217,7 +217,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             data = pd.read_csv("../data/Epileptic/data.csv")
         else:
             # (1) load data
-            data = pd.read_csv('/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
+            data = pd.read_csv('/home/user/Dropbox_from/Current_research/privacy/DPDR/data/Epileptic/data.csv')
 
         feature_names = data.iloc[:, 1:-1].columns
         target = data.iloc[:, -1:].columns
@@ -282,7 +282,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         else:
             # (1) load data
             data = pd.read_csv(
-                '/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
+                '/home/user/Dropbox_from/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv')
 
         feature_names = data.iloc[:, 1:30].columns
         target = data.iloc[:, 30:].columns
@@ -329,7 +329,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             data = np.load("../data/real/census/train.npy")
         else:
             data = np.load(
-                "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/census/train.npy")
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/census/train.npy")
 
         numerical_columns = [0, 5, 16, 17, 18, 29, 38]
         ordinal_columns = []
@@ -378,7 +378,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             df = pd.read_csv("../data/Cervical/kag_risk_factors_cervical_cancer.csv")
         else:
             df = pd.read_csv(
-                "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/Cervical/kag_risk_factors_cervical_cancer.csv")
             print("Loaded Cervical")
 
         # df.head()
@@ -496,9 +496,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         else:
             # (1) load data
             data_features_npy = np.load(
-                '/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/Isolet/isolet_data.npy')
+                '/home/user/Dropbox_from/Current_research/privacy/DPDR/data/Isolet/isolet_data.npy')
             data_target_npy = np.load(
-                '/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR//data/Isolet/isolet_labels.npy')
+                '/home/user/Dropbox_from/Current_research/privacy/DPDR//data/Isolet/isolet_labels.npy')
 
         print(data_features_npy.shape)
         # dtype = [('Col1', 'int32'), ('Col2', 'float32'), ('Col3', 'float32')]
@@ -610,9 +610,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             data = np.concatenate((train_data, test_data))
         else:
             train_data = np.load(
-                "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/train.npy")
             test_data = np.load(
-                "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/test.npy")
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/covtype/test.npy")
             data = np.concatenate((train_data, test_data))
 
         """ some specifics on this dataset """
