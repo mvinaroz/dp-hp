@@ -6,14 +6,14 @@ Please note, that DP-MERF downloads datasets, while the DP-CGAN code assumes the
 
 #### privacy analysis
 
-All privacy settings in the scripts below are set for (9.6, 10^-5)-DP by default. Parameters for different privacy settings can be computed with 
+All privacy settings in the scripts below are set for (9.6, 10^-5)-DP by default. Parameters for different privacy settings can be computed by running 
 `python3 dp_analysis.py`, after changing the parameters defined in that script.
 
 ## digit MNIST
 
 #### DP-MERF
-For the ($$2.9$$,10^-5)-DP model, append -noise 0.X and for (1.3,10^-5)-DP, append -noise 0.X  
-- `python3 train_dp_autoencoder_directly.py --log-name dp_merf_digits --data digits`
+For the (2.9,10^-5)-DP model, append -noise 0.X and for (1.3,10^-5)-DP, append -noise 0.X  
+- `python3 train_dp_generator_directly.py --log-name dp_merf_digits --data digits`
 
 #### DP-MERF+AE
 first autoencoder training, then generator training
@@ -24,6 +24,7 @@ first autoencoder training, then generator training
 - `python3 dp_cgan_reference.py --data-save-str dpcgan_digits --data digits`
 
 #### Evaluation
+each of the above models creates a synthetic dataset, which can be evaluated by running the following script with the previously used experiment name (`log-name` or `data-save-str`)
 - `python3 synth_data_benchmark.py --data-log-name *experiment name* --data digits`
 
 ## fashion MNIST
@@ -31,7 +32,7 @@ first autoencoder training, then generator training
 All experiments are run with the same hyperparameters. The only change requires is switching the `--data` flag to `fashion`
 
 #### DP-MERF
-- `python3 train_dp_autoencoder_directly.py --log-name dp_merf_fashion --data fashion`
+- `python3 train_dp_generator_directly.py --log-name dp_merf_fashion --data fashion`
 - `python3 synth_data_benchmark.py --data-log-name dp_merf_fashion --data fashion`
 
 #### DP-MERF+AE

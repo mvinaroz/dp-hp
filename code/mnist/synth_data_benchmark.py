@@ -96,6 +96,7 @@ def main():
 
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
+  # some custom settings were added to the model in order to either improve convergence or reduce runtime
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
