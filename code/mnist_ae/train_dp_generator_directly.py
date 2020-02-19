@@ -128,13 +128,13 @@ def get_args():
   parser = argparse.ArgumentParser()
 
   # BASICS
-  parser.add_argument('--no-cuda', action='store_true', default=False)
-  parser.add_argument('--seed', type=int, default=None)
-  parser.add_argument('--n-labels', type=int, default=10)
-  parser.add_argument('--log-interval', type=int, default=100)
-  parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
-  parser.add_argument('--log-name', type=str, default=None)
-  parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
+  parser.add_argument('--no-cuda', action='store_true', default=False, help='turns off gpu')
+  parser.add_argument('--seed', type=int, default=None, help='sets random seed')
+  parser.add_argument('--n-labels', type=int, default=10, help='number of labels/classes in data')
+  parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
+  parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
+  parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
+  parser.add_argument('--log-dir', type=str, default=None, help='override')  # constructed if None
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
   parser.add_argument('--synth-mnist', action='store_true', default=True)
 
@@ -146,7 +146,6 @@ def get_args():
   parser.add_argument('--lr-decay', type=float, default=0.9)
 
   # MODEL DEFINITION
-  # parser.add_argument('--conv-ae', action='store_true', default=False)
   parser.add_argument('--gen-labels', action='store_true', default=True)
   parser.add_argument('--uniform-labels', action='store_true', default=True)
   parser.add_argument('--batch-norm', action='store_true', default=True)
@@ -160,13 +159,6 @@ def get_args():
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0)
   parser.add_argument('--noise-factor', '-noise', type=float, default=0.4)
   ar = parser.parse_args()
-
-  # HACKS FOR QUICK ACCESS
-  # ar.ae_label = True
-  # ar.ae_ce_loss = True
-  # ar.ae_conv = True
-  # ar.gen_labels = True
-  # ar.uniform_labels = True
 
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)
@@ -196,7 +188,6 @@ def preprocess_args(args):
   assert args.data in {'digits', 'fashion'}
   assert args.gen_labels or not args.uniform_labels
   assert not (args.gen_labels and args.real_mmd)
-
 
 
 def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -245,9 +236,7 @@ def main():
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
                                   ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd)
 
-
-
-  ### compute the final epsilon dp based on the input arguments
+  # compute the final epsilon dp based on the input arguments
 
   # (1) privacy parameters for four types of Gaussian mechanisms
   sigma = ar.noise_factor

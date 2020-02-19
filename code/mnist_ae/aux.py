@@ -46,7 +46,7 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True,
       mnist_sdev = 0.3081
       transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
     prep_transforms = transforms.Compose(transforms_list)
-    trn_data = datasets.MNIST('../../data', train=True, transform=prep_transforms)
+    trn_data = datasets.MNIST('../../data', train=True, download=True, transform=prep_transforms)
     tst_data = datasets.MNIST('../../data', train=False, transform=prep_transforms)
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
@@ -69,13 +69,9 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw
   mnist_mat_as_list = [np.split(mnist_mat[n_rows*i:n_rows*(i+1)], n_rows) for i in range(n_cols)]
   # print([k.shape for k in mnist_mat_as_list[0]])
   mnist_mat_flat = np.concatenate([np.concatenate(k, axis=1).squeeze() for k in mnist_mat_as_list], axis=1)
-  # print(mnist_mat_flat.shape)
-  # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
+
   if denorm:
      mnist_mat_flat = denormalize(mnist_mat_flat)
-  # print(mnist_mat_flat.shape)
-  # print(np.max(mnist_mat_flat), np.min(mnist_mat_flat))
-  # print(mnist_mat_flat.dtype)
   save_img(save_path + '.png', mnist_mat_flat)
   if save_raw:
     np.save(save_path + '_raw.npy', mnist_mat_flat)
