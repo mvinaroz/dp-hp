@@ -30,33 +30,11 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
     l_enc = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
     if losses.wsiam > 0.:
       l_enc = l_enc + losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
-    # l_enc = pt.mean(v)
-    # l_enc = loss_to_backpack_mse(v, losses.l_enc)
 
     if dp_spec.clip is None:
       l_enc.backward()
       squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
     else:
-      # if noise_up_enc:
-      #   with backpack(BatchGrad(), BatchL2Grad()):
-      #     l_enc.backward(retain_graph=True)  # get grads for encoder
-      #
-      #   squared_param_norms = [p.batch_l2 for p in enc.parameters()]
-      #   bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
-      #   global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
-      #   # aggregate samplewise grads, replace normal grad
-      #   for idx, param in enumerate(enc.parameters()):
-      #     assert not dp_spec.per_layer  # keep it simple
-      #     clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
-      #     clipped_grad = pt.mean(clipped_sample_grads, dim=0)
-      #
-      #     if dp_spec.noise is not None:
-      #       bs = clipped_grad.shape[0]
-      #       noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
-      #       clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
-      #     param.grad = clipped_grad
-      #
-      # else:  # DEBUG END
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
       # wipe grads from decoder:
@@ -231,45 +209,45 @@ def get_args():
   parser = argparse.ArgumentParser()
 
   # BASICS
-  parser.add_argument('--no-cuda', action='store_true', default=False)
-  parser.add_argument('--seed', type=int, default=None)  # sampled if none
-  parser.add_argument('--log-interval', type=int, default=100)
-  parser.add_argument('--base-log-dir', type=str, default='logs/ae/')
-  parser.add_argument('--log-name', type=str, default=None)  # set for custom save subdir
-  parser.add_argument('--log-dir', type=str, default=None)  # constructed if None (only set thisto completely alter loc)
-  parser.add_argument('--n-labels', type=int, default=10)
-  parser.add_argument('--verbose', action='store_true', default=False)
-  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-  parser.add_argument('--norm-data', action='store_true', default=False)
+  parser.add_argument('--no-cuda', action='store_true', default=False, help='turns off gpu')
+  parser.add_argument('--seed', type=int, default=None, help='sets random seed')
+  parser.add_argument('--n-labels', type=int, default=10, help='number of labels/classes in data')
+  parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
+  parser.add_argument('--base-log-dir', type=str, default='logs/ae/', help='path where logs for all runs are stored')
+  parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
+  parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
+  parser.add_argument('--verbose', action='store_true', default=False, help='turns on more debug/status printing')
+  parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
+  parser.add_argument('--norm-data', action='store_true', default=False, help='if true, preprocess data')
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=10)
-  parser.add_argument('--lr', '-lr', type=float, default=1e-3)
-  parser.add_argument('--lr-decay', type=float, default=0.8)
-  parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=100.)
-  parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=5.)
+  parser.add_argument('--lr', '-lr', type=float, default=1e-3, help='learning rate')
+  parser.add_argument('--lr-decay', type=float, default=0.8, help='per epoch learning rate decay factor')
   parser.add_argument('--optimizer', '-opt', type=str, default='adam')
+  parser.add_argument('--siam-loss-weight', '-wsiam', type=float, default=100., help='weight of siamese loss')
+  parser.add_argument('--siam-loss-margin', '-msiam', type=float, default=5., help='margin used in siamese loss')
 
   # MODEL DEFINITION
-  parser.add_argument('--d-enc', '-denc', type=int, default=5)
-  parser.add_argument('--no-bias', action='store_true', default=True)
-  parser.add_argument('--batch-norm', action='store_true', default=True)
-  parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100')
-  parser.add_argument('--dec-spec', '-s-dec', type=str, default='100')
-  parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--flat-dec', action='store_true', default=False)
-  parser.add_argument('--ce-loss', action='store_true', default=False)
-  parser.add_argument('--label-ae', action='store_true', default=False)
+  parser.add_argument('--d-enc', '-denc', type=int, default=10, help='embedding space dimensionality')
+  parser.add_argument('--no-bias', action='store_true', default=True, help='remove bias units')
+  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in encoder')
+  parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100', help='encoder hidden layers')
+  parser.add_argument('--dec-spec', '-s-dec', type=str, default='100', help='decoder hidden layers')
+  parser.add_argument('--conv-ae', action='store_true', default=False, help='if true, use convolutional AE (not used)')
+  parser.add_argument('--flat-dec', action='store_true', default=False, help='if conv-ae, use smaller model (not used)')
+  parser.add_argument('--ce-loss', action='store_true', default=False, help='pixelwise cross-entropy loss (not used)')
+  parser.add_argument('--label-ae', action='store_true', default=False, help='autoencode labels as well (not used)')
 
   # DP SPEC
-  parser.add_argument('--clip-norm', '-clip', type=float, default=0.01)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7)
-  parser.add_argument('--clip-per-layer', action='store_true', default=False)
-  parser.add_argument('--layer-clip-norms', '-layer-clip', type=str, default=None)
+  parser.add_argument('--clip-norm', '-clip', type=float, default=0.01, help='samplewise gradient L2 clip norm')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7, help='DP-SGD noise parameter')
+  parser.add_argument('--clip-per-layer', action='store_true', default=False, help='if true, clip per layer (not used)')
+  parser.add_argument('--layer-clip-norms', '-layer-clip', type=str, default=None, help='perlayer clip norms(not used)')
 
-  parser.add_argument('--noise-up-enc', action='store_true', default=False)
+  parser.add_argument('--noise-up-enc', action='store_true', default=False, help='debug: apply DP-SGD to encoder too')
   ar = parser.parse_args()
 
   if ar.log_dir is None:
@@ -295,7 +273,7 @@ def preprocess_args(args):
   if args.seed is None:
     args.seed = np.random.randint(0, 1000)
 
-  assert not (args.conv_ae and args.label_ae)  # not supported yet, will try conv with siamese loss first
+  assert not (args.conv_ae and args.label_ae)  # not supported yet
   assert not (args.layer_clip_norms and args.clip_norm)  # define only one of them
   assert not (args.clip_norm is None and args.noise_factor is not None)
 
@@ -365,7 +343,6 @@ def main():
 
   pt.save(enc.state_dict(), ar.log_dir + 'enc.pt')
   pt.save(dec.state_dict(), ar.log_dir + 'dec.pt')
-  # summary_writer.export_scalars_to_json()
   summary_writer.close()
 
 

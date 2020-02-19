@@ -1,4 +1,5 @@
 import torch as pt
+# implementation of non-appriximate mmd loss mostly for debugging purposes
 
 
 def get_squared_dist(x, y=None):

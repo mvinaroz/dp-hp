@@ -19,21 +19,23 @@ def test_model(model, x_trn, y_trn, x_tst, y_tst):
 
 def main():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--data-path', type=str, default=None)  # is computed. only set to override
-  parser.add_argument('--data-base-dir', type=str, default='logs/gen/')
-  # parser.add_argument('--data-log-name', type=str, default='tb12_16_2')
-  parser.add_argument('--data-log-name', type=str, default=None)
-  parser.add_argument('--log-results', action='store_true', default=False)
-  parser.add_argument('--skip-slow-models', action='store_true', default=False)
-  parser.add_argument('--only-slow-models', action='store_true', default=False)
-  parser.add_argument('--custom-keys', type=str, default=None)
-  parser.add_argument('--shuffle-data', action='store_true', default=False)
-  parser.add_argument('--print-conf-mat', action='store_true', default=False)
-  parser.add_argument('--compute-real-to-real', action='store_true', default=False)
-  parser.add_argument('--compute-real-to-gen', action='store_true', default=False)
-  parser.add_argument('--skip-gen-to-real', action='store_true', default=False)  # only one on by default
+  parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
+  parser.add_argument('--data-base-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
+  parser.add_argument('--data-log-name', type=str, default=None, help='subdirectory for this run')
 
-  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+  parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
+  parser.add_argument('--shuffle-data', action='store_true', default=False, help='shuffle data before testing')
+
+  parser.add_argument('--log-results', action='store_true', default=False, help='if true, save results')
+  parser.add_argument('--print-conf-mat', action='store_true', default=False, help='print confusion matrix')
+
+  parser.add_argument('--skip-slow-models', action='store_true', default=False, help='skip models that take longer')
+  parser.add_argument('--only-slow-models', action='store_true', default=False, help='only do slower the models')
+  parser.add_argument('--custom-keys', type=str, default=None, help='enter model keys to run as key1,key2,key3...')
+
+  parser.add_argument('--skip-gen-to-real', action='store_true', default=False, help='skip train:gen,test:real setting')
+  parser.add_argument('--compute-real-to-real', action='store_true', default=False, help='add train:real,test:real')
+  parser.add_argument('--compute-real-to-gen', action='store_true', default=False, help='add train:real,test:gen')
 
   ar = parser.parse_args()
 
@@ -97,14 +99,14 @@ def main():
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
-  model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}  # still not enough??
+  model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
   model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
   model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
   model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
-  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}  # max_samples==subsample, n_est 10 is default
+  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
 

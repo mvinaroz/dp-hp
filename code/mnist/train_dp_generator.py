@@ -152,58 +152,58 @@ def synthesize_mnist_with_uniform_labels(gen, dec, device, ae_label, gen_batch_s
 
   return pt.cat(data_list, dim=0).cpu().numpy(), pt.cat(labels_list, dim=0).cpu().numpy()
 
+
 def get_args():
   parser = argparse.ArgumentParser()
 
   # BASICS
-  parser.add_argument('--no-cuda', action='store_true', default=False)
-  parser.add_argument('--seed', type=int, default=None)
-  parser.add_argument('--n-labels', type=int, default=10)
-  parser.add_argument('--log-interval', type=int, default=100)
-  parser.add_argument('--base-log-dir', type=str, default='logs/gen/')
-  parser.add_argument('--log-name', type=str, default=None)
-  parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
-  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-  parser.add_argument('--synth-mnist', action='store_true', default=True)
+  parser.add_argument('--no-cuda', action='store_true', default=False, help='turns off gpu')
+  parser.add_argument('--seed', type=int, default=None, help='sets random seed')
+  parser.add_argument('--n-labels', type=int, default=10, help='number of labels/classes in data')
+  parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
+  parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
+  parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
+  parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
+  parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
+  parser.add_argument('--synth-mnist', action='store_true', default=True, help='if true, make 60k synthetic mnist')
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=7)
-  parser.add_argument('--lr', '-lr', type=float, default=1e-3)
-  parser.add_argument('--lr-decay', type=float, default=0.9)
+  parser.add_argument('--lr', '-lr', type=float, default=1e-3, help='learning rate')
+  parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
   # MODEL DEFINITION
-  # parser.add_argument('--conv-ae', action='store_true', default=False)
-  parser.add_argument('--batch-norm', action='store_true', default=True)
-  parser.add_argument('--gen-labels', action='store_true', default=True)
-  parser.add_argument('--uniform-labels', action='store_true', default=True)
-  parser.add_argument('--d-enc', '-denc', type=int, default=10)
-  parser.add_argument('--d-code', '-dcode', type=int, default=10)
-  parser.add_argument('--gen-spec', type=str, default='100,100')
+  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
+  parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
+  parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
+  parser.add_argument('--d-enc', '-denc', type=int, default=10, help='embedding space dimensionality')
+  parser.add_argument('--d-code', '-dcode', type=int, default=10, help='random code dimensionality')
+  parser.add_argument('--gen-spec', type=str, default='100,100', help='specifies hidden layers of generator')
 
   # DP SPEC
-  parser.add_argument('--d-rff', type=int, default=10000)
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=80.0)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7)
+  parser.add_argument('--d-rff', type=int, default=10000, help='number of random filters for apprixmate mmd')
+  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=80.0, help='standard dev. for filter sampling')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.7, help='privacy noise parameter')
 
-  # AE info
-  parser.add_argument('--ae-no-bias', action='store_true', default=True)
-  parser.add_argument('--ae-bn', action='store_true', default=True)
-  parser.add_argument('--ae-enc-spec', type=str, default='300,100')
-  parser.add_argument('--ae-dec-spec', type=str, default='100')
+  # Autoencoder info
+  parser.add_argument('--ae-no-bias', action='store_true', default=True, help='if true, AE has no bias units')
+  parser.add_argument('--ae-bn', action='store_true', default=True, help='if true, AE uses batch norm')
+  parser.add_argument('--ae-enc-spec', type=str, default='300,100', help='AE encoder hidden layers')
+  parser.add_argument('--ae-dec-spec', type=str, default='100', help='AE decoder hidden layers')
+  parser.add_argument('--ae-norm-data', action='store_true', default=False, help='if true, data was pre-processed')
+  parser.add_argument('--ae-load-dir', type=str, default=None, help='path to where AE is stored')
+
+  # outdated variants and args only relevant for automated loading - don't worry about those
   parser.add_argument('--ae-conv', action='store_true', default=False)
   parser.add_argument('--ae-label', action='store_true', default=False)
   parser.add_argument('--ae-ce-loss', action='store_true', default=False)
   parser.add_argument('--ae-clip', type=float, default=None)
   parser.add_argument('--ae-noise', type=float, default=None)
-  parser.add_argument('--ae-load-dir', type=str, default=None)
   parser.add_argument('--ae-siam-weight', '-wsiam', type=float, default=None)
   parser.add_argument('--ae-siam-margin', '-msiam', type=float, default=None)
-  parser.add_argument('--ae-norm-data', action='store_true', default=False)
-
   ar = parser.parse_args()
-
 
   if ar.log_dir is None:
     ar.log_dir = get_log_dir(ar)

@@ -5,7 +5,7 @@ from torchvision import datasets
 
 def dpcgan_plot():
   # loads = np.load('dp_cgan_synth_mnist_eps9.6.npz')
-  loads = np.load('reference_dpcgan1_9.6.npz')
+  loads = np.load('plots_and_synth_datasets/reference_dpcgan1_9.6.npz')
   # loads = np.load('ref_dpcgan_fashion5-eps9.6.npz')
   data, labels = loads['data'], loads['labels']
 
@@ -35,7 +35,7 @@ def dpcgan_plot():
 
 
 def dpgan_plot():
-  data = np.load('dpgan_data.npy')
+  data = np.load('plots_and_synth_datasets/dpgan_data.npy')
 
   rand_perm = np.random.permutation(data.shape[0])
   data = data[rand_perm] / 255.
@@ -46,7 +46,7 @@ def dpgan_plot():
 
 
 def direct_gen_redo_plot():
-  data = np.load('MNISTsamples_ep5_raw.npy')
+  data = np.load('plots_and_synth_datasets/MNISTsamples_ep5_raw.npy')
 
   mnist_mean = 0.1307
   mnist_sdev = 0.3081
@@ -55,7 +55,7 @@ def direct_gen_redo_plot():
   print(data.shape)
   print(np.max(data), np.min(data))
   # plot_mnist_batch(data, 10, 10, 'fmnist_direct_plot', denorm=False, save_raw=False)
-  save_img('dmnist_direct_plot.png', data)
+  save_img('plots_and_synth_datasets/dmnist_direct_plot.png', data)
 
 
 def data_plot():

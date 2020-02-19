@@ -6,7 +6,6 @@ import numpy as np
 from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 from real_mmd_loss import mmd_g, get_squared_dist
-from autodp import rdp_acct, rdp_bank
 
 
 def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels):
@@ -83,11 +82,6 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   plot_mnist_batch(plot_samples, 10, 10, log_dir + f'samples_ep{epoch}', denorm=False)
   if gen_labels is not None and ordered_labels is None:
     save_gen_labels(gen_labels[:100, ...].cpu().numpy(), 10, 10, log_dir + f'labels_ep{epoch}')
-  # bs = plot_samples.shape[0]
-  # lit_samples = plot_samples - np.min(np.reshape(plot_samples, (bs, -1)), axis=1)[:, None, None, None]
-  # lit_samples = lit_samples / np.max(np.reshape(lit_samples, (bs, -1)), axis=1)[:, None, None, None]
-  # print(np.max(lit_samples), np.min(lit_samples))
-  # plot_mnist_batch(lit_samples, 10, 10, f'samples/gen_samples_bright_ep{epoch}.png')
   print('Test set: Average loss: {:.4f}'.format(test_loss))
 
 
@@ -96,11 +90,13 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
   w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
   if real_mmd:
     print('we use full MMD here')
+
     def rff_mmd_loss(data_enc, gen_enc):
       dxx, dxy, dyy = get_squared_dist(data_enc, gen_enc)
       return mmd_g(dxx, dxy, dyy, batch_size, sigma=np.sqrt(rff_sigma))
 
   elif not do_gen_labels:
+
     def mean_embedding(x):
       return pt.mean(rff_gauss(x, w_freq), dim=0)
 
@@ -111,6 +107,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   else:
     print('we use the random feature mean embeddings here')
+
     def label_mean_embedding(data, labels):
       return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
 
@@ -120,8 +117,6 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   return rff_mmd_loss
-
-
 
 
 def get_args():
@@ -142,13 +137,13 @@ def get_args():
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=5)
-  parser.add_argument('--lr', '-lr', type=float, default=0.01)
-  parser.add_argument('--lr-decay', type=float, default=0.9)
+  parser.add_argument('--lr', '-lr', type=float, default=0.01, help='learning rate')
+  parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
   # MODEL DEFINITION
+  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
   parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
   parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
-  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='100,50', help='specifies hidden layers of generator')
   parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
@@ -157,7 +152,7 @@ def get_args():
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0, help='standard dev. for filter sampling')
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.4, help='')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.6, help='privacy noise parameter')
   ar = parser.parse_args()
 
   if ar.log_dir is None:
@@ -235,40 +230,6 @@ def main():
 
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
                                   ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd)
-
-  # compute the final epsilon dp based on the input arguments
-
-  # (1) privacy parameters for four types of Gaussian mechanisms
-  sigma = ar.noise_factor
-
-  # (2) desired delta level
-  delta = 1e-5
-
-  # (5) number of training steps
-  batch_size = ar.batch_size
-  n_epochs = ar.epochs
-  n_data = 60000
-  steps_per_epoch = n_data // n_data
-  n_steps = steps_per_epoch * n_epochs
-
-  # (6) sampling rate
-  prob = batch_size / n_data
-
-  """ end of input arguments """
-
-  """ now use autodp to calculate the cumulative privacy loss """
-  # declare the moment accountants
-  acct = rdp_acct.anaRDPacct()
-
-  eps_seq = []
-  print_every_n = 100
-  for i in range(1, n_steps+1):
-      acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma}, x), prob)
-      eps_seq.append(acct.get_eps(delta))
-      if i % print_every_n == 0 or i == n_steps:
-          print("[", i, "]Privacy loss is", (eps_seq[-1]))
-
-  print("Composition of subsampled Gaussian mechanisms gives ", (acct.get_eps(delta), delta))
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)

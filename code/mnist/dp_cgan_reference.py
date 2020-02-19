@@ -175,9 +175,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     Z_dim = 100
 
     # Initializations for a two-layer discriminator network
-    # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     if dataset_key == 'digits':
-        mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
+        mnist = input_data.read_data_sets("../../data/MNIST/raw", one_hot=True)
     elif dataset_key == 'fashion':
         print('using FashionMNIST')
         mnist = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)

@@ -9,9 +9,10 @@ import matplotlib.cm as cm
 
 
 def rff_gauss(x, w):
-  """ this is a Pytorch version of anon's code for RFFKGauss"""
-  # Fourier transform formula from
-  # http://mathworld.wolfram.com/FourierTransformGaussian.html
+  """
+  this is a Pytorch version of anon's code for RFFKGauss
+  Fourier transform formula from http://mathworld.wolfram.com/FourierTransformGaussian.html
+  """
 
   xwt = pt.mm(x, w.t())
   z_1 = pt.cos(xwt)
@@ -37,7 +38,10 @@ def expand_vector(v, tgt_vec):
     return ValueError
 
 
-def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True, dataset='digits'):
+def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True,
+                          dataset='digits', data_dir='../../data'):
+  if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
   transforms_list = [transforms.ToTensor()]
   if dataset == 'digits':
@@ -46,15 +50,15 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True,
       mnist_sdev = 0.3081
       transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
     prep_transforms = transforms.Compose(transforms_list)
-    trn_data = datasets.MNIST('../../data', train=True, download=True, transform=prep_transforms)
-    tst_data = datasets.MNIST('../../data', train=False, transform=prep_transforms)
+    trn_data = datasets.MNIST(data_dir, train=True, download=True, transform=prep_transforms)
+    tst_data = datasets.MNIST(data_dir, train=False, transform=prep_transforms)
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   elif dataset == 'fashion':
     assert not normalize
     prep_transforms = transforms.Compose(transforms_list)
-    trn_data = datasets.FashionMNIST('../../data', train=True, download=True, transform=prep_transforms)
-    tst_data = datasets.FashionMNIST('../../data', train=False, transform=prep_transforms)
+    trn_data = datasets.FashionMNIST(data_dir, train=True, download=True, transform=prep_transforms)
+    tst_data = datasets.FashionMNIST(data_dir, train=False, transform=prep_transforms)
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   return train_loader, test_loader
@@ -67,7 +71,6 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw
   fill_mat = np.zeros((n_to_fill, 28, 28))
   mnist_mat = np.concatenate([mnist_mat, fill_mat])
   mnist_mat_as_list = [np.split(mnist_mat[n_rows*i:n_rows*(i+1)], n_rows) for i in range(n_cols)]
-  # print([k.shape for k in mnist_mat_as_list[0]])
   mnist_mat_flat = np.concatenate([np.concatenate(k, axis=1).squeeze() for k in mnist_mat_as_list], axis=1)
 
   if denorm:

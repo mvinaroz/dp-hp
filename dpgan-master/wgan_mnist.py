@@ -48,7 +48,7 @@ class WassersteinGAN(object):
         self.data_td, self.label_td = loaddata(self.digit, self.data_name, self.data_path)
 
         print self.data_td.shape
-        np.save('dpgan_data.npy', self.data_td)
+        np.save('plots_and_synth_datasets/dpgan_data.npy', self.data_td)
         # for digit 0: (self.data_td).shape: (5923, 784), (self.label_td).shape: (5923,), type(self.data_td)
         # & type(self.label_td): 'numpy.ndarray'
         self.data_td = normlization(self.data_td)
