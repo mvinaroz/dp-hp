@@ -134,9 +134,9 @@ def get_args():
   parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
-  parser.add_argument('--log-dir', type=str, default=None, help='override')  # constructed if None
-  parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-  parser.add_argument('--synth-mnist', action='store_true', default=True)
+  parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
+  parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
+  parser.add_argument('--synth-mnist', action='store_true', default=True, help='if true, make 60k synthetic mnist')
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=500)
@@ -146,18 +146,18 @@ def get_args():
   parser.add_argument('--lr-decay', type=float, default=0.9)
 
   # MODEL DEFINITION
-  parser.add_argument('--gen-labels', action='store_true', default=True)
-  parser.add_argument('--uniform-labels', action='store_true', default=True)
-  parser.add_argument('--batch-norm', action='store_true', default=True)
-  parser.add_argument('--d-code', '-dcode', type=int, default=5)
-  parser.add_argument('--gen-spec', type=str, default='100,50')
-  parser.add_argument('--big-gen', action='store_true', default=False)
-  parser.add_argument('--real-mmd', action='store_true', default=False)
+  parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
+  parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
+  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
+  parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
+  parser.add_argument('--gen-spec', type=str, default='100,50', help='specifies hidden layers of generator')
+  parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
+  parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
 
   # DP SPEC
-  parser.add_argument('--d-rff', type=int, default=1000)
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0)
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.4)
+  parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
+  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0, help='standard dev. for filter sampling')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=0.4, help='')
   ar = parser.parse_args()
 
   if ar.log_dir is None:
