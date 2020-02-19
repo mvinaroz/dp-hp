@@ -2,11 +2,15 @@
 
 To run the tabular experiments it is enough to run the script single_generator_priv_all.py with some of the arguments.
 
+## Datasets
+
+We include in the supplementary materials to the links of each dataset. We include also all the datasets in this dataset, except for the credit dataset which is too large. Intrusion (and also adult) datasets can downloaded with the SDGym package.
+
 ## Arguments
 
 The arguments are following:  
 
-dataset - type of dataset, choices: epileptic, credit, census, cervical, adult, isolet, default=credit  
+dataset - type of dataset, choices: epileptic, credit, census, cervical, adult, isolet, intrusion, covertype, default=adult  
 private - if running the generator with privacy guarantees, choices: 0, (non-private), 1 (private), by default non-private training is run  
 epochs - number of training epochs for generator  
 batch - batch size  
