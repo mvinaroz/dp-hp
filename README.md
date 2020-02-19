@@ -21,6 +21,8 @@
 
 ###Tabular data
 
+`code` contains separate scripts for each of the tabular datasets.
+
 
 ### High-dimensional data
 `code/mnist` contains code for mnist data experiments. See `code/mnist/scripts_to_run.txt` for instructions on how to run the experiments.
