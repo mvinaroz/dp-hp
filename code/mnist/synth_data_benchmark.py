@@ -49,11 +49,11 @@ def main():
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
   if ar.data == 'digits':
-    train_data = datasets.MNIST('../../data', train=True)
-    test_data = datasets.MNIST('../../data', train=False)
+    train_data = datasets.MNIST('data', train=True)
+    test_data = datasets.MNIST('data', train=False)
   elif ar.data == 'fashion':
-    train_data = datasets.FashionMNIST('../../data', train=True)
-    test_data = datasets.FashionMNIST('../../data', train=False)
+    train_data = datasets.FashionMNIST('data', train=True)
+    test_data = datasets.FashionMNIST('data', train=False)
   else:
     raise ValueError
 
@@ -96,6 +96,7 @@ def main():
 
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
+  # some custom settings were added to the model in order to either improve convergence or reduce runtime
   model_specs = defaultdict(dict)
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
