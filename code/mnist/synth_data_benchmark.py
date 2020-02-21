@@ -129,7 +129,7 @@ def main():
     print(f'Model: {key}')
 
     acc_str = 'acc:'
-    f1_str = 'f1'
+    f1_str = 'f1:'
 
     if not ar.skip_gen_to_real:
       model = models[key](**model_specs[key])
