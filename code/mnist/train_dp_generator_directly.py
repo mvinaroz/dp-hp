@@ -145,13 +145,13 @@ def get_args():
   parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
   parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
-  parser.add_argument('--gen-spec', type=str, default='100,50', help='specifies hidden layers of generator')
+  parser.add_argument('--gen-spec', type=str, default='200,100', help='specifies hidden layers of generator')
   parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0, help='standard dev. for filter sampling')
+  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=127.0, help='standard dev. for filter sampling')
   parser.add_argument('--noise-factor', '-noise', type=float, default=0.6, help='privacy noise parameter')
   ar = parser.parse_args()
 

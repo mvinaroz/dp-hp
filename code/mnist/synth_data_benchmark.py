@@ -127,26 +127,38 @@ def main():
 
   for key in run_keys:
     print(f'Model: {key}')
+
+    acc_str = 'acc:'
+    f1_str = 'f1'
+
     if not ar.skip_gen_to_real:
       model = models[key](**model_specs[key])
       g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
+      acc_str = acc_str + f' gen to real {g_to_r_acc}'
+      f1_str = f1_str + f' gen to real {g_to_r_f1}'
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 
     if ar.compute_real_to_real:
       model = models[key](**model_specs[key])
       base_acc, base_f1, base_conf = test_model(model, x_real_train, y_real_train, x_real_test, y_real_test)
+      acc_str = acc_str + f' real to real {base_acc}'
+      f1_str = f1_str + f' real to real {base_f1}'
     else:
       base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
 
     if ar.compute_real_to_gen:
       model = models[key](**model_specs[key])
       r_to_g_acc, r_to_g_f1, r_to_g_conv = test_model(model, x_real_train, y_real_train, x_gen[:10000], y_gen[:10000])
+      acc_str = acc_str + f' real to gen {r_to_g_acc}'
+      f1_str = f1_str + f' real to gen {r_to_g_f1}'
     else:
       r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
 
-    print(f'acc: real {base_acc}, gen to real {g_to_r_acc}, real to gen {r_to_g_acc}')
-    print(f'f1:  real {base_f1}, gen to real {g_to_r_f1}, real to gen {r_to_g_f1}')
+    # print(f'acc: real {base_acc}, gen to real {g_to_r_acc}, real to gen {r_to_g_acc}')
+    # print(f'f1:  real {base_f1}, gen to real {g_to_r_f1}, real to gen {r_to_g_f1}')
+    print(acc_str)
+    print(f1_str)
     if ar.print_conf_mat:
       print('gen to real confusion matrix:')
       print(g_to_r_conf)
