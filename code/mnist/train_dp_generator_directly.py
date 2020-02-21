@@ -89,7 +89,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
   assert d_rff % 2 == 0
   w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
   if real_mmd:
-    print('we use full MMD here')
+    # print('we use full MMD here')
 
     def rff_mmd_loss(data_enc, gen_enc):
       dxx, dxy, dyy = get_squared_dist(data_enc, gen_enc)
@@ -106,7 +106,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       noise = pt.randn(d_rff, device=device) * (2 * noise_factor / batch_size)
       return pt.sum((data_emb + noise - gen_emb) ** 2)
   else:
-    print('we use the random feature mean embeddings here')
+    # print('we use the random feature mean embeddings here')
 
     def label_mean_embedding(data, labels):
       return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
