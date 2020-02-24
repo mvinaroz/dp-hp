@@ -59,7 +59,7 @@ def main():
   else:
     raise ValueError
 
-  x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpNoney()
+  x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
