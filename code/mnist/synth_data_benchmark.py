@@ -37,6 +37,8 @@ def main():
   parser.add_argument('--compute-real-to-real', action='store_true', default=False, help='add train:real,test:real')
   parser.add_argument('--compute-real-to-gen', action='store_true', default=False, help='add train:real,test:gen')
 
+  parser.add_argument('--partial-data', type=float, default=1., help='fraction on data to use in training')
+
   ar = parser.parse_args()
 
   if ar.data_log_name is not None:
@@ -57,7 +59,7 @@ def main():
   else:
     raise ValueError
 
-  x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
+  x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpNoney()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
@@ -75,6 +77,11 @@ def main():
   if ar.shuffle_data:
     rand_perm = np.random.permutation(y_gen.shape[0])
     x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
+
+  if ar.partial_data < 1.:
+    new_n_data = int(60000 * ar.partial_data)
+    x_gen, y_gen = x_gen[:new_n_data], y_gen[:new_n_data]
+    print(f'training on {ar.partial_data * 100.}% of the original syntetic dataset')
 
   print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
         f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
