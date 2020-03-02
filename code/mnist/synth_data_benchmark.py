@@ -17,6 +17,45 @@ def test_model(model, x_trn, y_trn, x_tst, y_tst):
   return acc, f1, conf
 
 
+def subsample_data(x, y, frac, balance_classes=True):
+  n_data = y.shape[0]
+  n_classes = np.max(y) + 1
+  new_n_data = int(n_data * frac)
+  if not balance_classes:
+    x, y = x[:new_n_data], y[:new_n_data]
+  else:
+    n_data_per_class = new_n_data // n_classes
+    assert n_data_per_class * n_classes == new_n_data
+    print(f'starting label count {[sum(y == k) for k in range(n_classes)]}')
+    print('DEBUG: NCLASSES', n_classes, 'NDATA', n_data)
+    rand_perm = np.random.permutation(n_data)
+    x = x[rand_perm]
+    y = y[rand_perm]
+    # y_scalar = np.argmax(y, axis=1)
+
+    data_ids = [[], [], [], [], [], [], [], [], [], []]
+    n_full = 0
+    for idx in range(n_data):
+      l = y[idx]
+      if len(data_ids[l]) < n_data_per_class:
+        data_ids[l].append(idx)
+        # print(l)
+        if len(data_ids[l]) == n_data_per_class:
+          n_full += 1
+          if n_full == n_classes:
+            break
+
+    data_ids = np.asarray(data_ids)
+    data_ids = np.reshape(data_ids, (new_n_data,))
+    rand_perm = np.random.permutation(new_n_data)
+    data_ids = data_ids[rand_perm]  # otherwise sorted by class
+    x = x[data_ids]
+    y = y[data_ids]
+
+    print(f'subsampled label count {[sum(y == k) for k in range(n_classes)]}')
+  return x, y
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
@@ -37,7 +76,8 @@ def main():
   parser.add_argument('--compute-real-to-real', action='store_true', default=False, help='add train:real,test:real')
   parser.add_argument('--compute-real-to-gen', action='store_true', default=False, help='add train:real,test:gen')
 
-  parser.add_argument('--partial-data', type=float, default=1., help='fraction on data to use in training')
+  parser.add_argument('--subsample', type=float, default=1., help='fraction on data to use in training')
+  parser.add_argument('--sub-balanced-labels', action='store_true', default=False, help='add train:real,test:gen')
 
   ar = parser.parse_args()
 
@@ -78,10 +118,11 @@ def main():
     rand_perm = np.random.permutation(y_gen.shape[0])
     x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
 
-  if ar.partial_data < 1.:
-    new_n_data = int(60000 * ar.partial_data)
-    x_gen, y_gen = x_gen[:new_n_data], y_gen[:new_n_data]
-    print(f'training on {ar.partial_data * 100.}% of the original syntetic dataset')
+  if ar.subsample < 1.:
+    x_gen, y_gen = subsample_data(x_gen, y_gen, ar.subsample, ar.sub_balanced_labels)
+    x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, ar.subsample, ar.sub_balanced_labels)
+
+    print(f'training on {ar.subsample * 100.}% of the original syntetic dataset')
 
   print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
         f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
@@ -126,12 +167,6 @@ def main():
   else:
     run_keys = models.keys()
 
-  # for key in models.keys():
-  #
-  #
-  #   if ar.skip_slow_models and key in slow_models:
-  #     continue
-
   for key in run_keys:
     print(f'Model: {key}')
 
@@ -174,7 +209,8 @@ def main():
       accs = np.asarray([base_acc, g_to_r_acc, r_to_g_acc])
       f1_scores = np.asarray([base_f1, g_to_r_f1, r_to_g_f1])
       conf_mats = np.stack([base_conf, g_to_r_conf, r_to_g_conv])
-      np.savez(os.path.join(log_save_dir, f'{key}_log'), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
+      file_name = f'{key}_log' if ar.subsample == 1. else f'sub{ar.subsample}_{key}_log'
+      np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
 
 if __name__ == '__main__':
