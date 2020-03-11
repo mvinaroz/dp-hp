@@ -1,7 +1,7 @@
 import os
 from collections import defaultdict
 import numpy as np
-from torchvision import datasets
+# from torchvision import datasets
 import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
@@ -29,22 +29,24 @@ def load_real_data(data_key, data_from_torch):
     else:
       raise ValueError
   else:
-    if data_key == 'digits':
-      train_data = datasets.MNIST('data', train=True)
-      test_data = datasets.MNIST('data', train=False)
-    elif data_key == 'fashion':
-      train_data = datasets.FashionMNIST('data', train=True)
-      test_data = datasets.FashionMNIST('data', train=False)
-    else:
-      raise ValueError
+    # if data_key == 'digits':
+    #   train_data = datasets.MNIST('data', train=True)
+    #   test_data = datasets.MNIST('data', train=False)
+    # elif data_key == 'fashion':
+    #   train_data = datasets.FashionMNIST('data', train=True)
+    #   test_data = datasets.FashionMNIST('data', train=False)
+    # else:
+    #   raise ValueError
 
-    print('got dataset')
-    x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
-    x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
-    print('reshaped train set')
-    x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
-    x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
-    return x_real_train, y_real_train, x_real_test, y_real_test
+
+    # print('got dataset')
+    # x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
+    # x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
+    # print('reshaped train set')
+    # x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
+    # x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
+    # return x_real_train, y_real_train, x_real_test, y_real_test
+    raise NotImplementedError
 
 def subsample_data(x, y, frac, balance_classes=True):
   n_data = y.shape[0]
@@ -124,9 +126,8 @@ def main():
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
 
+  print('loading real data')
   x_real_train, y_real_train, x_real_test, y_real_test = load_real_data(ar.data, ar.data_from_torch)
-
-  print('reshaped test set')
   print('loading gen data')
   time.sleep(5)
   gen_data = np.load(ar.data_path)
