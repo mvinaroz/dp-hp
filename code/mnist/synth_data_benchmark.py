@@ -6,6 +6,7 @@ import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
+import time
 
 
 def test_model(model, x_trn, y_trn, x_tst, y_tst):
@@ -104,11 +105,12 @@ def main():
   print('got dataset')
   x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
-
+  print('reshaped train set')
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
   x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
-
+  print('reshaped test set')
   print('loading gen data')
+  time.sleep(5)
   gen_data = np.load(ar.data_path)
   print('loaded gen data')
   x_gen, y_gen = gen_data['data'], gen_data['labels']
