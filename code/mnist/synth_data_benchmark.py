@@ -18,6 +18,34 @@ def test_model(model, x_trn, y_trn, x_tst, y_tst):
   return acc, f1, conf
 
 
+def load_real_data(data_key, data_from_torch):
+  if not data_from_torch:
+    if data_key == 'digits':
+      d = np.load('data/MNIST/numpy_dmnist.npz') # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
+      return d['x_train'], d['y_train'], d['x_test'], d['y_test']
+    elif data_key == 'fashion':
+      d = np.load('data/FashionMNIST/numpy_fmnist.npz')
+      return d['x_train'], d['y_train'], d['x_test'], d['y_test']
+    else:
+      raise ValueError
+  else:
+    if data_key == 'digits':
+      train_data = datasets.MNIST('data', train=True)
+      test_data = datasets.MNIST('data', train=False)
+    elif data_key == 'fashion':
+      train_data = datasets.FashionMNIST('data', train=True)
+      test_data = datasets.FashionMNIST('data', train=False)
+    else:
+      raise ValueError
+
+    print('got dataset')
+    x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
+    x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
+    print('reshaped train set')
+    x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
+    x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
+    return x_real_train, y_real_train, x_real_test, y_real_test
+
 def subsample_data(x, y, frac, balance_classes=True):
   n_data = y.shape[0]
   n_classes = np.max(y) + 1
@@ -80,6 +108,8 @@ def main():
   parser.add_argument('--subsample', type=float, default=1., help='fraction on data to use in training')
   parser.add_argument('--sub-balanced-labels', action='store_true', default=False, help='add train:real,test:gen')
 
+  parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
+
   ar = parser.parse_args()
 
   if ar.data_log_name is not None:
@@ -93,21 +123,9 @@ def main():
   print('made dir')
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
-  if ar.data == 'digits':
-    train_data = datasets.MNIST('data', train=True)
-    test_data = datasets.MNIST('data', train=False)
-  elif ar.data == 'fashion':
-    train_data = datasets.FashionMNIST('data', train=True)
-    test_data = datasets.FashionMNIST('data', train=False)
-  else:
-    raise ValueError
 
-  print('got dataset')
-  x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
-  x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
-  print('reshaped train set')
-  x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
-  x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
+  x_real_train, y_real_train, x_real_test, y_real_test = load_real_data(ar.data, ar.data_from_torch)
+
   print('reshaped test set')
   print('loading gen data')
   time.sleep(5)
