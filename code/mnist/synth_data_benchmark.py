@@ -86,8 +86,10 @@ def main():
 
   gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
   log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
+  print('attempting to make dir')
   if ar.log_results and not os.path.exists(log_save_dir):
     os.makedirs(log_save_dir)
+  print('made dir')
   if ar.data_path is None:
     ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
   if ar.data == 'digits':
@@ -99,6 +101,7 @@ def main():
   else:
     raise ValueError
 
+  print('got dataset')
   x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
   x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
@@ -118,6 +121,7 @@ def main():
     rand_perm = np.random.permutation(y_gen.shape[0])
     x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
 
+  print('checking subsample')
   if ar.subsample < 1.:
     x_gen, y_gen = subsample_data(x_gen, y_gen, ar.subsample, ar.sub_balanced_labels)
     x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, ar.subsample, ar.sub_balanced_labels)
@@ -158,6 +162,7 @@ def main():
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
 
+  print('got models, setting keys')
   if ar.custom_keys is not None:
     run_keys = ar.custom_keys.split(',')
   elif ar.skip_slow_models:

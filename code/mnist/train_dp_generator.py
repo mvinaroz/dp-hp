@@ -8,7 +8,7 @@ from models_gen import FCGen, FCLabelGen, FCCondGen
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 
 
-def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, ae_conv, ae_label,
+def train(dec, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, ae_conv, ae_label,
           do_gen_labels, uniform_labels):
 
   gen.train()
@@ -21,19 +21,24 @@ def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_in
     bs = labels.shape[0]
 
     if not do_gen_labels:
-      loss = rff_mmd_loss(enc(data), gen(gen.get_code(bs, device)))
+      # loss = rff_mmd_loss(enc(data), gen(gen.get_code(bs, device)))
+      loss = rff_mmd_loss(data, dec(gen(gen.get_code(bs, device))))
 
     elif uniform_labels:
       one_hots = pt.zeros(bs, 10, device=device)
       one_hots.scatter_(1, labels.to(device)[:, None], 1)
       gen_code, gen_labels = gen.get_code(bs, device)
-      loss = rff_mmd_loss(enc(data), one_hots, gen(gen_code), gen_labels)
+      # loss = rff_mmd_loss(enc(data), one_hots, gen(gen_code), gen_labels)
+      gen_enc = gen(gen_code)
+      gen_dat = dec(gen_enc)
+      loss = rff_mmd_loss(data, one_hots, gen_dat, gen_labels)
 
     else:
       one_hots = pt.zeros(bs, 10, device=device)
       one_hots.scatter_(1, labels.to(device)[:, None], 1)
       gen_enc, gen_labels = gen(gen.get_code(bs, device))
-      loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+      # loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+      loss = rff_mmd_loss(data, one_hots, dec(gen_enc), gen_labels)
 
     optimizer.zero_grad()
     loss.backward()
@@ -44,7 +49,7 @@ def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_in
         epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
 
 
-def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label, ae_norm_data,
+def test(dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae_conv, ae_label, ae_norm_data,
          do_gen_labels, uniform_labels, log_dir):
   gen.eval()
   gen_samples, gen_labels = None, None
@@ -57,35 +62,37 @@ def test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, batch_size, ae
       if not ae_conv:
         data = flat_data(data.to(device), labels.to(device), device, n_labels=10, add_label=ae_label)
 
-      data_enc = enc(data)
+      # data_enc = enc(data)
       bs = labels.shape[0]
 
       if not do_gen_labels:
         gen_enc = gen(gen.get_code(bs, device))
         gen_labels = None
-        loss = rff_mmd_loss(enc(data), gen_enc)
+        # loss = rff_mmd_loss(enc(data), gen_enc)
+        loss = rff_mmd_loss(data, dec(gen_enc))
 
       elif uniform_labels:
         one_hots = pt.zeros(bs, 10, device=device)
         one_hots.scatter_(1, labels.to(device)[:, None], 1)
         gen_code, gen_labels = gen.get_code(bs, device)
         gen_enc = gen(gen_code)
-        loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+        # loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+        loss = rff_mmd_loss(data, one_hots, dec(gen_enc), gen_labels)
 
       else:
         one_hots = pt.zeros(bs, 10, device=device)
         one_hots.scatter_(1, labels.to(device)[:, None], 1)
         gen_enc, gen_labels = gen(gen.get_code(bs, device))
-        loss = rff_mmd_loss(enc(data), one_hots, gen_enc, gen_labels)
+        loss = rff_mmd_loss(data, one_hots, dec(gen_enc), gen_labels)
 
       gen_samples = dec(gen_enc)
 
       test_loss += loss.item()  # sum up batch loss
     test_loss /= (len(test_loader.dataset) / batch_size)
 
-    data_enc_batch = data_enc.cpu().numpy()
-    med_dist = meddistance(data_enc_batch)
-    print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
+    # data_enc_batch = data_enc.cpu().numpy()
+    # med_dist = meddistance(data_enc_batch)
+    # print(f'med distance for encodings is {med_dist}, heuristic suggests sigma={med_dist ** 2}')
 
     if uniform_labels:
       ordered_labels = pt.repeat_interleave(pt.arange(10), 10)[:, None].to(device)
@@ -265,7 +272,7 @@ def main():
   dec_reduced_dict = {k: dec_extended_dict[k] for k in dec.state_dict().keys()}
   dec.load_state_dict(dec_reduced_dict)
 
-  enc = enc.to(device)
+  # enc = enc.to(device)
   dec = dec.to(device)
 
   gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
@@ -278,15 +285,15 @@ def main():
     gen = FCGen(ar.d_code, gen_spec, ar.d_enc, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
-  rff_mmd_loss = get_rff_mmd_loss(ar.d_enc, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
+  rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
                                   ar.n_labels, ar.noise_factor, ar.batch_size)
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
-    train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
+    train(dec, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
           ar.ae_conv, ar.ae_label, ar.gen_labels, ar.uniform_labels)
-    test(enc, dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
+    test(dec, gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
          ar.ae_conv, ar.ae_label, ar.ae_norm_data, ar.gen_labels, ar.uniform_labels, ar.log_dir)
     scheduler.step()
 

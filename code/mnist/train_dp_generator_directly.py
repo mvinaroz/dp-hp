@@ -85,7 +85,8 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   print('Test set: Average loss: {:.4f}'.format(test_loss))
 
 
-def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size, real_mmd):
+def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size, real_mmd,
+                     renorm_release):
   assert d_rff % 2 == 0
   w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
   if real_mmd:
@@ -104,7 +105,12 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       data_emb = mean_embedding(data_enc)
       gen_emb = mean_embedding(gen_out)
       noise = pt.randn(d_rff, device=device) * (2 * noise_factor / batch_size)
-      return pt.sum((data_emb + noise - gen_emb) ** 2)
+      noisy_emb = data_emb + noise
+      if renorm_release == 'scale':
+        noisy_emb = noisy_emb / pt.norm(noisy_emb)  # rescale to L2 norm 1
+      elif renorm_release == 'clip':
+        noisy_emb = noisy_emb / pt.max(pt.norm(noisy_emb), other=pt.tensor(1., device=device))  # clip to L2 norm 1, don't touch smaller norms
+      return pt.sum((noisy_emb - gen_emb) ** 2)
   else:
     # print('we use the random feature mean embeddings here')
 
@@ -115,7 +121,12 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       data_emb = label_mean_embedding(data_enc, labels)  # (d_rff, n_labels)
       gen_emb = label_mean_embedding(gen_enc, gen_labels)
       noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
-      return pt.sum((data_emb + noise - gen_emb) ** 2)
+      noisy_emb = data_emb + noise
+      if renorm_release == 'scale':
+        noisy_emb = noisy_emb / pt.norm(noisy_emb)  # rescale to L2 norm 1
+      elif renorm_release == 'clip':
+        noisy_emb = noisy_emb / pt.max(pt.norm(noisy_emb), other=pt.tensor(1., device=device))  # clip to L2 norm 1, don't touch smaller norms
+      return pt.sum((noisy_emb - gen_emb) ** 2)
   return rff_mmd_loss
 
 
@@ -153,6 +164,7 @@ def get_args():
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=127.0, help='standard dev. for filter sampling')
   parser.add_argument('--noise-factor', '-noise', type=float, default=0.6, help='privacy noise parameter')
+  parser.add_argument('--renorm-release', type=str, default=None, help='project noisy loss back to hypersphere')
   ar = parser.parse_args()
 
   if ar.log_dir is None:
@@ -229,7 +241,7 @@ def main():
   gen = gen.to(device)
 
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
-                                  ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd)
+                                  ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd, ar.renorm_release)
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
