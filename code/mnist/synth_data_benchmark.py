@@ -108,7 +108,9 @@ def main():
   x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
   x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
 
+  print('loading gen data')
   gen_data = np.load(ar.data_path)
+  print('loaded gen data')
   x_gen, y_gen = gen_data['data'], gen_data['labels']
   if len(y_gen.shape) == 2:  # remove onehot
     if y_gen.shape[1] == 1:
@@ -117,6 +119,8 @@ def main():
       y_gen = np.argmax(y_gen, axis=1)
     else:
       raise ValueError
+
+  print('shuffling data')
   if ar.shuffle_data:
     rand_perm = np.random.permutation(y_gen.shape[0])
     x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
