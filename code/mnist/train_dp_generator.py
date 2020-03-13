@@ -188,6 +188,7 @@ def get_args():
   parser.add_argument('--d-enc', '-denc', type=int, default=10, help='embedding space dimensionality')
   parser.add_argument('--d-code', '-dcode', type=int, default=10, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='100,100', help='specifies hidden layers of generator')
+  parser.add_argument('--embed-loss', action='store_true', default=False, help='F: pixel loss, T: encoding loss')
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=10000, help='number of random filters for apprixmate mmd')
