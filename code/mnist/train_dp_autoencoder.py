@@ -377,8 +377,8 @@ def main():
 
   summary_writer = SummaryWriter(ar.log_dir)
 
-  enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')]) if ar.enc_spec is not None else None
-  dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')]) if ar.dec_spec is not None else None
+  enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')]) if ar.enc_spec not in {None, 'none'} else None
+  dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')]) if ar.dec_spec not in {None, 'none'} else None
 
   if ar.conv_ae:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)

@@ -7,17 +7,16 @@ from autodp import rdp_acct, rdp_bank
 
 
 def main():
-
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 0.5
+    sigma = 0.4
 
     # (2) desired delta level
     delta = 1e-5
 
     # (5) number of training steps
-    n_epochs = 5  # 5 for DP-MERF and 17 for DP-MERF+AE
+    n_epochs = 3  # 5 for DP-MERF and 17 for DP-MERF+AE
     batch_size = 500  # the same across experiments
 
     n_data = 60000  # fixed for mnist
