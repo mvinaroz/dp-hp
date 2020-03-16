@@ -128,7 +128,10 @@ def train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_
       l_dec.backward()
 
     # compute global gradient norm from parameter gradient norms
-    model_params = enc.parameters() + dec.parameters()
+    model_params = list(enc.parameters()) + list(dec.parameters())
+    # for k in model_params:
+    #   print(type(k.grad))
+
     squared_param_norms = [p.batch_l2 for p in model_params]
     bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
     global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
@@ -305,7 +308,7 @@ def get_args():
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=10, help='embedding space dimensionality')
   parser.add_argument('--no-bias', action='store_true', default=True, help='remove bias units')
-  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in encoder')
+  parser.add_argument('--batch-norm', action='store_true', default=False, help='use batch norm in encoder')
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100', help='encoder hidden layers')
   parser.add_argument('--dec-spec', '-s-dec', type=str, default='100', help='decoder hidden layers')
   parser.add_argument('--conv-ae', action='store_true', default=False, help='if true, use convolutional AE (not used)')
@@ -348,6 +351,7 @@ def preprocess_args(args):
   assert not (args.conv_ae and args.label_ae)  # not supported yet
   assert not (args.layer_clip_norms and args.clip_norm)  # define only one of them
   assert not (args.clip_norm is None and args.noise_factor is not None)
+  assert not (args.noise_up_enc and args.batch_norm)
 
 
 def main():
@@ -385,6 +389,9 @@ def main():
   else:
     enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
     dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias).to(device))
+
+  if ar.noise_up_enc:
+    enc = extend(enc)
 
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,

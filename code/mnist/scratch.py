@@ -110,6 +110,64 @@ def aggregate_subsample_tests_renorm_test():
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 
+def aggregate_mar12_setups():
+  data_ids = ['d', 'f']
+  setups = ['mar12_dpmerf_de_']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  # setup_with_real_data = 'dpmerf-high-eps'
+  save_str = 'mar12'
+  # aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+  all_the_results = np.zeros((len(data_ids),
+                              len(setups) + 1,  # 0 goes to real data
+                              len(models),
+                              len(runs),
+                              len(eval_metrics)))
+  for d_idx, d in enumerate(data_ids):
+    for s_idx, s in enumerate(setups):
+      for m_idx, m in enumerate(models):
+        for run_idx, run in enumerate(runs):
+          load_file = f'logs/gen/{s}{d}{run}/synth_eval/{m}_log.npz'
+          mat = np.load(load_file)
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]
+            all_the_results[d_idx, s_idx + 1, m_idx, run_idx, e_idx] = score
+
+  np.save(f'{save_str}_full_results', all_the_results)
+
+  print('models:')
+  for model in models:
+    print(model)
+  print('acc')
+  for d_idx, d in enumerate(data_ids):
+    print('dataset', d)
+    for run_idx, run in enumerate(runs):
+      print('run', run)
+      for m_idx, m in enumerate(models):
+        print(all_the_results[d_idx, 1, m_idx, run_idx, 0])
+
+  print('f1')
+  for d_idx, d in enumerate(data_ids):
+    print('dataset', d)
+    for run_idx, run in enumerate(runs):
+      print('run', run)
+      for m_idx, m in enumerate(models):
+        print(all_the_results[d_idx, 1, m_idx, run_idx, 1])
+
+  for e_idx, e in enumerate(eval_metrics):
+    print('metric:', e)
+    for d_idx, d in enumerate(data_ids):
+      print('data:', d)
+      for s_idx, s in enumerate(['real_data'] + setups):
+        print('setup:', s)
+        print('mean:', np.mean(all_the_results[d_idx, s_idx, :, :, e_idx]))
+
+  np.save(f'{save_str}_mean_results', np.mean(all_the_results, axis=(3, 4)))
+
+
+
 def plot_subsampling_performance():
   data_ids = ['d', 'f']
   setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps']
@@ -212,7 +270,8 @@ if __name__ == '__main__':
   # plot_subsampling_performance()
   # plot_subsampling_logreg_performance()
   # plot_renorm_performance()
-  extract_numpy_data_mats()
+  # extract_numpy_data_mats()
+  aggregate_mar12_setups()
 
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist

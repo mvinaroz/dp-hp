@@ -168,7 +168,7 @@ def compute_epsilon(batch_size, steps, sigma):
 
 
 def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, data_save_str,
-                  dataset_key, run_auc_test):
+                  dataset_key, non_private, run_auc_test):
     h_dim = 128
     Z_dim = 100
 
@@ -205,8 +205,9 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     end_lr = 0.052
     lr_saturate_epochs = 10000
     batches_per_lot = 1
-    num_training_steps = 100000
-    # num_training_steps = 30000
+    num_training_steps = 100000 if not non_private else 30000
+    if non_private:
+        sigma = 0.
 
     # Set accountant type to GaussianMomentsAccountant
     num_training_images = 60000
@@ -250,9 +251,13 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     # Generator optimizer
     g_solver = tf.train.AdamOptimizer().minimize(g_loss, var_list=theta_g)
     # Discriminator Optimizer
-    d_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
-                                                       batches_per_lot=batches_per_lot)
-    d_solver = d_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
+    if non_private:
+        d_optim = tf.compat.v1.train.GradientDescentOptimizer(lr_pl)
+        d_solver = d_optim.minimize(d_loss_real + d_loss_fake, var_list=theta_d)
+    else:
+        d_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
+                                                          batches_per_lot=batches_per_lot)
+        d_solver = d_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
     # ------------------------------------------------------------------------------
 
     # Set output directory
@@ -288,7 +293,10 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             epoch = step
             curr_lr = utils.VaryRate(start_lr, end_lr, lr_saturate_epochs, epoch)
 
-            eps = compute_epsilon(batch_size, (step + 1), sigma * clipping_value)
+            if non_private:
+                eps = -1.
+            else:
+                eps = compute_epsilon(batch_size, (step + 1), sigma * clipping_value)
 
             # Save the generated images every 50 steps
             if step % 50 == 0:
@@ -413,6 +421,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-save-str', type=str, default=None)  # set for custom save subdir
     parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
+    parser.add_argument('--non-private', action='store_true', default=False, help='True: train 30k iter w/o noise')
     ar = parser.parse_args()
 
     for iteration in range(1, 2):
@@ -420,7 +429,7 @@ def main():
             for batchSize in batchSizeList:
                 print("Running TensorFlow with Sigma=%f, Clipping=%d, batchSize=%d\n" % (sigma, clipping, batchSize))
                 runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration, ar.data_save_str,
-                              ar.data, run_auc_test=False)
+                              ar.data, ar.non_private, run_auc_test=False)
 
 
 if __name__ == '__main__':
