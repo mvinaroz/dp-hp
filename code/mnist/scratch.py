@@ -86,7 +86,8 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
 
 def aggregate_subsample_tests_paper_setups():
   data_ids = ['d', 'f']
-  setups = ['dpcgan-', 'dpmerf-ae-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-']
+  setups = ['dpcgan-', 'dpmerf-ae-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-',
+            'dpmerf-nonprivate-']
   sub_ratios = ['0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
@@ -170,7 +171,8 @@ def aggregate_mar12_setups():
 
 def plot_subsampling_performance():
   data_ids = ['d', 'f']
-  setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps']
+  setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps',
+            'dpmerf-nonprivate']
   sub_ratios = [0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
   #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
@@ -265,13 +267,13 @@ if __name__ == '__main__':
   # dpcgan_plot()
   # dpgan_plot()
   # collect_synth_benchmark_results()
-  # aggregate_subsample_tests_paper_setups()
+  aggregate_subsample_tests_paper_setups()
   # aggregate_subsample_tests_renorm_test()
-  # plot_subsampling_performance()
+  plot_subsampling_performance()
   # plot_subsampling_logreg_performance()
   # plot_renorm_performance()
   # extract_numpy_data_mats()
-  aggregate_mar12_setups()
+  # aggregate_mar12_setups()
 
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist
