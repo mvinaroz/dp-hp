@@ -307,7 +307,7 @@ if __name__ == '__main__':
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
-  aggregate_mar19_nonp()
+  # aggregate_mar19_nonp()
   spot_synth_mnist_mar19()
 
 
