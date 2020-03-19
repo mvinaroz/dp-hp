@@ -1,3 +1,4 @@
+import os
 import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
@@ -61,7 +62,13 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
         for m_idx, m in enumerate(models):
           for run_idx, run in enumerate(runs):
             load_file = f'logs/gen/{s}{d}{run}/synth_eval/sub{r}_{m}_log.npz'
-            mat = np.load(load_file)
+            if os.path.isfile(load_file):
+              mat = np.load(load_file)
+            elif r == '1.0':
+              alternate_file = f'logs/gen/{s}{d}{run}/synth_eval/{m}_log.npz'
+              mat = np.load(alternate_file)
+            else:
+              raise IOError
             for e_idx, e in enumerate(eval_metrics):
               score = mat[e][1]
               all_the_results[d_idx, s_idx + 1, r_idx, m_idx, run_idx, e_idx] = score
@@ -110,6 +117,17 @@ def aggregate_subsample_tests_renorm_test():
   save_str = 'renorm'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
+def aggregate_mar19_nonp():
+  data_ids = ['d', 'f']
+  setups = ['dpmerf-nonprivate-', 'dpcgan-nonprivate-', 'mar19_nonp_ae_', 'mar19_nonp_de_']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = 'dpmerf-high-eps'
+  save_str = 'mar19_nonp'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 def aggregate_mar12_setups():
   data_ids = ['d', 'f']
@@ -267,13 +285,14 @@ if __name__ == '__main__':
   # dpcgan_plot()
   # dpgan_plot()
   # collect_synth_benchmark_results()
-  aggregate_subsample_tests_paper_setups()
+  # aggregate_subsample_tests_paper_setups()
   # aggregate_subsample_tests_renorm_test()
-  plot_subsampling_performance()
+  # plot_subsampling_performance()
   # plot_subsampling_logreg_performance()
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
+  aggregate_mar19_nonp()
 
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist

@@ -10,7 +10,7 @@ def main():
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 0.4
+    sigma = 2.5
 
     # (2) desired delta level
     delta = 1e-5
@@ -22,9 +22,11 @@ def main():
     n_data = 60000  # fixed for mnist
     steps_per_epoch = n_data // batch_size
     n_steps = steps_per_epoch * n_epochs
+    # n_steps = 1
 
     # (6) sampling rate
     prob = batch_size / n_data
+    # prob = 1
 
     """ end of input arguments """
 
