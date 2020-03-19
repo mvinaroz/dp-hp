@@ -68,6 +68,7 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
               alternate_file = f'logs/gen/{s}{d}{run}/synth_eval/{m}_log.npz'
               mat = np.load(alternate_file)
             else:
+              print('failed to load', load_file)
               raise IOError
             for e_idx, e in enumerate(eval_metrics):
               score = mat[e][1]
