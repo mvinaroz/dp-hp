@@ -69,7 +69,7 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
               mat = np.load(alternate_file)
             else:
               print('failed to load', load_file)
-              raise IOError
+              continue
             for e_idx, e in enumerate(eval_metrics):
               score = mat[e][1]
               all_the_results[d_idx, s_idx + 1, r_idx, m_idx, run_idx, e_idx] = score
