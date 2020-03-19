@@ -178,7 +178,7 @@ def plot_subsampling_performance():
   #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
-  mean_mat = np.load('mean_results.npy')
+  mean_mat = np.load('paper_mean_results.npy')
 
   for d_idx, d in enumerate(data_ids):
     for e_idx, e in enumerate(eval_metrics):

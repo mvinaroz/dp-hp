@@ -239,7 +239,7 @@ def main():
       accs = np.asarray([base_acc, g_to_r_acc, r_to_g_acc])
       f1_scores = np.asarray([base_f1, g_to_r_f1, r_to_g_f1])
       conf_mats = np.stack([base_conf, g_to_r_conf, r_to_g_conv])
-      file_name = f'{key}_log' if ar.subsample == 1. else f'sub{ar.subsample}_{key}_log'
+      file_name = f'sub{ar.subsample}_{key}_log'
       np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
 

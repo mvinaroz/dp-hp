@@ -33,9 +33,7 @@ def train(enc, dec, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, l
       if embed_loss:
         loss = rff_mmd_loss(enc(data), one_hots, gen(gen_code), gen_labels)
       else:
-        gen_enc = gen(gen_code)
-        gen_dat = dec(gen_enc)
-        loss = rff_mmd_loss(data, one_hots, gen_dat, gen_labels)
+        loss = rff_mmd_loss(data, one_hots, dec(gen(gen_code)), gen_labels)
 
     else:
       one_hots = pt.zeros(bs, 10, device=device)
@@ -299,7 +297,8 @@ def main():
     gen = FCGen(ar.d_code, gen_spec, ar.d_enc, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
-  rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
+  loss_rff_dim = 784 if not ar.embed_loss else ar.d_enc
+  rff_mmd_loss = get_rff_mmd_loss(loss_rff_dim, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
                                   ar.n_labels, ar.noise_factor, ar.batch_size)
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)

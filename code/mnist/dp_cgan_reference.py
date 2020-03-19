@@ -181,8 +181,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     else:
         raise ValueError
 
-    x_dim = mnist.train.images.shape[1]
-    y_dim = mnist.train.labels.shape[1]
+    x_dim = mnist.train_multi_release.images.shape[1]
+    y_dim = mnist.train_multi_release.labels.shape[1]
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
     y_pl = tf.placeholder(tf.float32, shape=[None, y_dim])
 
@@ -313,7 +313,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                     (result_path + "/step_{}.png").format(str(step).zfill(3)), bbox_inches='tight')
                 plt.close(fig)
 
-            x_mb, y_mb = mnist.train.next_batch(batch_size, shuffle=True)
+            x_mb, y_mb = mnist.train_multi_release.next_batch(batch_size, shuffle=True)
 
             z_sample = sample_z(batch_size, Z_dim)
 
