@@ -62,10 +62,10 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
         for m_idx, m in enumerate(models):
           for run_idx, run in enumerate(runs):
             load_file = f'logs/gen/{s}{d}{run}/synth_eval/sub{r}_{m}_log.npz'
+            alternate_file = f'logs/gen/{s}{d}{run}/synth_eval/{m}_log.npz'
             if os.path.isfile(load_file):
               mat = np.load(load_file)
-            elif r == '1.0':
-              alternate_file = f'logs/gen/{s}{d}{run}/synth_eval/{m}_log.npz'
+            elif r == '1.0' and os.path.isfile(load_file):
               mat = np.load(alternate_file)
             else:
               print('failed to load', load_file)
