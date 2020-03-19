@@ -282,6 +282,20 @@ def extract_numpy_data_mats():
   np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
 
 
+def spot_synth_mnist_mar19():
+  rff = [1, 10, 100]
+  sig = ['50', '5', '2.5', '0']
+  dat = ['d', 'f']
+  run = [0, 1, 2, 3, 4]
+  for f in rff:
+    for s in sig:
+      for d in dat:
+        for r in run:
+          path = f'logs/gen/mar19_sr_rff{f}k_sig{s}_{d}{r}/synthetic_mnist.npz'
+          if not os.path.isfile(path):
+            print(f'{path} not found')
+
+
 if __name__ == '__main__':
   # dpcgan_plot()
   # dpgan_plot()
@@ -294,6 +308,8 @@ if __name__ == '__main__':
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
   aggregate_mar19_nonp()
+  spot_synth_mnist_mar19()
+
 
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist
