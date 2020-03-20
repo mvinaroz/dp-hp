@@ -137,8 +137,9 @@ def aggregate_mar20_sr():
             'mar19_sr_rff1k_sig2.5_', 'mar19_sr_rff10k_sig2.5_', 'mar19_sr_rff100k_sig2.5_',
             'mar19_sr_rff1k_sig0_',   'mar19_sr_rff10k_sig0_',   'mar19_sr_rff100k_sig0_']
   sub_ratios = ['0.1', '0.01']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  models = ['logistic_reg']
   runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
   setup_with_real_data = 'dpmerf-high-eps'
