@@ -130,6 +130,21 @@ def aggregate_mar19_nonp():
   save_str = 'mar19_nonp'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
+def aggregate_mar20_sr():
+  data_ids = ['d', 'f']
+  setups = ['mar19_sr_rff1k_sig50_',  'mar19_sr_rff10k_sig50_',  'mar19_sr_rff100k_sig50_',
+            'mar19_sr_rff1k_sig5_',   'mar19_sr_rff10k_sig5_',   'mar19_sr_rff100k_sig5_',
+            'mar19_sr_rff1k_sig2.5_', 'mar19_sr_rff10k_sig2.5_', 'mar19_sr_rff100k_sig2.5_',
+            'mar19_sr_rff1k_sig0_',   'mar19_sr_rff10k_sig0_',   'mar19_sr_rff100k_sig0_']
+  sub_ratios = ['0.1', '0.01']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = 'dpmerf-high-eps'
+  save_str = 'mar20_sr'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+
 def aggregate_mar12_setups():
   data_ids = ['d', 'f']
   setups = ['mar12_dpmerf_de_']
@@ -198,6 +213,32 @@ def plot_subsampling_performance():
   # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
   mean_mat = np.load('paper_mean_results.npy')
+
+  for d_idx, d in enumerate(data_ids):
+    for e_idx, e in enumerate(eval_metrics):
+      plt.figure()
+      plt.title(f'data: {d}, metric: {e}')
+      plt.xscale('log')
+      plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
+
+      for s_idx, s in enumerate(setups):
+        plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
+
+      plt.xlabel('% of data')
+      plt.ylabel('accuracy')
+      plt.legend()
+      plt.savefig(f'plot_{d}_{e}.png')
+
+
+def mar19_plot_nonprivate_subsampling_performance():
+  data_ids = ['d', 'f']
+  setups = ['(ignore)', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  # runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  mean_mat = np.load('mar19_nonp_mean_results.npy')
 
   for d_idx, d in enumerate(data_ids):
     for e_idx, e in enumerate(eval_metrics):
@@ -308,8 +349,9 @@ if __name__ == '__main__':
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
   # aggregate_mar19_nonp()
-  spot_synth_mnist_mar19()
-
+  # spot_synth_mnist_mar19()
+  # mar19_plot_nonprivate_subsampling_performance()
+  aggregate_mar20_sr()
 
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist
