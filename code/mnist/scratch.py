@@ -320,7 +320,7 @@ def mar20_plot_sr_performance():
   #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
-  mean_mat = np.load('mar19_nonp_mean_results.npy')
+  mean_mat = np.load('mar20_sr_mean_results.npy')
 
   for d_idx, d in enumerate(data_ids):
     for e_idx, e in enumerate(eval_metrics):
@@ -335,7 +335,7 @@ def mar20_plot_sr_performance():
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
       plt.legend()
-      plt.savefig(f'plot_{d}_{e}.png')
+      plt.savefig(f'mar20_sr_{d}_{e}.png')
 
 
 def extract_numpy_data_mats():
@@ -379,10 +379,10 @@ if __name__ == '__main__':
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
-  # aggregate_mar19_nonp()
+  aggregate_mar19_nonp()
   # spot_synth_mnist_mar19()
   # mar19_plot_nonprivate_subsampling_performance()
-  aggregate_mar20_sr()
+  # aggregate_mar20_sr()
   # mar20_plot_sr_performance()
 
 # python3 train_dp_generator.py --ae-enc-spec 300,100 --ae-dec-spec 100 --ae-load-dir logs/ae/d0_1_0/ --log-name d0_2_0 -bs 500 -lr 1e-3 -denc 10 -dcode 10 -ep 7 --gen-spec 100,100 --ae-no-bias --d-rff 10000 --rff-sigma 80 --ae-bn --batch-norm --gen-labels --uniform-labels -noise 0.7 --synth-mnist
