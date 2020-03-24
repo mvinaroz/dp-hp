@@ -97,7 +97,7 @@ def aggregate_subsample_tests_paper_setups():
   data_ids = ['d', 'f']
   setups = ['dpcgan-', 'dpmerf-ae-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-',
             'dpmerf-nonprivate-']
-  sub_ratios = ['0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   runs = [0, 1, 2, 3, 4]
@@ -106,6 +106,19 @@ def aggregate_subsample_tests_paper_setups():
   save_str = 'subsampled'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
+
+def aggregate_subsample_tests_paper_setups_redo():
+  data_ids = ['d', 'f']
+  setups = ['dpcgan-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-',
+            'dpmerf-nonprivate-']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = 'dpmerf-high-eps'
+  save_str = 'subsampled'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 # def aggregate_subsample_tests_renorm_test():
 #   data_ids = ['']
@@ -487,13 +500,13 @@ if __name__ == '__main__':
   # collect_synth_benchmark_results()
   # aggregate_subsample_tests_paper_setups()
   # aggregate_subsample_tests_renorm_test()
-  # aggregate_subsample_tests_paper_setups()
+  aggregate_subsample_tests_paper_setups_redo()
   # plot_subsampling_performance()
   # plot_subsampling_logreg_performance()
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
-  aggregate_mar19_nonp()
+  # aggregate_mar19_nonp()
   # spot_synth_mnist_mar19()
   # mar19_plot_nonprivate_subsampling_performance()
   # aggregate_mar20_sr()
