@@ -7,8 +7,7 @@ from torchvision import datasets
 from aux import plot_mnist_batch, NamedArray
 
 
-
-if __name__ == '__main__':
+def named_array_test():
   a = np.asarray(list(range(125)))
   a = np.reshape(a, (5, 5, 5))
   name_ids = [str(k) for k in range(5)]
@@ -35,3 +34,8 @@ if __name__ == '__main__':
   merged_array = named_arr1.merge(named_arr2, merge_dim='b')
   print(merged_array.idx_names)
   print(merged_array.array)
+
+
+if __name__ == '__main__':
+  mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
+  print(mat['accuracies'])

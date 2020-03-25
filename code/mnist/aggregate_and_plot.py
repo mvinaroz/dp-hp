@@ -49,7 +49,40 @@ def dpgan_plot():
   plot_mnist_batch(data, 10, 10, 'dpgan_digit_plot', denorm=False, save_raw=False)
 
 
-def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str):
+def real_nosub_results():  # copied from doc
+  digit_acc = [[0.925, 0.925, 0.925, 0.925, 0.925], [0.968, 0.968, 0.970, 0.968, 0.970],
+               [0.555, 0.555, 0.555, 0.555, 0.555], [0.842, 0.842, 0.842, 0.842, 0.842],
+               [0.918, 0.918, 0.918, 0.918, 0.918], [0.876, 0.879, 0.877, 0.876, 0.879],
+               [0.879, 0.879, 0.879, 0.879, 0.879], [0.729, 0.729, 0.729, 0.729, 0.729],
+               [0.978, 0.978, 0.978, 0.979, 0.978], [0.927, 0.929, 0.932, 0.926, 0.927],
+               [0.908, 0.909, 0.909, 0.909, 0.910], [0.912, 0.912, 0.912, 0.912, 0.912]]
+
+  digit_f1 = [[0.924, 0.924, 0.924, 0.924, 0.924], [0.968, 0.968, 0.969, 0.968, 0.970],
+              [0.508, 0.508, 0.508, 0.508, 0.508], [0.840, 0.840, 0.840, 0.840, 0.840],
+              [0.917, 0.917, 0.917, 0.917, 0.917], [0.875, 0.878, 0.876, 0.875, 0.878],
+              [0.878, 0.878, 0.878, 0.878, 0.878], [0.723, 0.723, 0.723, 0.723, 0.723],
+              [0.978, 0.978, 0.978, 0.978, 0.978], [0.926, 0.928, 0.931, 0.924, 0.926],
+              [0.907, 0.908, 0.908, 0.907, 0.908], [0.912, 0.912, 0.912, 0.912, 0.912]]
+
+  fashion_acc = [[0.844, 0.844, 0.844, 0.844, 0.844], [0.875, 0.874, 0.875, 0.875, 0.876],
+                 [0.585, 0.585, 0.585, 0.585, 0.585], [0.648, 0.648, 0.648, 0.648, 0.648],
+                 [0.839, 0.839, 0.839, 0.839, 0.839], [0.791, 0.787, 0.791, 0.790, 0.791],
+                 [0.799, 0.799, 0.799, 0.799, 0.799], [0.561, 0.561, 0.561, 0.561, 0.561],
+                 [0.878, 0.876, 0.883, 0.884, 0.877], [0.842, 0.839, 0.841, 0.839, 0.842],
+                 [0.834, 0.832, 0.833, 0.837, 0.833], [0.826, 0.826, 0.826, 0.826, 0.826]]
+
+  fashion_f1 = [[0.843, 0.843, 0.843, 0.843, 0.843], [0.873, 0.873, 0.874, 0.874, 0.875],
+                [0.556, 0.556, 0.556, 0.556, 0.556], [0.639, 0.639, 0.639, 0.639, 0.639],
+                [0.836, 0.837, 0.836, 0.836, 0.837], [0.792, 0.788, 0.791, 0.790, 0.792],
+                [0.800, 0.800, 0.800, 0.800, 0.800], [0.546, 0.546, 0.546, 0.546, 0.546],
+                [0.878, 0.876, 0.883, 0.883, 0.877], [0.840, 0.838, 0.839, 0.837, 0.840],
+                [0.833, 0.832, 0.833, 0.836, 0.833], [0.824, 0.824, 0.824, 0.824, 0.824]]
+
+  return np.asarray(digit_acc), np.asarray(digit_f1), np.asarray(fashion_acc), np.asarray(fashion_f1)
+
+
+def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str,
+                              load_real_nosub=False):
   all_the_results = np.zeros((len(data_ids),
                               len(setups) + 1,  # 0 goes to real data
                               len(sub_ratios),
@@ -78,7 +111,14 @@ def aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_m
               if s == setup_with_real_data:
                 all_the_results[d_idx, 0, r_idx, m_idx, run_idx, e_idx] = mat[e][0]
 
-  np.save(f'{save_str}_full_results', all_the_results)
+  if load_real_nosub:
+    digit_acc, digit_f1, fashion_acc, fashion_f1 = real_nosub_results()
+    all_the_results[0, 0, 0, :, :, 0] = digit_acc
+    all_the_results[0, 0, 0, :, :, 1] = digit_f1
+    all_the_results[1, 0, 0, :, :, 0] = fashion_acc
+    all_the_results[1, 0, 0, :, :, 1] = fashion_f1
+
+  np.save(f'results_full_{save_str}', all_the_results)
 
   for e_idx, e in enumerate(eval_metrics):
     print('metric:', e)
@@ -116,9 +156,9 @@ def aggregate_subsample_tests_paper_setups_redo():
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
-  setup_with_real_data = 'dpmerf-high-eps'
-  save_str = 'subsampled'
-  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+  setup_with_real_data = 'dpmerf-high-eps-'
+  save_str = 'mar25_subsampled'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str, load_real_nosub=True)
 
 # def aggregate_subsample_tests_renorm_test():
 #   data_ids = ['']
@@ -158,6 +198,25 @@ def aggregate_mar20_sr():
   eval_metrics = ['accuracies', 'f1_scores']
   setup_with_real_data = ''
   save_str = 'mar20_sr'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+
+
+def aggregate_mar25_sr():
+  sub_ratios = ['1.0', '0.1', '0.01']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = ''
+
+  data_ids = ['d']
+  setups = ['mar19_sr_rff10k_sig50_', 'mar19_sr_rff1k_sig5_', 'mar19_sr_rff1k_sig2.5_', 'mar19_sr_rff1k_sig0_']
+  save_str = 'mar25_sr_digit'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+
+  data_ids = ['f']
+  setups = ['mar19_sr_rff100k_sig50_', 'mar19_sr_rff10k_sig5_', 'mar19_sr_rff10k_sig2.5_', 'mar19_sr_rff10k_sig0_']
+  save_str = 'mar25_sr_fashion'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 
@@ -248,7 +307,7 @@ def plot_subsampling_performance():
       plt.ylabel('accuracy')
       plt.hlines([0.4, 0.5, 0.6, 0.7, 0.8], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.legend()
-      plt.savefig(f'subsampling_{d}_{e}.png')
+      plt.savefig(f'plot_subsampling_{d}_{e}.png')
 
 
 def mar19_plot_nonprivate_subsampling_performance():
@@ -500,7 +559,7 @@ if __name__ == '__main__':
   # collect_synth_benchmark_results()
   # aggregate_subsample_tests_paper_setups()
   # aggregate_subsample_tests_renorm_test()
-  aggregate_subsample_tests_paper_setups_redo()
+  # aggregate_subsample_tests_paper_setups_redo()
   # plot_subsampling_performance()
   # plot_subsampling_logreg_performance()
   # plot_renorm_performance()
@@ -512,3 +571,4 @@ if __name__ == '__main__':
   # aggregate_mar20_sr()
   # mar20_plot_sr_performance()
   # mar24_plot_selected_sr()
+  aggregate_mar25_sr()
