@@ -37,5 +37,8 @@ def named_array_test():
 
 
 if __name__ == '__main__':
-  mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
+  'dpmerf-high-eps-f0'
+  # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
+  mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
+
   print(mat['accuracies'])

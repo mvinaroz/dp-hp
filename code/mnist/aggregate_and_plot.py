@@ -462,14 +462,15 @@ def collect_results():
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   runs = [0, 1, 2, 3, 4]
 
-  sb_setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps',
-               'dpmerf-nonprivate_1']
-  sb_ratios = [0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  sb_mat = np.load('results_full_subsampled.npy')
+  sb_setups = ['real_data', 'dpcgan',
+               # 'dpmerf-ae',
+               'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps', 'dpmerf-nonprivate_sb']
+  sb_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  sb_mat = np.load('results/results_full_mar25_subsampled.npy')
 
   np_setups = ['(np)', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
   np_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  np_mat = np.load('results_full_mar19_nonp.npy')
+  np_mat = np.load('results/results_full_mar19_nonp.npy')
 
   sr_setups = ['(sr)',
                'mar19_sr_rff1k_sig50', 'mar19_sr_rff10k_sig50', 'mar19_sr_rff100k_sig50',
@@ -477,7 +478,18 @@ def collect_results():
                'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
                'mar19_sr_rff1k_sig0', 'mar19_sr_rff10k_sig0', 'mar19_sr_rff100k_sig0']
   sr_ratios = [0.1, 0.01]
-  sr_mat = np.load('results_full_mar20_sr.npy')
+  sr_mat = np.load('results/results_full_mar20_sr.npy')
+
+  sr_d_data_ids = ['d']
+  sr_d_setups = ['(srd)', 'mar19_sr_rff10k_sig50', 'mar19_sr_rff1k_sig5', 'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff1k_sig0']
+  sr_d_ratios = [1.0, 0.1, 0.01]
+  sr_d_mat = np.load('results/results_full_mar25_sr_digit.npy')
+
+  sr_f_data_ids = ['f']
+  sr_f_setups = ['(srf)', 'mar19_sr_rff100k_sig50', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff10k_sig0']
+  sr_f_ratios = [1.0, 0.1, 0.01]
+  sr_f_mat = np.load('results/results_full_mar25_sr_fashion.npy')
+
 
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']  # order matters!
   base_idx_names = {'data_ids': data_ids, 'models': models, 'runs': runs, 'eval_metrics': eval_metrics}
@@ -494,11 +506,21 @@ def collect_results():
   sr_idx_names.update(base_idx_names)
   sr_array = NamedArray(sr_mat, dim_names, sr_idx_names)
 
+  sr_d_idx_names = {'setups': sr_d_setups, 'sub_ratios': sr_d_ratios}
+  sr_d_idx_names.update(base_idx_names)
+  sr_d_idx_names['data_ids'] = sr_d_data_ids
+  sr_d_array = NamedArray(sr_d_mat, dim_names, sr_d_idx_names)
+
+  sr_f_idx_names = {'setups': sr_f_setups, 'sub_ratios': sr_f_ratios}
+  sr_f_idx_names.update(base_idx_names)
+  sr_f_idx_names['data_ids'] = sr_f_data_ids
+  sr_f_array = NamedArray(sr_f_mat, dim_names, sr_f_idx_names)
+
   sb_np_array = sb_array.merge(np_array, merge_dim='setups')
 
   all_array = sb_np_array.merge(sr_array, merge_dim='setups')
 
-  return sb_array, np_array, sr_array, sb_np_array, all_array
+  return sb_array, np_array, sr_array, sb_np_array, all_array, sr_d_array, sr_f_array
 
 
 def plot_with_variance(x, y, color, label):
@@ -513,11 +535,6 @@ def plot_with_variance(x, y, color, label):
 
 def mar24_plot_selected_sr():
   data_ids = ['d', 'f']
-  # setups = ['()',
-  #           'mar19_sr_rff1k_sig50',  'mar19_sr_rff10k_sig50',  'mar19_sr_rff100k_sig50',
-  #           'mar19_sr_rff1k_sig5',   'mar19_sr_rff10k_sig5',   'mar19_sr_rff100k_sig5',
-  #           'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
-  #           'mar19_sr_rff1k_sig0',   'mar19_sr_rff10k_sig0',   'mar19_sr_rff100k_sig0']
   setups = ['mar19_sr_rff1k_sig50',  'mar19_sr_rff10k_sig50',  'mar19_sr_rff100k_sig50',
             'mar19_sr_rff1k_sig5',   'mar19_sr_rff10k_sig5',   'mar19_sr_rff100k_sig5',
             'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
@@ -530,7 +547,7 @@ def mar24_plot_selected_sr():
 
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
 
-  _, _, sr_array, _, _ = collect_results()
+  _, _, sr_array, _, _, sr_d_array, sr_f_array = collect_results()
 
   for d_idx, d in enumerate(data_ids):
 
@@ -553,6 +570,85 @@ def mar24_plot_selected_sr():
     plt.savefig(f'mar24_sr_var_{d}_{metric}.png')
 
 
+def mar25_plot_selected_sr():
+  sr_d_setups = ['mar19_sr_rff10k_sig50', 'mar19_sr_rff1k_sig5', 'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff1k_sig0']
+  sr_f_setups = ['mar19_sr_rff100k_sig50', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff10k_sig0']
+
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  metric = 'accuracies'
+  # metric = 'f1_scores'
+  sub_ratios = [1.0, 0.1, 0.01]
+
+  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  _, _, _, _, _, sr_d_array, sr_f_array = collect_results()
+
+  # digit plot
+  plt.figure(), plt.title(f'data: d, metric: {metric}'), plt.xscale('log')
+  plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
+  for s_idx, s in enumerate(sr_d_setups):
+    sub_mat = sr_d_array.get({'data_ids': ['d'], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+    print('sr_d:', s)
+    by_model = np.mean(sub_mat, axis=2)[0, :]  # average over runs, select 1.0 subsampling
+    for v in by_model:
+      print(v)
+    sub_mat = np.mean(sub_mat, axis=1)  # average over models
+    plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+  plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
+  plt.savefig(f'plots/mar25_sr_var_d_{metric}.png')
+
+  # digit plot
+  plt.figure(), plt.title(f'data: f, metric: {metric}'), plt.xscale('log')
+  plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
+  for s_idx, s in enumerate(sr_f_setups):
+    sub_mat = sr_f_array.get({'data_ids': ['f'], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+    print('sr_f:', s)
+    by_model = np.mean(sub_mat, axis=2)[0, :]  # average over runs, select 1.0 subsampling
+    for v in by_model:
+      print(v)
+    sub_mat = np.mean(sub_mat, axis=1)  # average over models
+    plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+
+  plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
+  plt.savefig(f'plots/mar25_sr_var_f_{metric}.png')
+
+
+def mar25_plot_nonprivate():
+  queried_setups = ['real_data',
+                    # 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps',
+                    # 'dpmerf-high-eps', 'dpmerf-nonprivate_sb'
+                    # '(np)',
+                    'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
+
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  # metric = 'accuracies'
+  metric = 'f1_scores'
+  data_ids = ['d', 'f']
+  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  _, _, _, sb_np_array, _, _, _ = collect_results()
+
+  # digit plot
+  for d_id in data_ids:
+    plt.figure(), plt.title(f'data: {d_id}, metric: {metric}'), plt.xscale('log')
+    plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      print(f'sr_{d_id}:', s)
+      by_model = np.mean(sub_mat, axis=2)[6, :]  # average over runs, select 1.0 subsampling
+      for v in by_model:
+        print(v)
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+    plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
+    plt.savefig(f'plots/mar25_nonp_var_{d_id}_{metric}.png')
+
+
 if __name__ == '__main__':
   # dpcgan_plot()
   # dpgan_plot()
@@ -565,10 +661,12 @@ if __name__ == '__main__':
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
-  # aggregate_mar19_nonp()
+  aggregate_mar19_nonp()
   # spot_synth_mnist_mar19()
   # mar19_plot_nonprivate_subsampling_performance()
   # aggregate_mar20_sr()
   # mar20_plot_sr_performance()
   # mar24_plot_selected_sr()
-  aggregate_mar25_sr()
+  # aggregate_mar25_sr()
+  # mar25_plot_selected_sr()
+  # mar25_plot_nonprivate()
