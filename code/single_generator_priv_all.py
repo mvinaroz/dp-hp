@@ -59,13 +59,13 @@ print(device)
 args=argparse.ArgumentParser()
 args.add_argument("--dataset", default="credit")
 args.add_argument("--private", type=int, default=0)
-args.add_argument("--epochs", type=int, default=5000)
+args.add_argument("--epochs", type=int, default=500)
 args.add_argument("--batch", type=float, default=0.5)
-args.add_argument("--num_features", type=int, default=10000)
+args.add_argument("--num_features", type=int, default=100)
 args.add_argument("--undersample", type=float, default=0.4)
 args.add_argument("--repeat", type=int, default=5)
-args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1])
-#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1])
+args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 arguments=args.parse_args()
 print("arg", arguments)
 
@@ -871,7 +871,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
     """ privatizing weights """
     if is_private:
-        print("lalalalala")
+        print("private")
         # desired privacy level
         epsilon = 1.0
         delta = 1e-5
@@ -932,6 +932,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
     # End of Privatising quantities if necessary
     ####################################################
 
+    ##################################################################################################################
 
     print('Starting Training')
 
@@ -1099,13 +1100,6 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
     #
     #     return roc, prc
 
-def sizeof_fmt(num, suffix='B'):
-    ''' by Fred Cirera,  https://stackoverflow.com/a/1094933/1870254, modified'''
-    for unit in ['','Ki','Mi','Gi','Ti','Pi','Ei','Zi']:
-        if abs(num) < 1024.0:
-            return "%3.1f %s%s" % (num, unit, suffix)
-        num /= 1024.0
-    return "%.1f %s%s" % (num, 'Yi', suffix)
 
 ###################################################################################################
 ###################################################################################################
