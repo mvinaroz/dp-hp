@@ -59,14 +59,14 @@ print(device)
 args=argparse.ArgumentParser()
 args.add_argument("--dataset", default="credit")
 args.add_argument("--private", type=int, default=0)
-args.add_argument("--epochs", type=int, default=500)
+args.add_argument("--epochs", nargs='+', type=int, default=[8000, 6000, 2000, 1000, 4000, 10000])
 args.add_argument("--batch", type=float, default=0.5)
-args.add_argument("--num_features", type=int, default=100)
+args.add_argument("--num_features", nargs='+', type=int, default=[500, 1000, 2000, 5000, 10000, 50000, 80000, 100000])
 args.add_argument("--undersample", type=float, default=0.4)
-args.add_argument("--repeat", type=int, default=2)
-args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1])
-#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
-args.add_argument("--data_type", default='real') #both, real, generated
+args.add_argument("--repeat", type=int, default=5)
+#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1])
+args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+args.add_argument("--data_type", default='generated') #both, real, generated
 arguments=args.parse_args()
 print("arg", arguments)
 
@@ -1176,9 +1176,9 @@ if __name__ == '__main__':
         print('is private?', is_priv_arg)
 
         if single_run == True:
-            how_many_epochs_arg = [arguments.epochs]#[200]
+            how_many_epochs_arg = arguments.epochs#[200]
             # n_features_arg = [100000]#, 5000, 10000, 50000, 80000]
-            n_features_arg = [arguments.num_features]#[500]
+            n_features_arg = arguments.num_features#[500]
             mini_batch_arg = [arguments.batch]#[0.3]
             undersampling_rates = [arguments.undersample] #[.8]  # dummy
         else:
