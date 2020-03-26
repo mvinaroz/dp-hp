@@ -28,3 +28,6 @@ classifiers - a list of methods to test, by default all methods are run.
 
 Example:
 python single_generator_priv_all.py --dataset credit --private 0 --epochs 2000 --batch 0.3 --num_features 1000 --undersample 0.5 --repeat 2 --classifiers 1 2 5
+
+
+First we test a dataset on a number of classifiers on a real dataset (in a private or non-private setting). Subsequently, we train a generator with the DP-MERF method and then we test the classifiers on the generated data (again in a private or non-private setting).
