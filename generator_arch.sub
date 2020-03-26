@@ -46,7 +46,7 @@ private=0
 
 
 dataset=census
-num_features=500 1000 2000 5000 10000 20000 50000
+num_features="'500 1000 2000 5000 10000 20000 50000'"
 undersample=0.4
 batch=0.1
 queue 1
