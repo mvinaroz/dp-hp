@@ -626,8 +626,8 @@ def mar25_plot_nonprivate():
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  # metric = 'accuracies'
-  metric = 'f1_scores'
+  metric = 'accuracies'
+  # metric = 'f1_scores'
   data_ids = ['d', 'f']
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
 
@@ -661,7 +661,7 @@ if __name__ == '__main__':
   # plot_renorm_performance()
   # extract_numpy_data_mats()
   # aggregate_mar12_setups()
-  aggregate_mar19_nonp()
+  # aggregate_mar19_nonp()
   # spot_synth_mnist_mar19()
   # mar19_plot_nonprivate_subsampling_performance()
   # aggregate_mar20_sr()
@@ -669,4 +669,4 @@ if __name__ == '__main__':
   # mar24_plot_selected_sr()
   # aggregate_mar25_sr()
   # mar25_plot_selected_sr()
-  # mar25_plot_nonprivate()
+  mar25_plot_nonprivate()
