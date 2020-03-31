@@ -3,7 +3,7 @@ import torch as pt
 from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
-from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
+from models_gen import FCCondGen, ConvCondGen  # FCGen, FCLabelGen, FCGenBig
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 from real_mmd_loss import mmd_g, get_squared_dist
 
@@ -80,8 +80,8 @@ def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interv
     optimizer.step()
 
     if batch_idx % log_interval == 0:
-      print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-        epoch, batch_idx * batch_size, n_data, 100. * batch_idx / n_data, loss.item()))
+      print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+        epoch, batch_idx * batch_size, n_data, loss.item()))
 
 
 def train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels):
@@ -111,8 +111,8 @@ def train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_los
     optimizer.step()
 
     if batch_idx % log_interval == 0:
-      print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-        epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
+      print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+        epoch, batch_idx * len(data), len(train_loader.dataset), loss.item()))
 
 
 def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_labels, uniform_labels, log_dir):
@@ -237,6 +237,9 @@ def get_args():
   parser.add_argument('--gen-spec', type=str, default='200,100', help='specifies hidden layers of generator')
   parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
+  parser.add_argument('--conv-gen', action='store_true', default=False, help='use convolutional generator')
+  parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
+  parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
@@ -311,14 +314,19 @@ def main():
   gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
+      if ar.conv_gen:
+        gen = ConvCondGen(ar.d_code, gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True)
+      else:
+        gen = FCCondGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
     else:
-      gen = FCLabelGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
+      raise ValueError
+      # gen = FCLabelGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
   else:
-    if ar.big_gen:
-      gen = FCGenBig(ar.d_code, gen_spec, 784, use_sigmoid=True)
-    else:
-      gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True, batch_norm=ar.batch_norm)
+    raise ValueError
+    # if ar.big_gen:
+    #   gen = FCGenBig(ar.d_code, gen_spec, 784, use_sigmoid=True)
+    # else:
+    #   gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
   if ar.single_release:
