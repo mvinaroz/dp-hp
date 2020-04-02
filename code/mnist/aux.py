@@ -80,6 +80,35 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw
     np.save(save_path + '_raw.npy', mnist_mat_flat)
 
 
+def get_svhn_dataloaders(batch_size, test_batch_size, use_cuda, data_dir='data/SVHN/'):
+  if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+  kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+  transforms_list = [transforms.ToTensor()]
+  prep_transforms = transforms.Compose(transforms_list)
+  trn_data = datasets.SVHN(data_dir, split='train', download=False, transform=prep_transforms)
+  tst_data = datasets.SVHN(data_dir, split='test', download=False, transform=prep_transforms)
+  train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+  test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
+  return train_loader, test_loader
+
+
+def plot_svhn_batch(svhn_mat, n_rows, n_cols, save_path, save_raw=True):
+  svhn_hw = 32
+  bs = svhn_mat.shape[0]
+  n_to_fill = n_rows * n_cols - bs
+  svhn_mat = np.reshape(svhn_mat, (bs, 3, svhn_hw, svhn_hw))
+  svhn_mat = np.transpose(svhn_mat, axes=(0, 2, 3, 1))
+  fill_mat = np.zeros((n_to_fill, svhn_hw, svhn_hw, 3))
+  svhn_mat = np.concatenate([svhn_mat, fill_mat])
+  shvn_mat_as_list = [np.split(svhn_mat[n_rows * i:n_rows * (i + 1)], n_rows) for i in range(n_cols)]
+  svhn_mat_flat = np.concatenate([np.concatenate(k, axis=1).squeeze() for k in shvn_mat_as_list], axis=1)
+
+  save_img(save_path + '.png', svhn_mat_flat)
+  if save_raw:
+    np.save(save_path + '_raw.npy', svhn_mat_flat)
+
+
 def save_gen_labels(label_mat, n_rows, n_cols, save_path, save_raw=True):
   if save_raw:
     np.save(save_path + '_raw.npy', label_mat)
