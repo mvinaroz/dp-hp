@@ -1,4 +1,5 @@
 import os
+import shutil
 import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
@@ -92,6 +93,24 @@ def named_array_test():
   print(merged_array.array)
 
 
+def collect_arp4_grid():
+  log_dir = 'logs/gen/apr4_grid_log/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for idx in range(108):
+    run_dir = f'logs/gen/apr3_sr_conv_grid_{idx}/'
+
+    final_ep = [50, 20, 5]
+    for ep in final_ep:
+      run_plot_path = run_dir + f'samples_ep{ep}.png'
+      tgt_plot_path = log_dir + f'run{idx}_ep{ep}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+        break
+
+
+
 def plot_dpcgan_data():
   # mat = np.load('dp-cgan-synth-mnist-eps1.0.npz')
   mat = np.load('dmnist-sig5-eps1.0.npz')
@@ -111,6 +130,7 @@ if __name__ == '__main__':
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
   # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
-  plot_dpcgan_data()
+  # plot_dpcgan_data()
   # print(mat['accuracies'])
+  collect_arp4_grid()
 

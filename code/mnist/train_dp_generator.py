@@ -4,7 +4,7 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_ae import FCEnc, FCDec, ConvEnc, ConvDec
-from models_gen import FCGen, FCLabelGen, FCCondGen
+from models_gen import FCCondGen
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 
 
@@ -292,9 +292,11 @@ def main():
     if ar.uniform_labels:
       gen = FCCondGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
     else:
-      gen = FCLabelGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
+      raise ValueError
+      # gen = FCLabelGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
   else:
-    gen = FCGen(ar.d_code, gen_spec, ar.d_enc, batch_norm=ar.batch_norm)
+    raise ValueError
+    # gen = FCGen(ar.d_code, gen_spec, ar.d_enc, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
   loss_rff_dim = 784 if not ar.embed_loss else ar.d_enc
