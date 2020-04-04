@@ -10,14 +10,14 @@ def main():
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 2.5
+    sigma = 3.
 
     # (2) desired delta level
     delta = 1e-5
 
     # (5) number of training steps
-    n_epochs = 3  # 5 for DP-MERF and 17 for DP-MERF+AE
-    batch_size = 500  # the same across experiments
+    n_epochs = 6  # 5 for DP-MERF and 17 for DP-MERF+AE
+    batch_size = 600  # the same across experiments
 
     n_data = 60000  # fixed for mnist
     steps_per_epoch = n_data // batch_size

@@ -73,7 +73,7 @@ def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp
         clipped_grad = pt.mean(clipped_sample_grads, dim=0)
 
         if dp_spec.noise is not None:
-          bs = clipped_grad.shape[0]
+          bs = clipped_sample_grads.shape[0]
           noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
           clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
         param.grad = clipped_grad

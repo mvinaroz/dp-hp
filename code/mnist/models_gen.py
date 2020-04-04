@@ -97,11 +97,12 @@ import torch.nn as nn
 
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_enc, n_labels, use_sigmoid=False, batch_norm=True):
+  def __init__(self, d_code, d_hid, n_labels, use_sigmoid=False, batch_norm=True, d_out=748):
     super(FCCondGen, self).__init__()
+    d_hid = [int(k) for k in d_hid.split(',')]
     self.fc1 = nn.Linear(d_code + n_labels, d_hid[0])
     self.fc2 = nn.Linear(d_hid[0], d_hid[1])
-    self.fc3 = nn.Linear(d_hid[1], d_enc)
+    self.fc3 = nn.Linear(d_hid[1], d_out)
     self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
     self.bn2 = nn.BatchNorm1d(d_hid[1]) if batch_norm else None
     self.relu = nn.ReLU()
@@ -139,6 +140,7 @@ class ConvCondGen(nn.Module):
     super(ConvCondGen, self).__init__()
     self.nc = [int(k) for k in nc_str.split(',')] + [1]  # number of channels
     self.ks = [int(k) for k in ks_str.split(',')]  # kernel sizes
+    d_hid = [int(k) for k in d_hid.split(',')]
     assert len(self.nc) == 3 and len(self.ks) == 2
     self.hw = 7  # image height and width before upsampling
     self.reshape_size = self.nc[0]*self.hw**2

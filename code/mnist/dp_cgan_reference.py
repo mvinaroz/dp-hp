@@ -181,8 +181,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     else:
         raise ValueError
 
-    x_dim = mnist.train_multi_release.images.shape[1]
-    y_dim = mnist.train_multi_release.labels.shape[1]
+    x_dim = mnist.train.images.shape[1]
+    y_dim = mnist.train.labels.shape[1]
     x_pl = tf.placeholder(tf.float32, shape=[None, x_dim])
     y_pl = tf.placeholder(tf.float32, shape=[None, y_dim])
 
@@ -313,7 +313,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                     (result_path + "/step_{}.png").format(str(step).zfill(3)), bbox_inches='tight')
                 plt.close(fig)
 
-            x_mb, y_mb = mnist.train_multi_release.next_batch(batch_size, shuffle=True)
+            x_mb, y_mb = mnist.train.next_batch(batch_size, shuffle=True)
 
             z_sample = sample_z(batch_size, Z_dim)
 
@@ -411,25 +411,28 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
 
 
 def main():
-    sigma_clipping_list = [[1.12, 1.1]]
+    # sigma_clipping_list = [[1.12, 1.1]]
     # sigma_clipping_list = [[0.1, 1.1]]
-    batchSizeList = [600]
-    epsilon = 9.6
+    # batchSizeList = [600]
+    # epsilon = 9.6
     # epsilon = 1e10
-    delta = 1e-5
+    # delta = 1e-5
 
     parser = argparse.ArgumentParser()
     parser.add_argument('--data-save-str', type=str, default=None)  # set for custom save subdir
     parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
     parser.add_argument('--non-private', action='store_true', default=False, help='True: train 30k iter w/o noise')
+    parser.add_argument('--sigma', type=float, default=1.12)
+    parser.add_argument('--clip', type=float, default=1.1)
+    parser.add_argument('--epsilon', type=float, default=9.6)
+    parser.add_argument('--delta', type=float, default=1e-5)
+    parser.add_argument('--batch-size', '-bs', type=int, default=600)
+    parser.add_argument('--iteration', type=int, default=1)
     ar = parser.parse_args()
 
-    for iteration in range(1, 2):
-        for sigma, clipping in sigma_clipping_list:
-            for batchSize in batchSizeList:
-                print("Running TensorFlow with Sigma=%f, Clipping=%d, batchSize=%d\n" % (sigma, clipping, batchSize))
-                runTensorFlow(sigma, float(clipping), batchSize, epsilon, delta, iteration, ar.data_save_str,
-                              ar.data, ar.non_private, run_auc_test=False)
+    print("Running TensorFlow with Sigma=%f, Clipping=%d, batchSize=%d\n" % (ar.sigma, ar.clip, ar.batch_size))
+    runTensorFlow(ar.sigma, ar.clip, ar.batch_size, ar.epsilon, ar.delta, ar.iteration, ar.data_save_str,
+                  ar.data, ar.non_private, run_auc_test=False)
 
 
 if __name__ == '__main__':

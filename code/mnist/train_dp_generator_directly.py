@@ -16,16 +16,17 @@ def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, do_ge
   emb_acc = []
   n_data = 0
   for data, labels in train_loader:
-    # print(pt.max(data), pt.min(data))
     data, labels = data.to(device), labels.to(device)
     data = flat_data(data, labels, device, n_labels=10, add_label=False)
-    data_emb = rff_gauss(data, w_freq)
     if not do_gen_labels:
+      data_emb = rff_gauss(data, w_freq)
       emb_acc.append(pt.sum(data_emb, 0))
     else:
       one_hots = pt.zeros(batch_size, 10, device=device)
       one_hots.scatter_(1, labels[:, None], 1)
-      emb_acc.append(pt.sum(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), one_hots]), 0))
+      data_emb = rff_gauss(data, w_freq)
+      kernel_emb = pt.einsum('ki,kj->kij', [data_emb, one_hots])
+      emb_acc.append(pt.sum(kernel_emb, 0))
     n_data += data.shape[0]
 
   print('done collecting batches, n_data', n_data)
@@ -233,18 +234,17 @@ def get_args():
   parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
   parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
   parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
+  parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
-  parser.add_argument('--gen-spec', type=str, default='200,100', help='specifies hidden layers of generator')
-  parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
+  parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
-  parser.add_argument('--conv-gen', action='store_true', default=False, help='use convolutional generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=127.0, help='standard dev. for filter sampling')
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.6, help='privacy noise parameter')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
   parser.add_argument('--renorm-release', type=str, default=None, help='project noisy loss back to hypersphere')
 
   parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
@@ -311,13 +311,12 @@ def main():
 
   device = pt.device("cuda" if use_cuda else "cpu")
 
-  gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
       if ar.conv_gen:
-        gen = ConvCondGen(ar.d_code, gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True)
+        gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True)
       else:
-        gen = FCCondGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True, batch_norm=False)
+        gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, use_sigmoid=True, batch_norm=False, d_out=784)
     else:
       raise ValueError
       # gen = FCLabelGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)

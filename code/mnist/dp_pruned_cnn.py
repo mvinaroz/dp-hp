@@ -46,6 +46,7 @@ def train(model, device, train_loader, optimizer, epoch, clip_norm, dp_sigma, lo
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         data, target = data.to(device), target.to(device)
+        batch_size = data.shape[0]
         optimizer.zero_grad()
         output = model(data)
         # loss = loss_fun(output, target)
@@ -62,7 +63,8 @@ def train(model, device, train_loader, optimizer, epoch, clip_norm, dp_sigma, lo
           # clip samplewise gradients, then take average
           clipped_grad = pt.mean(p.grad_batch * global_clips[(...,) + (None,) * (len(p.grad_batch.shape) - 1)], dim=0)
           # compute Gaussian noise standard deviation based on sigma, norm clip & batch size
-          noise_sdev = (2 * dp_sigma * clip_norm / clipped_grad.shape[0])
+
+          noise_sdev = (2 * dp_sigma * clip_norm / batch_size)
           # clipped_grad = p.grad
           p.grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
 
@@ -103,7 +105,7 @@ def main():
     parser.add_argument('--batch-size', '-bs', type=int, default=500)
     parser.add_argument('--test-batch-size', type=int, default=1000)
     parser.add_argument('--epochs', type=int, default=14)
-    parser.add_argument('--lr', '-lr',type=float, default=0.0001)
+    parser.add_argument('--lr', '-lr', type=float, default=0.0001)
     parser.add_argument('--gamma', type=float, default=0.7)
     parser.add_argument('--no-cuda', action='store_true', default=False)
     parser.add_argument('--seed', type=int, default=1)

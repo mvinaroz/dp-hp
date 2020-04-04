@@ -17,8 +17,9 @@ def rff_gauss(x, w):
   xwt = pt.mm(x, w.t())
   z_1 = pt.cos(xwt)
   z_2 = pt.sin(xwt)
-
-  z = pt.cat((z_1, z_2), 1) / pt.sqrt(pt.tensor(w.shape[1]).to(pt.float32))  # w.shape[1] == n_features / 2
+  z_cat = pt.cat((z_1, z_2), 1)
+  norm_const = pt.sqrt(pt.tensor(w.shape[0]).to(pt.float32))
+  z = z_cat / norm_const  # w.shape[0] == n_features / 2
   return z
 
 
@@ -38,7 +39,7 @@ def expand_vector(v, tgt_vec):
     return ValueError
 
 
-def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=True,
+def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False,
                           dataset='digits', data_dir='data'):
   if not os.path.exists(data_dir):
     os.makedirs(data_dir)
