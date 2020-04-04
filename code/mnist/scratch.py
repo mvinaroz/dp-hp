@@ -98,7 +98,7 @@ def collect_arp4_grid():
   if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-  for idx in range(108):
+  for idx in range(216):
     run_dir = f'logs/gen/apr3_sr_conv_grid_{idx}/'
 
     final_ep = [50, 20, 5]
