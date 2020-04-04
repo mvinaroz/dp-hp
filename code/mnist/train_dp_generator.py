@@ -251,13 +251,12 @@ def preprocess_args(args):
   assert args.gen_labels or not args.uniform_labels
   assert args.ae_load_dir is not None
 
+
 def main():
   # Training settings
 
   ar = get_args()
-
   pt.manual_seed(ar.seed)
-
   use_cuda = not ar.no_cuda and pt.cuda.is_available()
   train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda,
                                                     normalize=ar.ae_norm_data, dataset=ar.data)
@@ -290,7 +289,7 @@ def main():
   # gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, batch_norm=ar.batch_norm)
+      gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, batch_norm=ar.batch_norm, d_out=ar.d_enc)
     else:
       raise ValueError
       # gen = FCLabelGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
