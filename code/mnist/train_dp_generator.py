@@ -287,10 +287,10 @@ def main():
   enc = enc.to(device)
   dec = dec.to(device)
 
-  gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
+  # gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
+      gen = FCCondGen(ar.d_code, ar.gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
     else:
       raise ValueError
       # gen = FCLabelGen(ar.d_code, gen_spec, ar.d_enc, ar.n_labels, batch_norm=ar.batch_norm)
