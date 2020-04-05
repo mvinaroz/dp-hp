@@ -110,7 +110,6 @@ def collect_arp4_grid():
         break
 
 
-
 def collect_apr4_sr_conv():
   log_dir = 'logs/gen/apr5_conv_sig_overview/'
   if not os.path.exists(log_dir):

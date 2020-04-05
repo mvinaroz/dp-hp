@@ -141,7 +141,7 @@ def get_args():
 
   # MODEL DEFINITION
   # parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
-  parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
+  parser.add_argument('--conv-gen', action='store_true', default=False, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
