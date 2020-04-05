@@ -125,7 +125,6 @@ def collect_apr4_sr_conv():
           tgt_plot_path = log_dir + f'data_{data}_{mode}_sig{sig}_run{run}_ep20.png'
           if os.path.exists(run_plot_path):
             shutil.copy(run_plot_path, tgt_plot_path)
-            break
 
 
 
