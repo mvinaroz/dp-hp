@@ -205,7 +205,7 @@ def main():
 
   # init model
   if ar.conv_gen:
-    gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes, batch_norm=True).to(device)
+    gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
   else:
     gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, batch_norm=True).to(device)
 

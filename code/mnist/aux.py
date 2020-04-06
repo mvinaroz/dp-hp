@@ -13,7 +13,6 @@ def rff_gauss(x, w):
   this is a Pytorch version of anon's code for RFFKGauss
   Fourier transform formula from http://mathworld.wolfram.com/FourierTransformGaussian.html
   """
-
   xwt = pt.mm(x, w.t())
   z_1 = pt.cos(xwt)
   z_2 = pt.sin(xwt)
