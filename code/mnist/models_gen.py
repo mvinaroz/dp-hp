@@ -97,7 +97,7 @@ import torch.nn as nn
 
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, n_labels, use_sigmoid=False, batch_norm=True, d_out=784):
+  def __init__(self, d_code, d_hid, n_labels, use_sigmoid=True, batch_norm=True, d_out=784):
     super(FCCondGen, self).__init__()
     d_hid = [int(k) for k in d_hid.split(',')]
     self.fc1 = nn.Linear(d_code + n_labels, d_hid[0])

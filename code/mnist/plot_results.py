@@ -269,7 +269,7 @@ def plot_with_variance(x, y, color, label, alpha=0.1):
   """
   means_y = np.mean(y, axis=1)
   sdevs_y = np.std(y, axis=1)
-  plt.plot(x, means_y, label=label, color=color)
+  plt.plot(x, means_y, 'o-', label=label, color=color)
   plt.fill_between(x, means_y-sdevs_y, means_y+sdevs_y, alpha=alpha, color=color)
   # plt.errorbar(x, means_y, yerr=sdevs_y,
   #              fmt='.',
@@ -468,13 +468,12 @@ def apr6_replot_nonprivate(plot_var=False):
     for s_idx, s in enumerate(queried_setups):
       sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
 
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
 
       if plot_var:
-        sub_mat = np.mean(sub_mat, axis=1)  # average over models
         plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
       else:
-        sub_mat = np.median(sub_mat, axis=2)  # average over runs
-        sub_mat = np.mean(sub_mat, axis=1)  # average over models
+        sub_mat = np.mean(sub_mat, axis=1)  # average over runs
         plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
 
     plt.xlabel('# samples generated')
@@ -488,7 +487,7 @@ def apr6_replot_nonprivate(plot_var=False):
       # plt.hlines([0.5, 0.6, 0.7], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.4, 0.8))
     plt.legend(loc='upper left')
-    plt.savefig(f'plots/apr4_nonp_{"var_" if plot_var else ""}{d_id}_{metric}_mean_of_medians.png')
+    plt.savefig(f'plots/apr4_nonp_{"var_" if plot_var else ""}{d_id}_{metric}.png')
 
 
 def apr6_plot_overfit_conv(plot_var=False):
@@ -560,8 +559,8 @@ if __name__ == '__main__':
   # aggregate_apr4_sr_conv()
   # apr4_plot_subsampling_performance_variance()
 
-  # apr6_replot_nonprivate(plot_var=True)
-  # apr6_replot_nonprivate(plot_var=False)
+  apr6_replot_nonprivate(plot_var=True)
+  apr6_replot_nonprivate(plot_var=False)
 
   # apr6_plot_overfit_conv(plot_var=False)
-  apr6_plot_overfit_conv(plot_var=True)
+  # apr6_plot_overfit_conv(plot_var=True)

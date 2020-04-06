@@ -87,6 +87,21 @@ def collect_apr4_sr_conv():
             shutil.copy(run_plot_path, tgt_plot_path)
 
 
+def collect_apr6_sr_conv():
+  log_dir = 'logs/gen/apr5_conv_sig_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for mode in ['', '_bigmodel']:
+    for data in {'d', 'f'}:
+      for sig in [0, 2.5, 5, 10, 25, 50]:
+        for run in range(5):
+          run_dir = f'logs/gen/apr4_sr_conv{mode}_sig_{sig}_{data}{run}/'
+          run_plot_path = run_dir + f'samples_ep20.png'
+          tgt_plot_path = log_dir + f'data_{data}_{mode}_sig{sig}_run{run}_ep20.png'
+          if os.path.exists(run_plot_path):
+            shutil.copy(run_plot_path, tgt_plot_path)
+
 def collect_apr6_noconv_grid():
   log_dir = 'logs/gen/apr6_noconv_grid_overview/'
   if not os.path.exists(log_dir):
