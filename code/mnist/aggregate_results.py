@@ -185,7 +185,7 @@ def aggregate_apr4_sr_conv():
 def aggregate_apr6_sr_conv():
   data_ids = ['d', 'f']
 
-  setups = ['apr6_sr_conv_sig_0_', 'apr6_sr_conv_sig_5_', 'apr6_sr_conv_sig_25_']
+  setups = ['apr6_sr_conv_sig0_', 'apr6_sr_conv_sig5_', 'apr6_sr_conv_sig25_']
   sub_ratios = ['1.0', '0.1', '0.01', '0.001']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']

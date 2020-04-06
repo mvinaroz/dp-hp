@@ -97,7 +97,7 @@ def collect_apr6_noconv_grid():
     for sig in [0, 2.5, 5, 10, 25, 50]:
       for run in range(5):
         run_dir = f'logs/gen/apr6_sr_noconv_sig_{sig}_{data}{run}/'
-        run_plot_path = run_dir + f'samples_ep20.png'
+        run_plot_path = run_dir + f'samples_ep5.png'
         tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep20.png'
         if os.path.exists(run_plot_path):
           shutil.copy(run_plot_path, tgt_plot_path)
