@@ -160,17 +160,6 @@ def aggregate_subsample_tests_paper_setups_redo():
   save_str = 'mar25_subsampled'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str, load_real_nosub=True)
 
-# def aggregate_subsample_tests_renorm_test():
-#   data_ids = ['']
-#   setups = ['dmnist_rescale_release_off_', 'dmnist_rescale_release_on_', 'dmnist_rescale_release_clip_']
-#   sub_ratios = ['0.1', '0.01', '0.001']
-#   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-#             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-#   runs = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
-#   eval_metrics = ['accuracies']
-#   setup_with_real_data = 'dmnist_rescale_release_off_'
-#   save_str = 'renorm'
-#   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 def aggregate_mar19_nonp():
   data_ids = ['d', 'f']
@@ -217,6 +206,23 @@ def aggregate_mar25_sr():
   data_ids = ['f']
   setups = ['mar19_sr_rff100k_sig50_', 'mar19_sr_rff10k_sig5_', 'mar19_sr_rff10k_sig2.5_', 'mar19_sr_rff10k_sig0_']
   save_str = 'mar25_sr_fashion'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
+
+
+def aggregate_apr4_sr_conv():
+  data_ids = ['d', 'f']
+
+  setups = ['apr4_sr_conv_bigmodel_sig_0_', 'apr4_sr_conv_bigmodel_sig_2.5_', 'apr4_sr_conv_bigmodel_sig_5_',
+            'apr4_sr_conv_bigmodel_sig_10_', 'apr4_sr_conv_bigmodel_sig_25_', 'apr4_sr_conv_bigmodel_sig_50_',
+            'apr4_sr_conv_sig_0_', 'apr4_sr_conv_sig_2.5_', 'apr4_sr_conv_sig_5_',
+            'apr4_sr_conv_sig_10_', 'apr4_sr_conv_sig_25_', 'apr4_sr_conv_sig_50_']
+  sub_ratios = ['1.0', '0.1', '0.01', '0.001']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = ''
+  save_str = 'apr4_sr_conv'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str)
 
 
@@ -669,4 +675,5 @@ if __name__ == '__main__':
   # mar24_plot_selected_sr()
   # aggregate_mar25_sr()
   # mar25_plot_selected_sr()
-  mar25_plot_nonprivate()
+  # mar25_plot_nonprivate()
+  aggregate_apr4_sr_conv()
