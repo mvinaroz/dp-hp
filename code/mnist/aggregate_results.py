@@ -322,6 +322,15 @@ def collect_results():
   sr_conv_apr4_idx_names['data_ids'] = sr_conv_apr4_data_ids
   sr_conv_apr4_array = NamedArray(sr_conv_apr4_mat, dim_names, sr_conv_apr4_idx_names)
 
+  sr_conv_apr6_data_ids = ['d', 'f']
+  sr_conv_apr6_setups = ['(apr6)',
+                         'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
+  sr_conv_apr6_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  sr_conv_apr6_mat = np.load('results/results_full_apr6_sr_conv_partial.npy')
+  sr_conv_apr6_idx_names = {'setups': sr_conv_apr6_setups, 'sub_ratios': sr_conv_apr6_ratios}
+  sr_conv_apr6_idx_names.update(base_idx_names)
+  sr_conv_apr6_idx_names['data_ids'] = sr_conv_apr6_data_ids
+  sr_conv_apr6_array = NamedArray(sr_conv_apr6_mat, dim_names, sr_conv_apr6_idx_names)
 
   sb_np_array = sb_array.merge(np_array, merge_dim='setups')
   all_array = sb_np_array.merge(sr_array, merge_dim='setups')
@@ -333,7 +342,8 @@ def collect_results():
                 'all': all_array,
                 'sr_d': sr_d_array,
                 'sr_f': sr_f_array,
-                'sr_conv_apr4': sr_conv_apr4_array}
+                'sr_conv_apr4': sr_conv_apr4_array,
+                'sr_conv_apr6': sr_conv_apr6_array}
 
   return array_dict
 

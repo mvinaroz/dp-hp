@@ -102,6 +102,7 @@ def collect_apr6_sr_conv():
           if os.path.exists(run_plot_path):
             shutil.copy(run_plot_path, tgt_plot_path)
 
+
 def collect_apr6_noconv_grid():
   log_dir = 'logs/gen/apr6_noconv_grid_overview/'
   if not os.path.exists(log_dir):
@@ -113,7 +114,23 @@ def collect_apr6_noconv_grid():
       for run in range(5):
         run_dir = f'logs/gen/apr6_sr_noconv_sig_{sig}_{data}{run}/'
         run_plot_path = run_dir + f'samples_ep5.png'
-        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep20.png'
+        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep5.png'
+        if os.path.exists(run_plot_path):
+          shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def collect_apr6_better_conv():
+  log_dir = 'logs/gen/apr6_conv_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  max_ep = '5'
+  for data in {'d', 'f'}:
+    for sig in [0, 5, 25]:
+      for run in range(5):
+        run_dir = f'logs/gen/apr6_sr_conv_sig_{sig}_{data}{run}/'
+        run_plot_path = run_dir + f'samples_ep{max_ep}.png'
+        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep{max_ep}.png'
         if os.path.exists(run_plot_path):
           shutil.copy(run_plot_path, tgt_plot_path)
 
@@ -139,7 +156,8 @@ if __name__ == '__main__':
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
   # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
-  plot_dpcgan_data()
+  # plot_dpcgan_data()
   # print(mat['accuracies'])
   # collect_arp4_grid()
   # collect_apr4_sr_conv()
+  collect_apr6_better_conv()
