@@ -112,7 +112,7 @@ def collect_apr6_noconv_grid():
   for data in {'d', 'f'}:
     for sig in [0, 2.5, 5, 10, 25, 50]:
       for run in range(5):
-        run_dir = f'logs/gen/apr6_sr_noconv_sig_{sig}_{data}{run}/'
+        run_dir = f'logs/gen/apr6_sr_noconv_sig{sig}_{data}{run}/'
         run_plot_path = run_dir + f'samples_ep5.png'
         tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep5.png'
         if os.path.exists(run_plot_path):
@@ -128,7 +128,7 @@ def collect_apr6_better_conv():
   for data in {'d', 'f'}:
     for sig in [0, 5, 25]:
       for run in range(5):
-        run_dir = f'logs/gen/apr6_sr_conv_sig_{sig}_{data}{run}/'
+        run_dir = f'logs/gen/apr6_sr_conv_sig{sig}_{data}{run}/'
         run_plot_path = run_dir + f'samples_ep{max_ep}.png'
         tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep{max_ep}.png'
         if os.path.exists(run_plot_path):
