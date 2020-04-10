@@ -1,101 +1,163 @@
+import os
+import shutil
+import matplotlib
+matplotlib.use('Agg')  # to plot without Xserver
+import matplotlib.pyplot as plt
 import numpy as np
-from aux import plot_mnist_batch, save_img
 from torchvision import datasets
+from aux import plot_mnist_batch, NamedArray
 
 
-def dpcgan_plot():
-  # loads = np.load('dp_cgan_synth_mnist_eps9.6.npz')
-  loads = np.load('plots_and_synth_datasets/reference_dpcgan1_9.6.npz')
-  # loads = np.load('ref_dpcgan_fashion5-eps9.6.npz')
-  data, labels = loads['data'], loads['labels']
-
-  print(np.sum(labels, axis=0))
-  print(np.max(data), np.min(data))
-
-  rand_perm = np.random.permutation(data.shape[0])
-  data = data[rand_perm]
-  labels = np.argmax(labels[rand_perm], axis=1)
-
-  data_ids = [[], [], [], [], [], [], [], [], [], []]
-  n_full = 0
-  for idx in range(data.shape[0]):
-    l = labels[idx]
-    if len(data_ids[l]) < 10:
-      data_ids[l].append(idx)
-      # print(l)
-      if len(data_ids[l]) == 10:
-        n_full += 1
-        if n_full == 10:
-          break
-
-  data_ids = np.asarray(data_ids)
-  data_ids = np.reshape(data_ids, (100,))
-  plot_mat = data[data_ids]
-  plot_mnist_batch(plot_mat, 10, 10, 'dp_cgan_digit_plot', denorm=False, save_raw=False)
+def expand_vector(v, tgt_vec):
+  # expand v to the number of dimensions of tgt_vec. I'm sure there is a nice way to do this but this works as well
+  tgt_dims = len(tgt_vec.shape)
+  if tgt_dims == 2:
+    return v[:, None]
+  elif tgt_dims == 3:
+    return v[:, None, None]
+  elif tgt_dims == 4:
+    return v[:, None, None, None]
+  elif tgt_dims == 5:
+    return v[:, None, None, None, None]
+  elif tgt_dims == 6:
+    return v[:, None, None, None, None, None]
+  else:
+    return ValueError
 
 
-def dpgan_plot():
-  data = np.load('plots_and_synth_datasets/dpgan_data.npy')
+def named_array_test():
+  a = np.asarray(list(range(125)))
+  a = np.reshape(a, (5, 5, 5))
+  name_ids = [str(k) for k in range(5)]
+  dim_names = ['a', 'b', 'c']
+  idx_names = {'a': name_ids, 'b': name_ids, 'c': name_ids}
+  named_arr1 = NamedArray(a, dim_names, idx_names)
 
-  rand_perm = np.random.permutation(data.shape[0])
-  data = data[rand_perm] / 255.
+  q1 = {'a': ['4', '2'], 'b': ['0', '1'], 'c': ['3', '4']}
+  get1 = named_arr1.get(q1)
 
-  data = data[:100]
-  print(np.max(data), np.min(data))
-  plot_mnist_batch(data, 10, 10, 'dpgan_digit_plot', denorm=False, save_raw=False)
+  q2 = {'b': ['1', '3', '0'], 'c': ['1', '4']}
+  get2 = named_arr1.get(q2)
+
+  print(a)
+  print(get1)
+  print(get2)
+
+  a = np.asarray(list(range(1000, 1060)))
+  a = np.reshape(a, (5, 3, 4))
+  dim_names = ['a', 'b', 'c']
+  idx_names = {'a': ['1', '2', '3', '7', '9'], 'b': ['10', '11', '12'], 'c': ['0', '1', '2', '3']}
+  named_arr2 = NamedArray(a, dim_names, idx_names)
+
+  merged_array = named_arr1.merge(named_arr2, merge_dim='b')
+  print(merged_array.idx_names)
+  print(merged_array.array)
 
 
-def direct_gen_redo_plot():
-  data = np.load('plots_and_synth_datasets/MNISTsamples_ep5_raw.npy')
+def collect_arp4_grid():
+  log_dir = 'logs/gen/apr4_grid_log/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
 
-  mnist_mean = 0.1307
-  mnist_sdev = 0.3081
-  data = np.clip((data - mnist_mean) / mnist_sdev, a_min=0., a_max=1.)
-  # data = data[:100]
+  for idx in range(216):
+    run_dir = f'logs/gen/apr3_sr_conv_grid_{idx}/'
+
+    final_ep = [50, 20, 5]
+    for ep in final_ep:
+      run_plot_path = run_dir + f'samples_ep{ep}.png'
+      tgt_plot_path = log_dir + f'run{idx}_ep{ep}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+        break
+
+
+def collect_apr4_sr_conv():
+  log_dir = 'logs/gen/apr5_conv_sig_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for mode in ['', '_bigmodel']:
+    for data in {'d', 'f'}:
+      for sig in [0, 2.5, 5, 10, 25, 50]:
+        for run in range(5):
+          run_dir = f'logs/gen/apr4_sr_conv{mode}_sig_{sig}_{data}{run}/'
+          run_plot_path = run_dir + f'samples_ep20.png'
+          tgt_plot_path = log_dir + f'data_{data}_{mode}_sig{sig}_run{run}_ep20.png'
+          if os.path.exists(run_plot_path):
+            shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def collect_apr6_sr_conv():
+  log_dir = 'logs/gen/apr5_conv_sig_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for mode in ['', '_bigmodel']:
+    for data in {'d', 'f'}:
+      for sig in [0, 2.5, 5, 10, 25, 50]:
+        for run in range(5):
+          run_dir = f'logs/gen/apr4_sr_conv{mode}_sig_{sig}_{data}{run}/'
+          run_plot_path = run_dir + f'samples_ep20.png'
+          tgt_plot_path = log_dir + f'data_{data}_{mode}_sig{sig}_run{run}_ep20.png'
+          if os.path.exists(run_plot_path):
+            shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def collect_apr6_noconv_grid():
+  log_dir = 'logs/gen/apr6_noconv_grid_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+
+  for data in {'d', 'f'}:
+    for sig in [0, 2.5, 5, 10, 25, 50]:
+      for run in range(5):
+        run_dir = f'logs/gen/apr6_sr_noconv_sig{sig}_{data}{run}/'
+        run_plot_path = run_dir + f'samples_ep5.png'
+        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep5.png'
+        if os.path.exists(run_plot_path):
+          shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def collect_apr6_better_conv():
+  log_dir = 'logs/gen/apr6_conv_overview/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  max_ep = '5'
+  for data in {'d', 'f'}:
+    for sig in [0, 5, 25]:
+      for run in range(5):
+        run_dir = f'logs/gen/apr6_sr_conv_sig{sig}_{data}{run}/'
+        run_plot_path = run_dir + f'samples_ep{max_ep}.png'
+        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep{max_ep}.png'
+        if os.path.exists(run_plot_path):
+          shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def plot_dpcgan_data():
+  # mat = np.load('dp-cgan-synth-mnist-eps1.0.npz')
+  # mat = np.load('dmnist-sig5-eps1.0.npz')
+  mat = np.load('old_plots_and_synth_datasets/dp-cgan-synth-mnist-eps=9.6.npz')
+  data = mat['data']
   print(data.shape)
-  print(np.max(data), np.min(data))
-  # plot_mnist_batch(data, 10, 10, 'fmnist_direct_plot', denorm=False, save_raw=False)
-  save_img('plots_and_synth_datasets/dmnist_direct_plot.png', data)
-
-
-def data_plot():
-  # loads = np.load('dp_cgan_synth_mnist_eps9.6.npz')
-
-  # loads = np.load('ref_dpcgan_fashion5-eps9.6.npz')
-
-  # train_data = datasets.MNIST('../../data', train=True)
-  train_data = datasets.FashionMNIST('../../data', train=True)
-
-  data, labels = train_data.data.numpy(), train_data.targets.numpy()
-  data = np.reshape(data, (-1, 784)) / 255
-
-  print(np.sum(labels, axis=0))
-  print(np.max(data), np.min(data))
-
-  # rand_perm = np.random.permutation(data.shape[0])
-  # data = data[rand_perm]
-  # labels = np.argmax(labels[rand_perm], axis=1)
-
-  data_ids = [[], [], [], [], [], [], [], [], [], []]
-  n_full = 0
-  for idx in range(data.shape[0]):
-    l = labels[idx]
-    if len(data_ids[l]) < 10:
-      data_ids[l].append(idx)
-      # print(l)
-      if len(data_ids[l]) == 10:
-        n_full += 1
-        if n_full == 10:
-          break
-
-  data_ids = np.asarray(data_ids)
-  data_ids = np.reshape(data_ids, (100,))
-  plot_mat = data[data_ids]
-  plot_mnist_batch(plot_mat, 10, 10, 'data_fashion_plot', denorm=False, save_raw=False)
+  labels = mat['labels']
+  mat_select = []
+  for idx in range(10):
+    ids = np.where(labels[:, idx] == 1)[0][:10]
+    print(ids)
+    mat_select.append(data[ids])
+  mat_select = np.concatenate(mat_select, axis=0)
+  print(mat_select.shape)
+  plot_mnist_batch(mat_select, 10, 10, 'dmnist-eps9.6-plot', save_raw=False)
 
 
 if __name__ == '__main__':
-  # dpcgan_plot()
-  # dpgan_plot()
-  # direct_gen_redo_plot()
-  data_plot()
+  # 'dpmerf-high-eps-f0'
+  # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
+  # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
+  # plot_dpcgan_data()
+  # print(mat['accuracies'])
+  # collect_arp4_grid()
+  # collect_apr4_sr_conv()
+  collect_apr6_better_conv()

@@ -3,16 +3,94 @@ import torch as pt
 from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
-from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
+from models_gen import FCCondGen, ConvCondGen  # FCGen, FCLabelGen, FCGenBig
 from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 from real_mmd_loss import mmd_g, get_squared_dist
 
 
-def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels):
+def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, do_gen_labels,
+                            n_labels, noise_factor, batch_size):  # create data mean embedding and rff_loss function
+  assert d_rff % 2 == 0
+  w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+
+  emb_acc = []
+  n_data = 0
+  for data, labels in train_loader:
+    data, labels = data.to(device), labels.to(device)
+    data = flat_data(data, labels, device, n_labels=10, add_label=False)
+    if not do_gen_labels:
+      data_emb = rff_gauss(data, w_freq)
+      emb_acc.append(pt.sum(data_emb, 0))
+    else:
+      one_hots = pt.zeros(batch_size, 10, device=device)
+      one_hots.scatter_(1, labels[:, None], 1)
+      data_emb = rff_gauss(data, w_freq)
+      kernel_emb = pt.einsum('ki,kj->kij', [data_emb, one_hots])
+      emb_acc.append(pt.sum(kernel_emb, 0))
+    n_data += data.shape[0]
+
+  print('done collecting batches, n_data', n_data)
+  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
+  print(pt.norm(emb_acc), emb_acc.shape)
+  if not do_gen_labels:
+    noise = pt.randn(d_rff, device=device) * (2 * noise_factor / n_data)
+  else:
+    noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / n_data)
+  noisy_emb = emb_acc + noise
+
+  if not do_gen_labels:
+
+    def mean_embedding(x):
+      return pt.mean(rff_gauss(x, w_freq), dim=0)
+
+    def rff_mmd_loss(gen_out):
+      gen_emb = mean_embedding(gen_out)
+      return pt.sum((noisy_emb - gen_emb) ** 2)
+  else:
+    def label_mean_embedding(data, labels):
+      return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
+
+    def rff_mmd_loss(gen_enc, gen_labels):
+      gen_emb = label_mean_embedding(gen_enc, gen_labels)
+      return pt.sum((noisy_emb - gen_emb) ** 2)
+
+  return rff_mmd_loss, noisy_emb
+
+
+def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels,
+                         batch_size, n_data):
+  n_iter = n_data // batch_size
+  for batch_idx in range(n_iter):
+    # print(pt.max(data), pt.min(data))
+    if not do_gen_labels:
+      loss = rff_mmd_loss(gen(gen.get_code(batch_size, device)))
+
+    elif uniform_labels:
+      # one_hots = pt.zeros(bs, 10, device=device)
+      # one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      gen_code, gen_labels = gen.get_code(batch_size, device)
+      loss = rff_mmd_loss(gen(gen_code), gen_labels)
+    else:
+      # one_hots = pt.zeros(bs, 10, device=device)
+      # one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      gen_enc, gen_labels = gen(gen.get_code(batch_size, device))
+      loss = rff_mmd_loss(gen_enc, gen_labels)
+
+    optimizer.zero_grad()
+    loss.backward()
+    optimizer.step()
+
+    if batch_idx % log_interval == 0:
+      print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+        epoch, batch_idx * batch_size, n_data, loss.item()))
+
+
+def train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, do_gen_labels, uniform_labels):
 
   for batch_idx, (data, labels) in enumerate(train_loader):
     # print(pt.max(data), pt.min(data))
-    data = flat_data(data.to(device), labels.to(device), device, n_labels=10, add_label=False)
+    data, labels = data.to(device), labels.to(device)
+    data = flat_data(data, labels, device, n_labels=10, add_label=False)
 
     bs = labels.shape[0]
     if not do_gen_labels:
@@ -20,12 +98,12 @@ def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interva
 
     elif uniform_labels:
       one_hots = pt.zeros(bs, 10, device=device)
-      one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      one_hots.scatter_(1, labels[:, None], 1)
       gen_code, gen_labels = gen.get_code(bs, device)
       loss = rff_mmd_loss(data, one_hots, gen(gen_code), gen_labels)
     else:
       one_hots = pt.zeros(bs, 10, device=device)
-      one_hots.scatter_(1, labels.to(device)[:, None], 1)
+      one_hots.scatter_(1, labels[:, None], 1)
       gen_enc, gen_labels = gen(gen.get_code(bs, device))
       loss = rff_mmd_loss(data, one_hots, gen_enc, gen_labels)
 
@@ -34,8 +112,8 @@ def train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interva
     optimizer.step()
 
     if batch_idx % log_interval == 0:
-      print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
-        epoch, batch_idx * len(data), len(train_loader.dataset), 100. * batch_idx / len(train_loader), loss.item()))
+      print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(
+        epoch, batch_idx * len(data), len(train_loader.dataset), loss.item()))
 
 
 def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_labels, uniform_labels, log_dir):
@@ -85,11 +163,13 @@ def test(gen, device, test_loader, rff_mmd_loss, epoch, batch_size, do_gen_label
   print('Test set: Average loss: {:.4f}'.format(test_loss))
 
 
-def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size, real_mmd):
+def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, noise_factor, batch_size, real_mmd,
+                     renorm_release):
   assert d_rff % 2 == 0
   w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+
   if real_mmd:
-    print('we use full MMD here')
+    # print('we use full MMD here')
 
     def rff_mmd_loss(data_enc, gen_enc):
       dxx, dxy, dyy = get_squared_dist(data_enc, gen_enc)
@@ -104,9 +184,14 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       data_emb = mean_embedding(data_enc)
       gen_emb = mean_embedding(gen_out)
       noise = pt.randn(d_rff, device=device) * (2 * noise_factor / batch_size)
-      return pt.sum((data_emb + noise - gen_emb) ** 2)
+      noisy_emb = data_emb + noise
+      if renorm_release == 'scale':
+        noisy_emb = noisy_emb / pt.norm(noisy_emb)  # rescale to L2 norm 1
+      elif renorm_release == 'clip':
+        noisy_emb = noisy_emb / pt.max(pt.norm(noisy_emb), other=pt.tensor(1., device=device))  # clip to L2 norm 1, don't touch smaller norms
+      return pt.sum((noisy_emb - gen_emb) ** 2)
   else:
-    print('we use the random feature mean embeddings here')
+    # print('we use the random feature mean embeddings here')
 
     def label_mean_embedding(data, labels):
       return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
@@ -115,7 +200,12 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
       data_emb = label_mean_embedding(data_enc, labels)  # (d_rff, n_labels)
       gen_emb = label_mean_embedding(gen_enc, gen_labels)
       noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
-      return pt.sum((data_emb + noise - gen_emb) ** 2)
+      noisy_emb = data_emb + noise
+      if renorm_release == 'scale':
+        noisy_emb = noisy_emb / pt.norm(noisy_emb)  # rescale to L2 norm 1
+      elif renorm_release == 'clip':
+        noisy_emb = noisy_emb / pt.max(pt.norm(noisy_emb), other=pt.tensor(1., device=device))  # clip to L2 norm 1, don't touch smaller norms
+      return pt.sum((noisy_emb - gen_emb) ** 2)
   return rff_mmd_loss
 
 
@@ -144,15 +234,20 @@ def get_args():
   parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
   parser.add_argument('--gen-labels', action='store_true', default=True, help='generate labels as well as samples')
   parser.add_argument('--uniform-labels', action='store_true', default=True, help='assume uniform label distribution')
+  parser.add_argument('--conv-gen', action='store_true', default=False, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
-  parser.add_argument('--gen-spec', type=str, default='100,50', help='specifies hidden layers of generator')
-  parser.add_argument('--big-gen', action='store_true', default=False, help='False: gen as 2 hidden layers. True: 4')
+  parser.add_argument('--gen-spec', type=str, default='200,100', help='specifies hidden layers of generator')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
+  parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
+  parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=100.0, help='standard dev. for filter sampling')
-  parser.add_argument('--noise-factor', '-noise', type=float, default=0.6, help='privacy noise parameter')
+  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=127.0, help='standard dev. for filter sampling')
+  parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
+  parser.add_argument('--renorm-release', type=str, default=None, help='project noisy loss back to hypersphere')
+
+  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
   ar = parser.parse_args()
 
   if ar.log_dir is None:
@@ -183,6 +278,7 @@ def preprocess_args(args):
   assert args.data in {'digits', 'fashion'}
   assert args.gen_labels or not args.uniform_labels
   assert not (args.gen_labels and args.real_mmd)
+  assert not (args.real_mmd and args.single_release)
 
 
 def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -215,27 +311,41 @@ def main():
 
   device = pt.device("cuda" if use_cuda else "cpu")
 
-  gen_spec = tuple([int(k) for k in ar.gen_spec.split(',')]) if ar.gen_spec is not None else None
   if ar.gen_labels:
     if ar.uniform_labels:
-      gen = FCCondGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
+      if ar.conv_gen:
+        gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True)
+      else:
+        gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, use_sigmoid=True, batch_norm=False, d_out=784)
     else:
-      gen = FCLabelGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
+      raise ValueError
+      # gen = FCLabelGen(ar.d_code, gen_spec, 784, ar.n_labels, use_sigmoid=True)
   else:
-    if ar.big_gen:
-      gen = FCGenBig(ar.d_code, gen_spec, 784, use_sigmoid=True)
-    else:
-      gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True, batch_norm=ar.batch_norm)
+    raise ValueError
+    # if ar.big_gen:
+    #   gen = FCGenBig(ar.d_code, gen_spec, 784, use_sigmoid=True)
+    # else:
+    #   gen = FCGen(ar.d_code, gen_spec, 784, use_sigmoid=True, batch_norm=ar.batch_norm)
   gen = gen.to(device)
 
+  if ar.single_release:
+    single_release_loss, _ = get_single_release_loss(train_loader, 784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
+                                                     ar.n_labels, ar.noise_factor, ar.batch_size)
+  else:
+    single_release_loss = None
   rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.gen_labels,
-                                  ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd)
+                                  ar.n_labels, ar.noise_factor, ar.batch_size, ar.real_mmd, ar.renorm_release)
 
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
+
   for epoch in range(1, ar.epochs + 1):
-    train(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
-          ar.gen_labels, ar.uniform_labels)
+    if ar.single_release:
+      train_single_release(gen, device, optimizer, epoch, single_release_loss, ar.log_interval, ar.gen_labels,
+                           ar.uniform_labels, ar.batch_size, n_data=60000)
+    else:
+      train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval,
+                          ar.gen_labels, ar.uniform_labels)
     test(gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size,
          ar.gen_labels, ar.uniform_labels, ar.log_dir)
     scheduler.step()

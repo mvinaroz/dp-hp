@@ -12,7 +12,7 @@ from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_ar
 from tensorboardX import SummaryWriter
 
 
-def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
+def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
           summary_writer, verbose):
   enc.train()
   dec.train()
@@ -73,7 +73,7 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         clipped_grad = pt.mean(clipped_sample_grads, dim=0)
 
         if dp_spec.noise is not None:
-          bs = clipped_grad.shape[0]
+          bs = clipped_sample_grads.shape[0]
           noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
           clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
         param.grad = clipped_grad
@@ -97,6 +97,81 @@ def train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, lab
         loss_str = 'Loss: {:.6f}'.format(l_enc.item())
       else:
         loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_enc.item(), rec_loss.item(), siam_loss.item())
+      print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
+
+
+def train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
+                   summary_writer, verbose):
+  enc.train()
+  dec.train()
+  for batch_idx, (data, labels) in enumerate(train_loader):
+    data = data.to(device)
+    labels = labels.to(device)
+    if not conv_ae:
+      data = flat_data(data, labels, device, add_label=label_ae)
+
+    optimizer.zero_grad()
+
+    data_enc = enc(data)
+    reconstruction = dec(data_enc)
+    rec_loss = bin_ce_loss(reconstruction, data) if losses.do_ce else mse_loss(reconstruction, data)
+
+    if losses.wsiam > 0.:
+      siam_loss = losses.wsiam * siamese_loss(data_enc, labels, losses.msiam)
+      full_loss = rec_loss + siam_loss
+    else:
+      siam_loss = None
+      full_loss = rec_loss
+    l_dec = full_loss
+
+    with backpack(BatchGrad(), BatchL2Grad()):
+      l_dec.backward()
+
+    # compute global gradient norm from parameter gradient norms
+    model_params = list(enc.parameters()) + list(dec.parameters())
+    # for k in model_params:
+    #   print(type(k.grad))
+
+    squared_param_norms = [p.batch_l2 for p in model_params]
+    bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
+    global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
+    # aggregate samplewise grads, replace normal grad
+    for idx, param in enumerate(model_params):
+      if dp_spec.per_layer:
+        # clip each param by C/sqrt(m), then total sensitivity is still C
+        if dp_spec.layer_clip:
+          local_clips = pt.clamp_max(dp_spec.layer_clip[idx] / pt.sqrt(param.batch_l2), 1.)
+        else:
+          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
+        clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
+      else:
+        clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
+      clipped_grad = pt.mean(clipped_sample_grads, dim=0)
+
+      if dp_spec.noise is not None:
+        bs = clipped_grad.shape[0]
+        noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
+        clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
+      param.grad = clipped_grad
+
+    optimizer.step()
+    if batch_idx % log_interval == 0 and verbose:
+      n_data = len(train_loader.dataset)
+      n_done = batch_idx * len(data)
+      frac_done = 100. * batch_idx / len(train_loader)
+      iter_idx = batch_idx + epoch * (n_data / len(data))
+
+      if dp_spec.clip is not None:
+        print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
+
+        summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
+        for idx, sq_norm in enumerate(squared_param_norms):
+          summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
+
+      if siam_loss is None:
+        loss_str = 'Loss: {:.6f}'.format(l_dec.item())
+      else:
+        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_dec.item(), rec_loss.item(), siam_loss.item())
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
@@ -233,7 +308,7 @@ def get_args():
   # MODEL DEFINITION
   parser.add_argument('--d-enc', '-denc', type=int, default=10, help='embedding space dimensionality')
   parser.add_argument('--no-bias', action='store_true', default=True, help='remove bias units')
-  parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in encoder')
+  parser.add_argument('--batch-norm', action='store_true', default=False, help='use batch norm in encoder')
   parser.add_argument('--enc-spec', '-s-enc', type=str, default='300,100', help='encoder hidden layers')
   parser.add_argument('--dec-spec', '-s-dec', type=str, default='100', help='decoder hidden layers')
   parser.add_argument('--conv-ae', action='store_true', default=False, help='if true, use convolutional AE (not used)')
@@ -276,6 +351,7 @@ def preprocess_args(args):
   assert not (args.conv_ae and args.label_ae)  # not supported yet
   assert not (args.layer_clip_norms and args.clip_norm)  # define only one of them
   assert not (args.clip_norm is None and args.noise_factor is not None)
+  assert not (args.noise_up_enc and args.batch_norm)
 
 
 def main():
@@ -301,8 +377,8 @@ def main():
 
   summary_writer = SummaryWriter(ar.log_dir)
 
-  enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')]) if ar.enc_spec is not None else None
-  dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')]) if ar.dec_spec is not None else None
+  enc_spec = tuple([int(k) for k in ar.enc_spec.split(',')]) if ar.enc_spec not in {None, 'none'} else None
+  dec_spec = tuple([int(k) for k in ar.dec_spec.split(',')]) if ar.dec_spec not in {None, 'none'} else None
 
   if ar.conv_ae:
     enc = ConvEnc(ar.d_enc, enc_spec, extra_conv=True).to(device)
@@ -313,6 +389,9 @@ def main():
   else:
     enc = FCEnc(d_data, enc_spec, ar.d_enc, batch_norm=ar.batch_norm).to(device)
     dec = extend(FCDec(ar.d_enc, dec_spec, d_data, use_sigmoid=not ar.norm_data, use_bias=not ar.no_bias).to(device))
+
+  if ar.noise_up_enc:
+    enc = extend(enc)
 
   loss_nt = namedtuple('losses', ['l_enc', 'l_dec', 'do_ce', 'wsiam', 'msiam'])
   losses = loss_nt(pt.nn.MSELoss(), extend(pt.nn.MSELoss()), ar.ce_loss,
@@ -331,8 +410,12 @@ def main():
 
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
   for epoch in range(1, ar.epochs + 1):
-    train(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae, ar.log_interval,
-          summary_writer, ar.verbose)
+    if ar.noise_up_enc:
+      train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae,
+                     ar.log_interval, summary_writer, ar.verbose)
+    else:
+      train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae,
+                      ar.log_interval, summary_writer, ar.verbose)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec,
          epoch == ar.epochs, ar.norm_data)
     scheduler.step()
