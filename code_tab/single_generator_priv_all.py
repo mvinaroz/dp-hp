@@ -54,20 +54,32 @@ import os
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
+# 0 - LogisticRegression
+# 1 - GaussianNB
+# 2 - BernoulliNB
+# 3 - LinearSVC
+# 4 - DecisionTreeClassifier
+# 5 - LinearDiscriminantAnalysis
+# 6 - AdaBoostClassifier
+# 7 - BaggingClassifier
+# 8 - RandomForestClassifier
+# 9 - GradientBoostingClassifier
+# 10 - MLP
+# 11 - XGBoost
 
 
 args=argparse.ArgumentParser()
-args.add_argument("--dataset", default="credit")
+args.add_argument("--dataset", default="epileptic")
 args.add_argument("--private", type=int, default=0)
 #args.add_argument("--epochs", nargs='+', type=int, default=[8000, 6000, 2000, 1000, 4000, 10000])
-args.add_argument("--epochs", default='2000,8000,6000,1000,4000,10000')
-args.add_argument("--batch", type=float, default=0.5)
+args.add_argument("--epochs", default='200,2000,8000,6000,1000,4000,10000')
+args.add_argument("--batch", type=float, default=0.1)
 #args.add_argument("--num_features", nargs='+', type=int, default=[500, 1000, 2000, 5000, 10000, 50000, 80000, 100000])
-args.add_argument("--num_features", default='500,1000,2000,5000,10000,50000,80000,100000')
-args.add_argument("--undersample", type=float, default=0.4)
-args.add_argument("--repeat", type=int, default=5)
-#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1])
-args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+args.add_argument("--num_features", default='500,1000,2000,5000,10000')
+args.add_argument("--undersample", type=float, default=1)
+args.add_argument("--repeat", type=int, default=2)
+args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[2])
+#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 args.add_argument("--data_type", default='generated') #both, real, generated
 arguments=args.parse_args()
 print("arg", arguments)
@@ -734,19 +746,19 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
         if n_classes > 2:
 
-            res1 = np.mean(f1_arr)
+            res1 = np.mean(f1_arr); res1_arr=f1_arr
             print("------\nf1 mean across methods is %.3f\n" % res1)
-            res2 = 0  # dummy
+            res2 = 0; res2_arr=0  # dummy
         else:
 
-            res1=np.mean(roc_arr)
-            res2=np.mean(prc_arr)
+            res1=np.mean(roc_arr); res1_arr=roc_arr
+            res2=np.mean(prc_arr); res2_arr=prc_arr
             print("-"*40)
             print("roc mean across methods is %.3f" % res1)
             print("prc mean across methods is %.3f\n" % res2)
 
-
-        return res1, res2
+        return res1_arr, res2_arr
+        #return res1, res2
 
 
     #######################################################
@@ -1236,7 +1248,7 @@ if __name__ == '__main__':
 
             for elem in grid:
                 print(elem, "\n")
-                prc_arr = []; roc_arr = []; rocprc_arr=[]
+                prc_arr_all = []; roc_arr_all = []
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
@@ -1248,12 +1260,29 @@ if __name__ == '__main__':
                     #     print("{:>30}: {:>8}".format(name, sizeof_fmt(size)))
                     # print("\n")
 
-                    roc_arr.append(roc)
-                    prc_arr.append(prc)
+                    roc_arr_all.append(roc)
+                    prc_arr_all.append(prc)
 
-                print("Average over repetitions of running on set of methods")
+
+                roc_each_method_avr=np.mean(roc_arr_all, 0)
+                prc_each_method_avr=np.mean(prc_arr_all, 0)
+                roc_each_method_std = np.std(roc_arr_all, 0)
+                prc_each_method_std = np.std(prc_arr_all, 0)
+                roc_arr=np.mean(roc_arr_all, 1)
+                prc_arr = np.mean(prc_arr_all, 1)
+
+                print("\n", "-" * 40, "\n\n")
+                print("For each of the methods")
+                print("Average ROC each method: ", roc_each_method_avr);
+                print("Average PRC each method: ", prc_each_method_avr);
+                print("Std ROC each method: ", roc_each_method_std);
+                print("Std PRC each method: ", prc_each_method_std)
+
+
+                print("Average over repetitions across all methods")
                 print("Average ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
                 print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+                print("\n", "-" * 80, "\n\n\n")
 
                 if np.mean(roc_arr)>max_aver_roc:
                     max_aver_roc=np.mean(roc_arr)
@@ -1282,16 +1311,27 @@ if __name__ == '__main__':
 
             for elem in grid:
                 print(elem, "\n")
-                f1score_arr = []
+                f1score_arr_all = []
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
                     f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
-                    f1score_arr.append(f1scr[0])
+                    f1score_arr_all.append(f1scr[0])
 
-                print("Average over repetitions of running on set of methods")
+                f1score_each_method_avr = np.mean(f1score_arr_all, 0)
+                f1score_each_method_std = np.std(f1score_arr_all, 0)
+                f1score_arr = np.mean(f1score_arr_all, 1)
+
+                print("\n", "-" * 40, "\n\n")
+                print("For each of the methods")
+                print("Average F1: ", f1score_each_method_avr)
+                print("Std F1: ", f1score_each_method_std)
+
+
+                print("Average over repetitions across all methods")
                 print("Average f1 score: ", np.mean(f1score_arr))
                 print("Std F1: ", np.std(f1score_arr))
+                print("\n","-" * 80, "\n\n\n")
 
                 if np.mean(f1score_arr)>max_aver_f1:
                     max_aver_f1=np.mean(f1score_arr)
