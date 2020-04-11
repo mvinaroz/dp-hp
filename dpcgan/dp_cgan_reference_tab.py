@@ -48,7 +48,7 @@ from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
 
 import sys
 
-sys.path.insert(0, "../../data")
+sys.path.insert(0, "../data")
 sys.path.insert(0, "../../code")
 sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
 sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
@@ -59,7 +59,7 @@ from dataloader import load_isolet, test_models, load_credit, load_census, load_
 import argparse
 
 arguments=argparse.ArgumentParser()
-arguments.add_argument("--dataset", default='intrusion')
+arguments.add_argument("--dataset", default='credit')
 arguments.add_argument("--clipping", default='1.1')
 arguments.add_argument("--noise", default='1.1')
 args=arguments.parse_args()

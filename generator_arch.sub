@@ -37,30 +37,35 @@ data_type=generated
 private=0
 
 dataset=adult
+num_features=500,1000,2000,5000,10000,20000,50000,80000,100000
 undersample=0.4
 batch=0.1
 queue 1
 
 
 dataset=census
-num_features=500,1000,2000,5000,10000,20000,50000
+num_features=500,1000,2000,5000,10000,20000,30000
 undersample=0.4
 batch=0.1
 queue 1
 
 dataset=epileptic
+num_features=500,1000,2000,5000,10000,20000,50000,80000,100000
 undersample =1
 queue 1
 
 dataset=credit
+num_features=500,1000,2000,5000,10000,20000,50000,80000,100000
 undersample = 0.005
 queue 1
 
 dataset=cervical
+num_features=500,1000,2000,5000,10000,20000,50000,80000,100000
 undersample =1
 queue 1
 
 dataset=isolet
+num_features=500,1000,2000,5000,10000,20000,50000,80000,100000
 undersample =1
 queue 1
 
