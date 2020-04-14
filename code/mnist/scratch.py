@@ -160,4 +160,5 @@ if __name__ == '__main__':
   # print(mat['accuracies'])
   # collect_arp4_grid()
   # collect_apr4_sr_conv()
-  collect_apr6_better_conv()
+  # collect_apr6_better_conv()
+  collect_apr6_noconv_grid()

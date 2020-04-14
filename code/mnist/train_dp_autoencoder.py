@@ -5,15 +5,15 @@ import torch.nn.functional as nnf
 from torch.optim.lr_scheduler import StepLR
 import argparse
 from collections import namedtuple
-from backpack import extend, backpack
-from backpack.extensions import BatchGrad, BatchL2Grad
+from backpack import extend
 from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecFlat
-from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
+from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data
 from tensorboardX import SummaryWriter
+from dp_sgd import dp_sgd_backward
 
 
 def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
-          summary_writer, verbose):
+                    verbose):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -33,7 +33,7 @@ def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp
 
     if dp_spec.clip is None:
       l_enc.backward()
-      squared_param_norms, bp_global_norms, rec_loss, siam_loss = None, None, None, None
+      squared_param_norms, global_norms, rec_loss, siam_loss = None, None, None, None
     else:
       l_enc.backward(retain_graph=True)  # get grads for encoder
 
@@ -50,48 +50,17 @@ def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp
       else:
         siam_loss = None
         full_loss = rec_loss
-      l_dec = full_loss
 
-      with backpack(BatchGrad(), BatchL2Grad()):
-        l_dec.backward()
-
-      # compute global gradient norm from parameter gradient norms
-      squared_param_norms = [p.batch_l2 for p in dec.parameters()]
-      bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
-      global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
-      # aggregate samplewise grads, replace normal grad
-      for idx, param in enumerate(dec.parameters()):
-        if dp_spec.per_layer:
-          # clip each param by C/sqrt(m), then total sensitivity is still C
-          if dp_spec.layer_clip:
-            local_clips = pt.clamp_max(dp_spec.layer_clip[idx] / pt.sqrt(param.batch_l2), 1.)
-          else:
-            local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
-          clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
-        else:
-          clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
-        clipped_grad = pt.mean(clipped_sample_grads, dim=0)
-
-        if dp_spec.noise is not None:
-          bs = clipped_sample_grads.shape[0]
-          noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
-          clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
-        param.grad = clipped_grad
+      global_norms, global_clips = dp_sgd_backward(dec.parameters(), full_loss, device, dp_spec.clip, dp_spec.noise)
 
     optimizer.step()
     if batch_idx % log_interval == 0 and verbose:
       n_data = len(train_loader.dataset)
       n_done = batch_idx * len(data)
       frac_done = 100. * batch_idx / len(train_loader)
-      iter_idx = batch_idx + epoch * (n_data / len(data))
 
       if dp_spec.clip is not None:
-        print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
-
-        summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
-        for idx, sq_norm in enumerate(squared_param_norms):
-          # print(f'param {idx} shape: {list(dec.parameters())[idx].shape}')
-          summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
+        print(f'max_norm:{pt.max(global_norms).item()}, mean_norm:{pt.mean(global_norms).item()}')
 
       if siam_loss is None:
         loss_str = 'Loss: {:.6f}'.format(l_enc.item())
@@ -101,7 +70,7 @@ def train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp
 
 
 def train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, label_ae, conv_ae, log_interval,
-                   summary_writer, verbose):
+                   verbose):
   enc.train()
   dec.train()
   for batch_idx, (data, labels) in enumerate(train_loader):
@@ -122,56 +91,25 @@ def train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_
     else:
       siam_loss = None
       full_loss = rec_loss
-    l_dec = full_loss
 
-    with backpack(BatchGrad(), BatchL2Grad()):
-      l_dec.backward()
 
-    # compute global gradient norm from parameter gradient norms
     model_params = list(enc.parameters()) + list(dec.parameters())
-    # for k in model_params:
-    #   print(type(k.grad))
-
-    squared_param_norms = [p.batch_l2 for p in model_params]
-    bp_global_norms = pt.sqrt(pt.sum(pt.stack(squared_param_norms), dim=0))
-    global_clips = pt.clamp_max(dp_spec.clip / bp_global_norms, 1.)
-    # aggregate samplewise grads, replace normal grad
-    for idx, param in enumerate(model_params):
-      if dp_spec.per_layer:
-        # clip each param by C/sqrt(m), then total sensitivity is still C
-        if dp_spec.layer_clip:
-          local_clips = pt.clamp_max(dp_spec.layer_clip[idx] / pt.sqrt(param.batch_l2), 1.)
-        else:
-          local_clips = pt.clamp_max(dp_spec.clip / np.sqrt(len(squared_param_norms)) / pt.sqrt(param.batch_l2), 1.)
-        clipped_sample_grads = param.grad_batch * expand_vector(local_clips, param.grad_batch)
-      else:
-        clipped_sample_grads = param.grad_batch * expand_vector(global_clips, param.grad_batch)
-      clipped_grad = pt.mean(clipped_sample_grads, dim=0)
-
-      if dp_spec.noise is not None:
-        bs = clipped_grad.shape[0]
-        noise_sdev = (2 * dp_spec.noise * dp_spec.clip / bs)
-        clipped_grad = clipped_grad + pt.rand_like(clipped_grad, device=device) * noise_sdev
-      param.grad = clipped_grad
-
+    global_norms, global_clips = dp_sgd_backward(model_params, full_loss, device, dp_spec.clip, dp_spec.noise)
     optimizer.step()
+
     if batch_idx % log_interval == 0 and verbose:
       n_data = len(train_loader.dataset)
       n_done = batch_idx * len(data)
       frac_done = 100. * batch_idx / len(train_loader)
-      iter_idx = batch_idx + epoch * (n_data / len(data))
+      # iter_idx = batch_idx + epoch * (n_data / len(data))
 
       if dp_spec.clip is not None:
-        print(f'max_norm:{pt.max(bp_global_norms).item()}, mean_norm:{pt.mean(bp_global_norms).item()}')
-
-        summary_writer.add_histogram(f'grad_norm_global', bp_global_norms.clone().cpu().numpy(), iter_idx)
-        for idx, sq_norm in enumerate(squared_param_norms):
-          summary_writer.add_histogram(f'grad_norm_param_{idx}', pt.sqrt(sq_norm).clone().cpu().numpy(), iter_idx)
+        print(f'max_norm:{pt.max(global_norms).item()}, mean_norm:{pt.mean(global_norms).item()}')
 
       if siam_loss is None:
-        loss_str = 'Loss: {:.6f}'.format(l_dec.item())
+        loss_str = 'Loss: {:.6f}'.format(full_loss.item())
       else:
-        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(l_dec.item(), rec_loss.item(), siam_loss.item())
+        loss_str = 'Loss: full {:.6f}, rec {:.6f}, siam {:.6f}'.format(full_loss.item(), rec_loss.item(), siam_loss.item())
       print('Train Epoch: {} [{}/{} ({:.0f}%)]\t{}'.format(epoch, n_done, n_data, frac_done, loss_str))
 
 
@@ -412,10 +350,10 @@ def main():
   for epoch in range(1, ar.epochs + 1):
     if ar.noise_up_enc:
       train_noisy_ae(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae,
-                     ar.log_interval, summary_writer, ar.verbose)
+                     ar.log_interval, ar.verbose)
     else:
       train_noisy_dec(enc, dec, device, train_loader, optimizer, epoch, losses, dp_spec, ar.label_ae, ar.conv_ae,
-                      ar.log_interval, summary_writer, ar.verbose)
+                      ar.log_interval, ar.verbose)
     test(enc, dec, device, test_loader, epoch, losses, ar.label_ae, ar.conv_ae, log_spec,
          epoch == ar.epochs, ar.norm_data)
     scheduler.step()
