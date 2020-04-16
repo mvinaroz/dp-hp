@@ -18,7 +18,7 @@ import socket
 
 """
 Copy to make sure I don't interfere with anyone else. please don't make changes here
-
+EDIT: nevermind this is old
 """
 
 
