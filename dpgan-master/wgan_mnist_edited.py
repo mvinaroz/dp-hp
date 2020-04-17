@@ -17,6 +17,14 @@ from visualize import *
 import socket
 
 
+"""
+new attempt at getting this to work on mnist. 
+This time a bit more liberal with the changes because the source code is a mess.
+
+EDITS:
+
+"""
+
 class WassersteinGAN(object):
     def __init__(self, g_net, d_net, z_sampler, data, model, sigma, digit, reg, lr, cilpc, batch_size, num_batches, plot_size, save_size, d_iters, data_name, data_path, path_output): # changed
         self.model = model
@@ -165,12 +173,23 @@ class WassersteinGAN(object):
         save_path = saver.save(self.sess, path_output + 'sesssave/sess.ckpt')
         print("Training finished, session saved in file: %s" % save_path)
 
+    # def dpnoise(self, tensor, batch_size):
+    #     '''add noise to tensor'''
+    #     s = tensor.get_shape().as_list()  # get shape of the tensor
+    #     rt = tf.random_normal(s, mean=0.0, stddev= self.sigma)
+    #     t = tf.add(tensor, tf.scalar_mul((1.0 / batch_size), rt))
+    #     return t
+
     def dpnoise(self, tensor, batch_size):
-        '''add noise to tensor'''
+        '''
+        add noise to tensor
+        EDITS:
+        - noise now made at right std right away
+        - TODO: and scaled by c_g
+        '''
         s = tensor.get_shape().as_list()  # get shape of the tensor
-        rt = tf.random_normal(s, mean=0.0, stddev= self.sigma)
-        t = tf.add(tensor, tf.scalar_mul((1.0 / batch_size), rt))
-        return t
+        rt = tf.random_normal(s, mean=0.0, stddev=self.sigma/batch_size)
+        return tensor + rt
 
     def norm_w(self, v):
         return sum([linalg.norm(i) for i in v])
@@ -193,7 +212,7 @@ if __name__ == '__main__':
         zs = data.NoiseSampler()
         d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
-        sigma_all = 800.0  # total noise std added
+        sigma_all = 0.0  # total noise std added
         reg = 2.5e-5
         lr = 5e-5
         cilpc = 0.02

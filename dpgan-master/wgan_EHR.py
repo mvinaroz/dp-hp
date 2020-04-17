@@ -77,7 +77,20 @@ class MIMIC_WGAN(object):
             self.g_rmsprop = tf.train.RMSPropOptimizer(learning_rate=self.learning_rate) \
                 .minimize(self.g_loss + self.reg, var_list=self.g_net.vars+self.decodeVariables.values())
 
-        self.d_clip = [v.assign(tf.clip_by_value(v, -1*self.cilpc,  self.cilpc)) for v in self.d_net.vars]
+        # CLIPPING seems to happen here. replacing with debuggable code
+        # self.d_clip = [v.assign(tf.clip_by_value(v, -1*self.cilpc,  self.cilpc)) for v in self.d_net.vars]
+        self.d_clip = []
+        for v in self.d_net.vars:
+            v_clipped = tf.clip_by_value(v, -1 * self.cilpc, self.cilpc)
+            # v_clipped = tf.Print(v_clipped, [tf.reduce_max(v), tf.reduce_min(v), tf.reduce_mean(tf.abs(v))],
+            #                      message='v: max,min,mean_abs')
+            # v_clipped = tf.Print(v_clipped, [tf.reduce_max(v_clipped), tf.reduce_min(v_clipped),
+            #                                  tf.reduce_mean(tf.abs(v_clipped))],
+            #                      message='v_clipped: max,min,mean_abs')
+            v_update_op = v.assign(v_clipped)
+            self.d_clip.append(v_update_op)
+
+
         gpu_options = tf.GPUOptions(allow_growth=True)
         self.sess = tf.Session(config=tf.ConfigProto(gpu_options=gpu_options))
         self.sess.run(tf.initialize_all_variables())
@@ -176,7 +189,7 @@ class MIMIC_WGAN(object):
         plt.title('Histogram of distribution of generated data')
         plt.xlabel('Generated data value')
         plt.ylabel('Frequency')
-        plt.savefig('./result/genefinalfig/WGAN-Generated-data-distribution.jpg')
+        plt.savefig('./result/genefinalfig/WGAN-Generated-data-distribution.png')
         plt.close()
         with open('./result/lossfig/wdis.pickle', 'wb') as fp:
             pickle.dump(self.wdis_store, fp)
@@ -184,7 +197,7 @@ class MIMIC_WGAN(object):
         plt.plot(t, self.wdis_store, 'r--')
         plt.xlabel('Iterations')
         plt.ylabel('Wasserstein distance')
-        plt.savefig('./result/lossfig/WGAN-W-distance.jpg')
+        plt.savefig('./result/lossfig/WGAN-W-distance.png')
         plt.close()
         rv_pre, gv_pre, rv_pro, gv_pro = dwp(x_train, x_gene, self.testX, self.db)
         print 'Totally ' + str(len(rv_pre)) + ' of coordinates are left'
@@ -201,13 +214,13 @@ class MIMIC_WGAN(object):
         plt.title('Dimension-wise prediction, lr')
         plt.xlabel('Real data')
         plt.ylabel('Generated data')
-        plt.savefig('./result/genefinalfig/WGAN-dim-wise-prediction.jpg')
+        plt.savefig('./result/genefinalfig/WGAN-dim-wise-prediction.png')
         plt.close()
         plt.scatter(rv_pro, gv_pro)
         plt.title('Dimension-wise probability, lr')
         plt.xlabel('Real data')
         plt.ylabel('Generated data')
-        plt.savefig('./result/genefinalfig/WGAN-dim-wise-probability.jpg')
+        plt.savefig('./result/genefinalfig/WGAN-dim-wise-probability.png')
         plt.close()
 
     def loss_store(self, x_train, x_gene):
@@ -219,7 +232,7 @@ class MIMIC_WGAN(object):
         plt.title('Histogram of distribution of generated data')
         plt.xlabel('Generated data value')
         plt.ylabel('Frequency')
-        plt.savefig('./result/genefinalfig/generated_value.jpg')
+        plt.savefig('./result/genefinalfig/generated_value.png')
         plt.close()
         with open('./result/lossfig/wdis.pickle', 'wb') as fp:
             pickle.dump(self.wdis_store, fp)
@@ -227,7 +240,7 @@ class MIMIC_WGAN(object):
         plt.plot(t, self.wdis_store, 'r--')
         plt.xlabel('Iterations')
         plt.ylabel('Wasserstein distance')
-        plt.savefig('./result/lossfig/wdis.jpg')
+        plt.savefig('./result/lossfig/wdis.png')
         plt.close()
         precision_r_all = []
         precision_g_all = []

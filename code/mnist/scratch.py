@@ -108,15 +108,16 @@ def collect_apr6_noconv_grid():
   if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
+  for idx in range(216):
+    run_dir = f'logs/gen/apr6_sr_noconv_grid_{idx}/'
 
-  for data in {'d', 'f'}:
-    for sig in [0, 2.5, 5, 10, 25, 50]:
-      for run in range(5):
-        run_dir = f'logs/gen/apr6_sr_noconv_sig{sig}_{data}{run}/'
-        run_plot_path = run_dir + f'samples_ep5.png'
-        tgt_plot_path = log_dir + f'data_{data}_sig{sig}_run{run}_ep5.png'
-        if os.path.exists(run_plot_path):
-          shutil.copy(run_plot_path, tgt_plot_path)
+    final_ep = [50, 20, 5]
+    for ep in final_ep:
+      run_plot_path = run_dir + f'samples_ep{ep}.png'
+      tgt_plot_path = log_dir + f'run{idx}_ep{ep}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+        break
 
 
 def collect_apr6_better_conv():
@@ -160,4 +161,5 @@ if __name__ == '__main__':
   # print(mat['accuracies'])
   # collect_arp4_grid()
   # collect_apr4_sr_conv()
-  collect_apr6_better_conv()
+  # collect_apr6_better_conv()
+  collect_apr6_noconv_grid()

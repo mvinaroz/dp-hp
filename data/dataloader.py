@@ -1,10 +1,11 @@
 import socket
 import pandas as pd
 import numpy as np
-
+import sys
 from sklearn.model_selection import train_test_split
 
-#import sdgym
+if sys.version_info[0] > 2:
+    import sdgym
 import xgboost
 
 
@@ -201,7 +202,9 @@ def load_credit():
     print("Creditcard fraud detection dataset") # this is homogeneous
 
     if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
-        data = pd.read_csv("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv")
+        # data = pd.read_csv("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv")
+        data = pd.read_csv(
+            "../data/credit/creditcard.csv")
     else:
         # (1) load data
         data = pd.read_csv(

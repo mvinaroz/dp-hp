@@ -23,13 +23,16 @@ class Discriminator(object):
                 activation_fn=tf.identity
             )
             conv1 = leaky_relu(conv1)
+            # conv1 = tf.Print(conv1, [tf.shape(conv1)], message='c1 shape')
             conv2 = tc.layers.convolution2d(
                 conv1, 128, [4, 4], [2, 2],
                 weights_initializer=tf.random_normal_initializer(stddev=0.02),
                 activation_fn=tf.identity
             )
             conv2 = leaky_relu(tc.layers.batch_norm(conv2))
+            # conv2 = tf.Print(conv2, [tf.shape(conv2)], message='c2 shape')
             conv2 = tcl.flatten(conv2)
+            # conv2 = tf.Print(conv2, [tf.shape(conv2)], message='c2 shape')
             fc1 = tc.layers.fully_connected(
                 conv2, 1024,
                 weights_initializer=tf.random_normal_initializer(stddev=0.02),
