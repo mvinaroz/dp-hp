@@ -21,7 +21,6 @@ Copy to make sure I don't interfere with anyone else. please don't make changes 
 
 """
 
-
 class WassersteinGAN(object):
     def __init__(self, g_net, d_net, z_sampler, data, model, sigma, digit, reg, lr, cilpc, batch_size, num_batches,
                  plot_size, save_size, d_iters, data_name, data_path, path_output):  # changed
