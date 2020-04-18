@@ -156,24 +156,35 @@ def log_progress(batches_done, ep_len, ld, lg, epoch, gen_imgs, ar, label, is_fi
 
 
 def make_synth_data(gen, n_data, device, log_name, label, batch_size=300):
-  samples = []
+  gen_labels = np.zeros((n_data, 10))
+  gen_labels[:, label] = 1
+  gen_data = []
   while n_data > 0:
     if n_data < batch_size:
       batch_size = n_data
 
-    samples.append(gen(gen.get_noise(batch_size, device)).detach().cpu().numpy())
+    gen_data.append(gen(gen.get_noise(batch_size, device)).detach().cpu().numpy())
     n_data -= batch_size
-  samples = np.concatenate(samples)
-  np.save(f'synth_data/{log_name}/synth_l{label}.npy', samples)
+  gen_data = np.concatenate(gen_data)
+  gen_data = np.reshape(gen_data, (gen_data.shape[0], 784))
+  gen_data = gen_data * 0.5 + 0.5  # revert normalization
+
+  np.savez(f'synth_data/{log_name}/synth_l{label}.npz', data=gen_data, labels=gen_labels)
 
 
 def combine_synth_data(labels, log_name):
-  samples = []
+  gen_data = []
+  gen_labels = []
   for label in labels:
-    samples.append(np.load(f'synth_data/{log_name}/synth_l{label}.npy'))
-  samples = np.concatenate(samples)
-  samples = samples[np.random.permutation(samples.shape[0])]  # mix em up
-  np.save(f'synth_data/{log_name}/synth_data_full.npy', samples)
+    mat = np.load(f'synth_data/{log_name}/synth_l{label}.npz')
+    gen_data.append(mat['data'])
+    gen_labels.append(mat['labels'])
+  gen_data = np.concatenate(gen_data)
+  gen_labels = np.concatenate(gen_labels)
+  rand_perm = np.random.permutation(gen_data.shape[0])
+  gen_data = gen_data[rand_perm]  # mix em up
+  gen_labels = gen_labels[rand_perm]
+  np.savez(f'synth_data/{log_name}/synthetic_mnist.npz', data=gen_data, labels=gen_labels)
 
 
 def train_model_for_label(ar, label):
@@ -212,9 +223,9 @@ def main():
   pt.manual_seed(ar.seed)
   log_args(f"synth_data/{ar.log_name}/", ar)
 
-  # labels = list(range(5, 7))
   labels = list(range(10))
   for label in labels:
+    print(f'training label {label}')
     train_model_for_label(ar, label)
 
   if ar.synth_data:

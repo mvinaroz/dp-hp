@@ -198,6 +198,8 @@ def main():
   else:
     run_keys = models.keys()
 
+  g_to_r_acc_summary = []
+
   for key in run_keys:
     print(f'Model: {key}')
 
@@ -209,6 +211,7 @@ def main():
       g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
       acc_str = acc_str + f' gen to real {g_to_r_acc}'
       f1_str = f1_str + f' gen to real {g_to_r_f1}'
+      g_to_r_acc_summary.append(g_to_r_acc)
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 
@@ -243,6 +246,10 @@ def main():
       file_name = f'sub{ar.subsample}_{key}_log'
       np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
+  print('acc summary:')
+  for acc in g_to_r_acc_summary:
+    print(acc)
+  print(f'mean: {np.mean(g_to_r_acc_summary)}')
 
 if __name__ == '__main__':
   main()
