@@ -48,6 +48,7 @@ def load_real_data(data_key, data_from_torch):
     # return x_real_train, y_real_train, x_real_test, y_real_test
     raise NotImplementedError
 
+
 def subsample_data(x, y, frac, balance_classes=True):
   n_data = y.shape[0]
   n_classes = np.max(y) + 1

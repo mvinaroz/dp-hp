@@ -217,8 +217,8 @@ if __name__ == '__main__':
         lr = 5e-5
         cilpc = 0.02
         batch_size = 64
-        num_batches = 10000  # 150000
-        plot_size = 5
+        num_batches = 1000  # 10000  # 150000
+        plot_size = 100
         save_size = 100000
         d_iters = 1
         data_name = 'training'
