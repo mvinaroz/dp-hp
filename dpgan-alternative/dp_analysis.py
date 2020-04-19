@@ -5,13 +5,13 @@
 # several Gaussian mechanisms we use given a mini-batch.
 from autodp import rdp_acct, rdp_bank
 import time
-
+import numpy as np
 
 def conservative_analysis():
   """ input arguments """
 
   # (1) privacy parameters for four types of Gaussian mechanisms
-  sigma = 1.5
+  sigma = 1.41
 
   # (2) desired delta level
   delta = 1e-5
@@ -25,14 +25,18 @@ def conservative_analysis():
   start_time = time.time()
   for n_data in n_data_by_class:
 
-    steps_per_epoch = n_data // batch_size
+    steps_per_epoch = int(np.ceil(n_data / batch_size))
     n_steps = steps_per_epoch * n_epochs
     sampling_rate = batch_size / n_data
+
+    epoch_last_batch_size = n_data % batch_size
+    epoch_last_sampling_rate = epoch_last_batch_size / n_data
 
     subset_count = 0
     old_time = start_time
     for i in range(1, n_steps + 1):
-      acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma}, x), sampling_rate)
+      sampling_rate_i = epoch_last_sampling_rate if i % steps_per_epoch == 0 else sampling_rate
+      acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma}, x), sampling_rate_i)
       if i % steps_per_epoch == 0:
         new_time = time.time()
         epochs_done = i // steps_per_epoch
@@ -42,11 +46,11 @@ def conservative_analysis():
       if i == n_steps:
         pre_eps_time = time.time()
         subset_count += 1
-        print(f'data subset {subset_count} done')
         print("[", i, "]Privacy loss is", (acct.get_eps(delta)))
         post_eps_time = time.time()
         print('time to get_eps: ', post_eps_time - pre_eps_time)
         old_time = post_eps_time
+    print(f'data subset {subset_count} done')
 
 
 def main():

@@ -14,10 +14,15 @@ def get_dataloader(batch_size):
   return dataloader
 
 
-def get_single_label_dataloader(batch_size, label_idx):
+def get_single_label_dataloader(batch_size, label_idx, data_key='digits'):
   os.makedirs("../data", exist_ok=True)
   data_transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.5], [0.5])])
-  dataset = datasets.MNIST("../data", train=True, download=True, transform=data_transform)
+
+  assert data_key in {'digits', 'fashion'}
+  if data_key == 'digits':
+    dataset = datasets.MNIST("../data", train=True, download=True, transform=data_transform)
+  else:
+    dataset = datasets.FashionMNIST("../data", train=True, download=True, transform=data_transform)
   selected_ids = dataset.targets == label_idx
   dataset.data = dataset.data[selected_ids]
   dataset.targets = dataset.targets[selected_ids]

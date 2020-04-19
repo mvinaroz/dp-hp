@@ -27,6 +27,7 @@ def parse_arguments():
   parser.add_argument("--sample-interval", type=int, default=1000, help="interval betwen image samples")
   parser.add_argument("--print-interval", type=int, default=50, help="interval betwen image samples")
 
+  parser.add_argument("--data-key", '-data', type=str, default='digits', help="either digits or fashion")
   parser.add_argument("--seed", type=int, default=42, help="random seed")
   parser.add_argument("--log-name", type=str, default='test', help="name of folder where results are stored")
   parser.add_argument('--overwrite', action='store_true', default=False, help='only write to existing log-name if true')
@@ -145,11 +146,16 @@ def expand_vector(vec, tgt_tensor):
   return vec.view(*tgt_shape)
 
 
-def log_progress(batches_done, ep_len, ld, lg, epoch, gen_imgs, ar, label, is_final_batch):
+def log_progress(log_vals, batches_done, ep_len, epoch, ar, label, is_final_batch):
+  ld, lg, gen_imgs, norms_real, clips_real, norms_fake, clips_fake = log_vals
+
   if batches_done % ar.print_interval == 0:
     ep_frac = batches_done % ep_len
 
     print(f'[Epoch {epoch}/{ar.n_epochs}] [Batch {ep_frac}/{ep_len}] [D loss: {ld}] [G loss: {lg}]')
+    cr_mean, cr_max = pt.mean(clips_real), pt.max(clips_real)
+    cf_mean, cf_max = pt.mean(clips_fake), pt.max(clips_fake)
+    print(f'Clips - Real: mean {cr_mean}, max {cr_max} Fake: mean {cf_mean}, max {cf_max}')
 
   if batches_done % ar.sample_interval == 0 or is_final_batch:
     save_image(gen_imgs.data[:25], f"run_logs/{ar.log_name}/l{label}/{batches_done}.png", nrow=5, normalize=True)
@@ -195,7 +201,7 @@ def train_model_for_label(ar, label):
   if ar.dp_noise > 0.:
     dis = extend(dis)
 
-  dataloader, n_data = get_single_label_dataloader(ar.batch_size, label)
+  dataloader, n_data = get_single_label_dataloader(ar.batch_size, label, ar.data_key)
 
   # Optimizers
   gen_opt = pt.optim.RMSprop(gen.parameters(), lr=ar.lr)
@@ -207,10 +213,10 @@ def train_model_for_label(ar, label):
       train_gen = batches_done % ar.n_critic == 0
       is_final_batch = epoch + 1 == ar.n_epochs and idx + 1 == len(dataloader)
 
-      ret_vals = train_batch(real_imgs, device, dis_opt, gen_opt, dis, gen, ar.clip_value, train_gen,
+      log_vals = train_batch(real_imgs, device, dis_opt, gen_opt, dis, gen, ar.clip_value, train_gen,
                              ar.dp_clip, ar.dp_noise)
-      ld, lg, fake_imgs, norms_real, clips_real, norms_fake, clips_fake = ret_vals
-      log_progress(batches_done, len(dataloader), ld, lg, epoch, fake_imgs, ar, label, is_final_batch)
+
+      log_progress(log_vals, batches_done, len(dataloader), epoch, ar, label, is_final_batch)
       batches_done += 1
   if ar.synth_data:
     make_synth_data(gen, n_data, device, ar.log_name, label)
