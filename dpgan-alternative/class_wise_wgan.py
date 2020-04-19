@@ -153,9 +153,10 @@ def log_progress(log_vals, batches_done, ep_len, epoch, ar, label, is_final_batc
     ep_frac = batches_done % ep_len
 
     print(f'[Epoch {epoch}/{ar.n_epochs}] [Batch {ep_frac}/{ep_len}] [D loss: {ld}] [G loss: {lg}]')
-    cr_mean, cr_max = pt.mean(clips_real), pt.max(clips_real)
-    cf_mean, cf_max = pt.mean(clips_fake), pt.max(clips_fake)
-    print(f'Clips - Real: mean {cr_mean}, max {cr_max} Fake: mean {cf_mean}, max {cf_max}')
+    if clips_real is not None:
+      cr_mean, cr_max = pt.mean(clips_real), pt.max(clips_real)
+      cf_mean, cf_max = pt.mean(clips_fake), pt.max(clips_fake)
+      print(f'Clips - Real: mean {cr_mean}, max {cr_max} Fake: mean {cf_mean}, max {cf_max}')
 
   if batches_done % ar.sample_interval == 0 or is_final_batch:
     save_image(gen_imgs.data[:25], f"run_logs/{ar.log_name}/l{label}/{batches_done}.png", nrow=5, normalize=True)
