@@ -77,17 +77,18 @@ def load_cervical():
 
     df_nan = df.replace("?", np.float64(np.nan))
 
-    ind=0
-    nparray=np.array(df_nan)
-    for i in range(len(nparray)):
-        print(nparray[i])
-        had_qmark=False
-        for j in range(len(nparray[0])):
-            if math.isnan(float(nparray[i][j])) and had_qmark==False:
-                ind+=1
-                had_qmark=True
+    #counting number of missing data samples
+    # ind=0
+    # nparray=np.array(df_nan)
+    # for i in range(len(nparray)):
+    #     print(nparray[i])
+    #     had_qmark=False
+    #     for j in range(len(nparray[0])):
+    #         if math.isnan(float(nparray[i][j])) and had_qmark==False:
+    #             ind+=1
+    #             had_qmark=True
 
-    print("mising:", str(ind))
+    #print("mising:", str(ind))
 
 
 
@@ -609,4 +610,4 @@ def test_models(X_tr, y_tr, X_te, y_te, datasettype, n_classes=2):
 
 #load_epileptic()
 #load_adult()_
-load_cervical()
+#load_cervical()

@@ -69,17 +69,20 @@ print(device)
 
 
 args=argparse.ArgumentParser()
-args.add_argument("--dataset", default="epileptic")
+args.add_argument("--dataset", default="covtype")
 args.add_argument("--private", type=int, default=0)
 #args.add_argument("--epochs", nargs='+', type=int, default=[8000, 6000, 2000, 1000, 4000, 10000])
-args.add_argument("--epochs", default='200,2000,8000,6000,1000,4000,10000')
+#args.add_argument("--epochs", default='200,2000,8000,6000,1000,4000,10000')
+args.add_argument("--epochs", default='200')
 args.add_argument("--batch", type=float, default=0.1)
 #args.add_argument("--num_features", nargs='+', type=int, default=[500, 1000, 2000, 5000, 10000, 50000, 80000, 100000])
-args.add_argument("--num_features", default='500,1000,2000,5000,10000')
+#args.add_argument("--num_features", default='500,1000,2000,5000,10000')
+args.add_argument("--num_features", default='2000')
+
 args.add_argument("--undersample", type=float, default=1)
 args.add_argument("--repeat", type=int, default=2)
-args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[2])
-#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
+#args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[2])
+args.add_argument('--classifiers', nargs='+', type=int, help='list of integers', default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 args.add_argument("--data_type", default='generated') #both, real, generated
 arguments=args.parse_args()
 print("arg", arguments)
@@ -982,8 +985,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
                     label_input = label_input.to(device)
                     feature_input = torch.randn((mini_batch_size, input_size-1)).to(device)
                     input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
-                    outputs = model(input_to_model)
 
+                    #we feed noise + label (like in cond-gan) as input
+                    outputs = model(input_to_model)
 
                     """ computing mean embedding of generated samples """
                     emb2_input_features = RFF_Gauss(n_features, outputs, W_freq)
@@ -1079,6 +1083,8 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
             """ now generate samples from the trained network """
 
+            # weights[1] represents the fraction of the positive labels in the dataset,
+            #and we would like to generate a similar fraction of the postive/negative datapoints
             label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
             label_input = label_input.to(device)
 
