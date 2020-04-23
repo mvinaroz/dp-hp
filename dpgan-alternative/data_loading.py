@@ -43,6 +43,7 @@ def get_single_label_dataloader_tab(batch_size, label_idx, data_key='isolet'):
 
 
   X_train, y_train, X_test, y_test = globals()["load_"+data_key]()
+  print(f"Shape of the training data is {X_train.shape}")
 
   tensor_x=pt.stack([pt.Tensor(i) for i in X_train])
   tensor_y=pt.stack([pt.Tensor(np.array([i])) for i in y_train])
@@ -50,6 +51,7 @@ def get_single_label_dataloader_tab(batch_size, label_idx, data_key='isolet'):
   #dataloader = DataLoader(dataset)
 
   selected_ids = tensor_y == label_idx
+  print(f"{label_idx} has {sum(selected_ids.squeeze())} data samples")
   tensor_x_selected = tensor_x[selected_ids.squeeze()]
   tensor_y_selected = tensor_y[selected_ids.squeeze()]
   n_data = len(tensor_y_selected)
@@ -60,4 +62,6 @@ def get_single_label_dataloader_tab(batch_size, label_idx, data_key='isolet'):
 
 
 if __name__ == '__main__':
-  get_single_label_dataloader(100, 0)
+  for i in range(102035):
+    get_single_label_dataloader_tab(100, i, "covtype")
+

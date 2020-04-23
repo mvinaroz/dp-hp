@@ -57,16 +57,34 @@ def main():
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 0.7
+    sigma = 1.2
 
     # (2) desired delta level
     delta = 1e-5
 
     # (5) number of training steps
-    n_epochs = 17  # 5 for DP-MERF and 17 for DP-MERF+AE
-    batch_size = 500  # the same across experiments
+    n_epochs = 10# 5 for DP-MERF and 17 for DP-MERF+AE
+    batch_size = 64  # the same across experiments
 
-    n_data = 60000  # fixed for mnist
+    dataset="intrusion"
+
+    if dataset == "epileptic":
+        n_data = 8049
+    elif dataset == "isolet":
+        n_data = 4366
+    elif dataset == "adult":
+        n_data = 11077
+    elif dataset == "census":
+        n_data = 199523
+    elif dataset == "cervical":
+        n_data = 753
+    elif dataset == "credit":
+        n_data = 2668
+    elif dataset == "intrusion":
+        n_data = 394021
+    elif dataset == "covtype":
+        n_data = 9217
+
     steps_per_epoch = n_data // batch_size
     n_steps = steps_per_epoch * n_epochs
     # n_steps = 1
@@ -91,5 +109,5 @@ def main():
 
 
 if __name__ == '__main__':
-    # main()
-    conservative_analysis()
+    main()
+    #conservative_analysis()

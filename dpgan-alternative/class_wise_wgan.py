@@ -23,6 +23,7 @@ def parse_arguments():
   parser.add_argument("--img-size", type=int, default=28, help="size of each image dimension")
   parser.add_argument("--channels", type=int, default=1, help="number of image channels")
   parser.add_argument("--n-critic", type=int, default=5, help="number of training steps for discriminator per iter")
+
   parser.add_argument("--clip-value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
   parser.add_argument("--sample-interval", type=int, default=1000, help="interval betwen image samples")
   parser.add_argument("--print-interval", type=int, default=50, help="interval betwen image samples")

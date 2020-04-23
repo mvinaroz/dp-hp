@@ -47,11 +47,9 @@ class Generator_tab(nn.Module):
       return layers
 
     self.model = nn.Sequential(
-      *block(latent_dim, 128, normalize=False),
-      *block(128, 256),
-      *block(256, 512),
-      *block(512, 1024),
-      nn.Linear(1024, int(img_shape)),
+      *block(latent_dim, 4*latent_dim, normalize=False),
+      *block(4*latent_dim, 2*latent_dim),
+      nn.Linear(2*latent_dim, int(img_shape)),
       nn.Tanh()
     )
 

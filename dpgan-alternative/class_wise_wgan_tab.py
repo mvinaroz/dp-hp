@@ -22,27 +22,27 @@ from data.dataloader import test_models
 def parse_arguments():
 
   parser = argparse.ArgumentParser()
-  parser.add_argument("--n-epochs", type=int, default=10, help="number of epochs of training")
+  parser.add_argument('--dp-clip', '-clip', type=float, default=0.01, help='samplewise gradient L2 clip norm')
+  parser.add_argument('--dp-noise', '-noise', type=float, default=1.2, help='DP-SGD noise parameter')
+
+  parser.add_argument("--n-epochs", type=int, default=5, help="number of epochs of training")
   parser.add_argument("--batch-size", type=int, default=64, help="size of the batches")
+  parser.add_argument("--data-key", '-data', type=str, default='intrusion', help="isolet, credit, epileptic, adult, census, cervical")
+
+
   parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
   parser.add_argument("--n-cpu", type=int, default=4, help="number of cpu threads to use during batch generation")
   parser.add_argument("--latent-dim", type=int, default=100, help="dimensionality of the latent space")
-  parser.add_argument("--dataset", type=str, default='isolet', help="dataset")
   parser.add_argument("--img-size", type=int, default=617, help="size of each image dimension")
   parser.add_argument("--channels", type=int, default=1, help="number of image channels")
   parser.add_argument("--n-critic", type=int, default=5, help="number of training steps for discriminator per iter")
   parser.add_argument("--clip-value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
   parser.add_argument("--sample-interval", type=int, default=1000, help="interval betwen image samples")
   parser.add_argument("--print-interval", type=int, default=50, help="interval betwen image samples")
-
-  parser.add_argument("--data-key", '-data', type=str, default='epileptic', help="isolet, credit, epileptic, adult, census, cervical")
   parser.add_argument("--seed", type=int, default=42, help="random seed")
   parser.add_argument("--log-name", type=str, default='tab', help="name of folder where results are stored")
   parser.add_argument('--overwrite', action='store_true', default=False, help='only write to existing log-name if true')
   parser.add_argument('--synth-data', action='store_true', default=True, help='make synthetic data if true')
-
-  parser.add_argument('--dp-clip', '-clip', type=float, default=0.01, help='samplewise gradient L2 clip norm')
-  parser.add_argument('--dp-noise', '-noise', type=float, default=0.0, help='DP-SGD noise parameter')
 
   return parser.parse_args()
 
@@ -174,12 +174,13 @@ def make_synth_data(gen, n_data, device, log_name, label, batch_size=300):
   gen_labels = np.zeros((n_data, 10))
   gen_labels[:, label] = 1
   gen_data = []
-  while n_data > 0:
+  while n_data > 1: #1 throws errow
     if n_data < batch_size:
       batch_size = n_data
 
     gen_data.append(gen(gen.get_noise(batch_size, device)).detach().cpu().numpy())
     n_data -= batch_size
+    print(n_data)
   gen_data = np.concatenate(gen_data)
   #gen_data = np.reshape(gen_data, (gen_data.shape[0], 784))
   #gen_data = gen_data * 0.5 + 0.5  # revert normalization
@@ -244,7 +245,13 @@ def main():
   pt.manual_seed(ar.seed)
   log_args(f"synth_data/{ar.log_name}/", ar)
 
-  labels = list(range(2))
+  if ar.data_key=="covtype":
+    labels_num=6
+  elif ar.data_key =="intrusion":
+    labels_num=4
+  else:
+    labels_num=2
+  labels = list(range(labels_num))
   for label in labels: #we generate data for each label separately
     print(f'training label {label}')
     train_model_for_label(ar, label)
@@ -254,7 +261,7 @@ def main():
 
   gen_labels=np.array([np.where(r == 1)[0][0] for r in gen_labels_onehot])
 
-  roc, prc = test_models(gen_data, gen_labels, X_test, y_test, "generated")
+  roc, prc = test_models(gen_data, gen_labels, X_test, y_test, "generated", labels_num)
 
 
 if __name__ == '__main__':
