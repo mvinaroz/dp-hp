@@ -11,7 +11,7 @@ def conservative_analysis():
   """ input arguments """
 
   # (1) privacy parameters for four types of Gaussian mechanisms
-  sigma = 1.41
+  sigma = 10.
 
   # (2) desired delta level
   delta = 1e-5
@@ -23,6 +23,7 @@ def conservative_analysis():
   n_data_by_class = [5923, 6742, 5958, 6131, 5842, 5421, 5918, 6265, 5851, 5949]
 
   start_time = time.time()
+  subset_count = 0
   for n_data in n_data_by_class:
 
     steps_per_epoch = int(np.ceil(n_data / batch_size))
@@ -32,15 +33,18 @@ def conservative_analysis():
     epoch_last_batch_size = n_data % batch_size
     epoch_last_sampling_rate = epoch_last_batch_size / n_data
 
-    subset_count = 0
-    old_time = start_time
+    # old_time = start_time
+    old_time = time.time()
     for i in range(1, n_steps + 1):
       sampling_rate_i = epoch_last_sampling_rate if i % steps_per_epoch == 0 else sampling_rate
       acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma}, x), sampling_rate_i)
       if i % steps_per_epoch == 0:
         new_time = time.time()
         epochs_done = i // steps_per_epoch
-        print(f'Epoch {epochs_done} done - Time used: {new_time - old_time}, Total: {new_time - start_time}')
+        t_used = new_time - old_time
+        t_total = new_time - start_time
+        t_total_min = t_total / 60
+        print(f'Epoch {epochs_done} done - Time used: {t_used:.2f}, Total: {t_total:.2f} ({t_total_min:.2f} minutes)')
         old_time = new_time
 
       if i == n_steps:

@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torchvision import datasets
 from aux import plot_mnist_batch, NamedArray
+from sklearn.metrics import roc_curve, auc
 
 
 def expand_vector(v, tgt_vec):
@@ -153,7 +154,29 @@ def plot_dpcgan_data():
   plot_mnist_batch(mat_select, 10, 10, 'dmnist-eps9.6-plot', save_raw=False)
 
 
+def dpcgan_dummmy_eval():
+  targets = np.zeros(60000)
+  targets[:6000] = 1.
+  print(sum(targets))
+  preds = np.zeros(60000)
+  # preds[:12000] = .5
+  # preds[6000:12000] = 1.
+
+  # preds[6600:12000] = 1.
+  # preds[:600] = 1.
+
+  preds[6000:12000] = .51
+  preds[:6000] = .49
+
+  # preds[:12000] = .5
+
+  print(sum(preds))
+  fpr, tpr, thresholds = roc_curve(targets, preds)
+
+  print(fpr, tpr, thresholds, auc(fpr, tpr))
+
 if __name__ == '__main__':
+  dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
   # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')

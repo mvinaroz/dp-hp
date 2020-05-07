@@ -575,6 +575,9 @@ def apr6_plot_better_conv(plot_var=False):
         sub_mat = np.median(sub_mat, axis=1)
         plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
 
+        print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
     if d_id == 'd':
@@ -619,4 +622,4 @@ if __name__ == '__main__':
 
   # apr6_plot_overfit_conv(plot_var=False)
   # apr6_plot_overfit_conv(plot_var=True)
-  apr6_plot_better_conv(plot_var=True)
+  apr6_plot_better_conv(plot_var=False)
