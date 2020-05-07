@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import sys
 from sklearn.model_selection import train_test_split
+import math
 
 if sys.version_info[0] > 2:
     import sdgym
@@ -75,6 +76,23 @@ def load_cervical():
     # df.head()
 
     df_nan = df.replace("?", np.float64(np.nan))
+
+    #counting number of missing data samples
+    # ind=0
+    # nparray=np.array(df_nan)
+    # for i in range(len(nparray)):
+    #     print(nparray[i])
+    #     had_qmark=False
+    #     for j in range(len(nparray[0])):
+    #         if math.isnan(float(nparray[i][j])) and had_qmark==False:
+    #             ind+=1
+    #             had_qmark=True
+
+    #print("mising:", str(ind))
+
+
+
+
     df_nan.head()
 
     # df1 = df_nan.convert_objects(convert_numeric=True)
@@ -202,9 +220,9 @@ def load_credit():
     print("Creditcard fraud detection dataset") # this is homogeneous
 
     if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
-        # data = pd.read_csv("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv")
-        data = pd.read_csv(
-            "../data/credit/creditcard.csv")
+        data = pd.read_csv("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR/data/Kaggle_Credit/creditcard.csv")
+        #data = pd.read_csv(
+        #    "../data/Kaggle_Credit/creditcard.csv")
     else:
         # (1) load data
         data = pd.read_csv(
@@ -592,3 +610,4 @@ def test_models(X_tr, y_tr, X_te, y_te, datasettype, n_classes=2):
 
 #load_epileptic()
 #load_adult()_
+#load_cervical()

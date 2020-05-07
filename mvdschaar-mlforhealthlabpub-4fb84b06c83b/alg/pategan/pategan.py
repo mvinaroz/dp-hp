@@ -18,9 +18,9 @@ from pathlib import Path
 
 sys.path.append(os.path.join(Path(__file__).parent.parent.parent.parent, "data"))
 
-from dataloader import load_credit, load_isolet, test_models
+from dataloader import load_credit, load_isolet, load_cervical, load_epileptic, load_census, test_models
 
-X_train, y_train, X_test, y_test = load_credit()
+X_train, y_train, X_test, y_test = load_cervical()
 
 # gpu_frac = 0.5
 # config = tf.ConfigProto()
@@ -45,7 +45,7 @@ def init_arg():
     parser.add_argument("--otest")
     parser.add_argument("--itrain")
     parser.add_argument("--itest")
-    parser.add_argument("--iter", type=int, default=5)
+    parser.add_argument("--iter", type=int, default=50)
     parser.add_argument("--epsilon", type=float, default=1)
     parser.add_argument("--delta", type=int, default=5)
     parser.add_argument("--teachers", type=int, default=5)
@@ -125,31 +125,31 @@ if __name__ == '__main__':
     roc, prc = test_models(x_train_new, y_train_new, x_test_new, y_test_new, "generated")
     print("roc: ", roc)
 
-    print(df_train[features].values.shape
-          )
-    print(x_train_new.shape)
-
-    cols = features
-    cols.append(target[0])
-
-    df_train_new = pd.DataFrame(
-        np.hstack(
-            [x_train_new,
-             y_train_new.reshape(len(y_train_new), -1)]),
-        columns=cols)
-
-    df_test_new = pd.DataFrame(
-        np.hstack(
-            [x_test_new,
-             y_test_new.reshape(len(y_test_new), -1)]),
-        columns=cols)
-
-    df_train_new.to_csv(
-        fn_o_train,
-        index=False,
-        compression=utilmlab.get_df_compression(fn_o_train))
-
-    df_test_new.to_csv(
-        fn_o_test,
-        index=False,
-        compression=utilmlab.get_df_compression(fn_o_test))    
+    # print(df_train[features].values.shape
+    #       )
+    print("x_train_new: ", x_train_new.shape)
+    #
+    # cols = features
+    # cols.append(target[0])
+    #
+    # df_train_new = pd.DataFrame(
+    #     np.hstack(
+    #         [x_train_new,
+    #          y_train_new.reshape(len(y_train_new), -1)]),
+    #     columns=cols)
+    #
+    # df_test_new = pd.DataFrame(
+    #     np.hstack(
+    #         [x_test_new,
+    #          y_test_new.reshape(len(y_test_new), -1)]),
+    #     columns=cols)
+    #
+    # df_train_new.to_csv(
+    #     fn_o_train,
+    #     index=False,
+    #     compression=utilmlab.get_df_compression(fn_o_train))
+    #
+    # df_test_new.to_csv(
+    #     fn_o_test,
+    #     index=False,
+    #     compression=utilmlab.get_df_compression(fn_o_test))
