@@ -19,7 +19,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 # Import the requiered python packages
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
+# from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -48,12 +48,12 @@ from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
 
 import sys
 
-sys.path.insert(0, "../data")
-sys.path.insert(0, "../../code")
-sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
-sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
+# sys.path.insert(0, "../data")
+# sys.path.insert(0, "../../code")
+# sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
+# sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
 
-from dataloader import load_isolet, test_models, load_credit, load_census, load_epileptic, load_intrusion, load_covtype, load_adult, load_cervical
+from tab_dataloader import load_isolet, test_models, load_credit, load_census, load_epileptic, load_intrusion, load_covtype, load_adult, load_cervical
 
 
 import argparse

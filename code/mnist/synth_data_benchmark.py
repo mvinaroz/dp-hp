@@ -88,6 +88,24 @@ def subsample_data(x, y, frac, balance_classes=True):
   return x, y
 
 
+def normalize_data(x_train, x_test):
+  # mean = np.mean(x_train, axis=0)
+  # sdev = np.std(x_train, axis=0)
+  mean = np.mean(x_train)
+  sdev = np.std(x_train)
+
+  # print(mean, sdev)
+  x_train_normed = (x_train - mean) / sdev
+  x_test_normed = (x_test - mean) / sdev
+  assert not np.any(np.isnan(x_train_normed)) and not np.any(np.isnan(x_test_normed))
+  # print(np.max(x_train), np.min(x_train))
+  # print(np.max(x_test), np.min(x_test))
+  # print(np.max(x_train_normed), np.min(x_train_normed))
+  # print(np.max(x_test_normed), np.min(x_test_normed))
+  # print(x_train_normed.shape, x_test_normed.shape)
+  return x_train_normed, x_test_normed
+
+
 def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
@@ -112,6 +130,8 @@ def main():
   parser.add_argument('--sub-balanced-labels', action='store_true', default=False, help='add train:real,test:gen')
 
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
+
+  parser.add_argument('--norm-data', action='store_true', default=False, help='if true, load data from pytorch')
 
   ar = parser.parse_args()
 
@@ -183,7 +203,9 @@ def main():
   model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
-  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
+  # model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips20202 submission
+  # model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}  best so far
+  model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}
   model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
@@ -208,7 +230,8 @@ def main():
 
     if not ar.skip_gen_to_real:
       model = models[key](**model_specs[key])
-      g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
+      x_gen_gr, x_real_test_gr = normalize_data(x_gen, x_real_test) if ar.norm_data else (x_gen, x_real_test)
+      g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen_gr, y_gen, x_real_test_gr, y_real_test)
       acc_str = acc_str + f' gen to real {g_to_r_acc}'
       f1_str = f1_str + f' gen to real {g_to_r_f1}'
       g_to_r_acc_summary.append(g_to_r_acc)
@@ -217,7 +240,8 @@ def main():
 
     if ar.compute_real_to_real:
       model = models[key](**model_specs[key])
-      base_acc, base_f1, base_conf = test_model(model, x_real_train, y_real_train, x_real_test, y_real_test)
+      x_train_rr, x_test_rr = normalize_data(x_real_train, x_real_test) if ar.norm_data else (x_real_train, x_real_test)
+      base_acc, base_f1, base_conf = test_model(model, x_train_rr, y_real_train, x_test_rr, y_real_test)
       acc_str = acc_str + f' real to real {base_acc}'
       f1_str = f1_str + f' real to real {base_f1}'
     else:
@@ -225,7 +249,9 @@ def main():
 
     if ar.compute_real_to_gen:
       model = models[key](**model_specs[key])
-      r_to_g_acc, r_to_g_f1, r_to_g_conv = test_model(model, x_real_train, y_real_train, x_gen[:10000], y_gen[:10000])
+      x_gen_test, y_gen_test = x_gen[:10000], y_gen[:10000]
+      x_train_rg, x_test_rg = normalize_data(x_real_train, x_gen_test) if ar.norm_data else (x_real_train, x_gen_test)
+      r_to_g_acc, r_to_g_f1, r_to_g_conv = test_model(model, x_train_rg, y_real_train, x_test_rg, y_gen_test)
       acc_str = acc_str + f' real to gen {r_to_g_acc}'
       f1_str = f1_str + f' real to gen {r_to_g_f1}'
     else:
