@@ -8,20 +8,6 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 
-def rff_gauss(x, w):
-  """
-  this is a Pytorch version of anon's code for RFFKGauss
-  Fourier transform formula from http://mathworld.wolfram.com/FourierTransformGaussian.html
-  """
-  xwt = pt.mm(x, w.t())
-  z_1 = pt.cos(xwt)
-  z_2 = pt.sin(xwt)
-  z_cat = pt.cat((z_1, z_2), 1)
-  norm_const = pt.sqrt(pt.tensor(w.shape[0]).to(pt.float32))
-  z = z_cat / norm_const  # w.shape[0] == n_features / 2
-  return z
-
-
 def expand_vector(v, tgt_vec):
   tgt_dims = len(tgt_vec.shape)
   if tgt_dims == 2:
@@ -281,4 +267,25 @@ class NamedArray:
     return NamedArray(merged_array, self.dim_names, merged_idx_names)
 
 
+def extract_numpy_data_mats():
+  def prep_data(dataset):
+    x, y = dataset.data.numpy(), dataset.targets.numpy()
+    x = np.reshape(x, (-1, 784)) / 255
+    return x, y
 
+  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True))
+  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False))
+  np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
+
+  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True))
+  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False))
+  np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
+
+
+def log_final_score(log_dir, final_acc):
+  """ print and save all args """
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+  with open(os.path.join(log_dir, 'final_score'), 'w') as f:
+    lines = [f'acc: {final_acc}\n']
+    f.writelines(lines)

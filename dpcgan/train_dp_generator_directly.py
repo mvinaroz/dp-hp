@@ -4,7 +4,8 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
-from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from mmd_approx import rff_sphere
 from real_mmd_loss import mmd_g, get_squared_dist
 from autodp import rdp_acct, rdp_bank
 
@@ -102,7 +103,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
 
   elif not do_gen_labels:
     def mean_embedding(x):
-      return pt.mean(rff_gauss(x, w_freq), dim=0)
+      return pt.mean(rff_sphere(x, w_freq), dim=0)
 
     def rff_mmd_loss(data_enc, gen_out):
       data_emb = mean_embedding(data_enc)
@@ -112,7 +113,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
   else:
     print('we use the random feature mean embeddings here')
     def label_mean_embedding(data, labels):
-      return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
+      return pt.mean(pt.einsum('ki,kj->kij', [rff_sphere(data, w_freq), labels]), 0)
 
     def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
       data_emb = label_mean_embedding(data_enc, labels)  # (d_rff, n_labels)

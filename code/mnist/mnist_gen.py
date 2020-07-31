@@ -4,7 +4,8 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import FCCondGen, ConvCondGen
-from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from mmd_approx import rff_sphere
 
 
 def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=None, reduce='mean'):
@@ -14,7 +15,7 @@ def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=N
     one_hots = pt.zeros(batch_size, 10, device=device)
     one_hots.scatter_(1, labels[:, None], 1)
     labels = one_hots
-  embedding = pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels])
+  embedding = pt.einsum('ki,kj->kij', [rff_sphere(data, w_freq), labels])
   return pt.mean(embedding, 0) if reduce == 'mean' else pt.sum(embedding, 0)
 
 

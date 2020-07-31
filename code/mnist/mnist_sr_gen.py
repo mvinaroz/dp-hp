@@ -4,114 +4,9 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import ConvCondGen
-from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, log_args, flat_data
-
-
-def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=None, reduce='mean'):
-  assert reduce in {'mean', 'sum'}
-  if labels_to_one_hot:
-    batch_size = data.shape[0]
-    one_hots = pt.zeros(batch_size, 10, device=device)
-    one_hots.scatter_(1, labels[:, None], 1)
-    labels = one_hots
-  embedding = pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels])
-  return pt.mean(embedding, 0) if reduce == 'mean' else pt.sum(embedding, 0)
-
-
-def get_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor):
-  assert isinstance(rff_sigma, str)
-  rff_sigma = [float(sig) for sig in rff_sigma.split(',')]
-  if len(rff_sigma) == 1:
-    return get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma[0], device, n_labels, noise_factor)
-  else:
-    return get_multi_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor)
-
-
-def get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor):
-  assert d_rff % 2 == 0
-  # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
-  minibatch_loss, w_freq = get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor,
-                                            train_loader.batch_size)
-
-  noisy_emb = noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor)
-
-  def single_release_loss(gen_enc, gen_labels):
-    gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq)
-    return pt.sum((noisy_emb - gen_emb) ** 2)
-
-  return single_release_loss, minibatch_loss, noisy_emb
-
-
-def noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor):
-  emb_acc = []
-  n_data = 0
-  for data, labels in train_loader:
-    data, labels = data.to(device), labels.to(device)
-    data = flat_data(data, labels, device, n_labels=10, add_label=False)
-
-    emb_acc.append(data_label_embedding(data, labels, w_freq, labels_to_one_hot=True, device=device, reduce='sum'))
-    # emb_acc.append(pt.sum(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), one_hots]), 0))
-    n_data += data.shape[0]
-
-  print('done collecting batches, n_data', n_data)
-  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
-  print(pt.norm(emb_acc), emb_acc.shape)
-  noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / n_data)
-  noisy_emb = emb_acc + noise
-  return noisy_emb
-
-def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size):
-  assert d_rff % 2 == 0
-  w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
-
-  def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
-    data_emb = data_label_embedding(data_enc, labels, w_freq, labels_to_one_hot=True, device=device)  # (d_rff, n_labels)
-    gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq)
-    noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
-    noisy_emb = data_emb + noise
-    return pt.sum((noisy_emb - gen_emb) ** 2)
-
-  return rff_mmd_loss, w_freq
-
-
-def get_multi_sigma_minibatch_loss(d_enc, d_rff, rff_sigmas, device, n_labels, noise_factor, batch_size):
-  w_freqs = []
-  mb_losses = []
-  for rff_sigma in rff_sigmas:
-    mb_loss, w_freq = get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size)
-    mb_losses.append(mb_loss)
-    w_freqs.append(w_freq)
-
-  def mb_multi_loss(data_enc, labels, gen_enc, gen_labels):
-    loss_acc = 0
-    for loss in mb_losses:
-      loss_acc += loss(data_enc, labels, gen_enc, gen_labels)
-    return loss_acc
-  return mb_multi_loss, w_freqs
-
-
-def get_multi_sigma_losses(train_loader, d_enc, d_rff, rff_sigmas, device, n_labels, noise_factor):
-  mb_multi_loss, w_freqs = get_multi_sigma_minibatch_loss(d_enc, d_rff, rff_sigmas, device, n_labels, noise_factor,
-                                                          train_loader.batch_size)
-
-  sr_losses = []
-  noisy_embs = []
-  for w_freq in w_freqs:
-    noisy_emb = noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor)
-    noisy_embs.append(noisy_emb)
-
-    def single_release_loss(gen_enc, gen_labels):
-      gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq)
-      return pt.sum((noisy_emb - gen_emb) ** 2)
-    sr_losses.append(single_release_loss)
-
-  def sr_multi_loss(gen_enc, gen_labels):
-    loss_acc = 0
-    for loss in sr_losses:
-      loss_acc += loss(gen_enc, gen_labels)
-    return loss_acc
-
-  return sr_multi_loss, mb_multi_loss, noisy_embs
+from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
+from mmd_approx import get_losses
+from synth_data_benchmark import test_gen_data
 
 
 def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
@@ -180,7 +75,7 @@ def get_args():
   # BASICS
   parser.add_argument('--seed', type=int, default=None, help='sets random seed')
   parser.add_argument('--n-labels', type=int, default=10, help='number of labels/classes in data')
-  parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
+  parser.add_argument('--log-interval', type=int, default=10000, help='print updates after n steps')
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
   parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
@@ -200,6 +95,7 @@ def get_args():
   parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
+  parser.add_argument('--mmd-type', type=str, default='sphere', help='how to approx mmd', choices=['sphere', 'r+r'])
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
@@ -262,7 +158,8 @@ def main():
 
   # define loss function
 
-  sr_loss, mb_loss, _ = get_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor)
+  sr_loss, mb_loss, _ = get_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor,
+                                   ar.mmd_type)
 
   # rff_mmd_loss = get_rff_mmd_loss(n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
 
@@ -282,6 +179,8 @@ def main():
     syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, device)
     np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
 
+    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
+    log_final_score(ar.log_dir, final_score)
 
 if __name__ == '__main__':
   main()

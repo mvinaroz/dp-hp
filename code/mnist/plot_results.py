@@ -4,8 +4,7 @@ import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
 import numpy as np
-from torchvision import datasets
-from aux import plot_mnist_batch, NamedArray
+from aux import plot_mnist_batch
 from aggregate_results import collect_results
 
 
@@ -232,21 +231,6 @@ def apr4_plot_subsampling_performance():
       plt.ylim((0.4, 0.6))
       plt.legend()
       plt.savefig(f'apr4_plot_subsampling_{d}_{e}.png')
-
-
-def extract_numpy_data_mats():
-  def prep_data(dataset):
-    x, y = dataset.data.numpy(), dataset.targets.numpy()
-    x = np.reshape(x, (-1, 784)) / 255
-    return x, y
-
-  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False))
-  np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
-
-  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False))
-  np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
 
 
 def spot_synth_mnist_mar19():
