@@ -188,9 +188,11 @@ def collect_sep14_real_mmd_grid():
       with open(run_score) as f:
         scores.append((run, f.readline()))
 
-  with open(log_dir + 'scores') as f:
+  for idx, score in scores:
+    print(f'{idx}: {score}')
+
+  with open(log_dir + 'scores', mode='w') as f:
     for idx, score in scores:
-      print(f'{idx}: {score}')
       f.write(f'{idx}: {score}')
 
 # import numpy as np
