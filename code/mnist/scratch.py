@@ -176,6 +176,22 @@ def dpcgan_dummmy_eval():
   print(fpr, tpr, thresholds, auc(fpr, tpr))
 
 
+def collect_sep14_real_mmd_grid():
+  log_dir = 'logs/gen/sep14_realmmd_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  scores = []
+  for run in range(64):
+    run_score = f'logs/gen/sep14_realmmd_{run}/final_score'
+    if os.path.exists(run_score):
+      with open(run_score) as f:
+        scores.append((run, f.readline()))
+
+  with open(log_dir + 'scores') as f:
+    for idx, score in scores:
+      print(f'{idx}: {score}')
+      f.write(f'{idx}: {score}')
 
 # import numpy as np
 # import os
@@ -197,7 +213,7 @@ def dpcgan_dummmy_eval():
 
 
 if __name__ == '__main__':
-  pass
+  collect_sep14_real_mmd_grid()
   # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
