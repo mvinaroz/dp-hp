@@ -177,14 +177,14 @@ def dpcgan_dummmy_eval():
 
 
 def collect_sep14_real_mmd_grid():
-  log_dir = 'logs/gen/sep14_realmmd_summary/'
+  log_dir = 'logs/gen/sep14_realmmd2_summary/'
   if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
   scores = []
-  run_range = ['00', '01', '02', '03', '04', '05', '06', '07', '08',  '09'] + [str(k) for k in range(10, 64)]
+  run_range = ['00', '01', '02', '03', '04', '05', '06', '07', '08',  '09'] + [str(k) for k in range(10, 28)]
   for run in run_range:
-    run_score = f'logs/gen/sep14_realmmd_{run}/final_score'
+    run_score = f'logs/gen/sep14_realmmd2_{run}/final_score'
     if os.path.exists(run_score):
       with open(run_score) as f:
         scores.append((run, f.readline()))
