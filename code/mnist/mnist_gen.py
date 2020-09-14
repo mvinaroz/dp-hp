@@ -4,8 +4,10 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import FCCondGen, ConvCondGen
-from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
-from mmd_approx import rff_sphere
+from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
+from mmd_approx import rff_sphere, weights_sphere
+from synth_data_benchmark import test_gen_data
+from real_mmd_loss import mmd_g, get_squared_dist
 
 
 def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=None, reduce='mean'):
@@ -21,7 +23,8 @@ def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=N
 
 def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor):
   assert d_rff % 2 == 0
-  w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+  # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+  w_freq = weights_sphere(d_rff, d_enc, rff_sigma, device)
 
   emb_acc = []
   n_data = 0
@@ -48,7 +51,8 @@ def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, n_lab
 
 def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size):
   assert d_rff % 2 == 0
-  w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+  # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
+  w_freq = weights_sphere(d_rff, d_enc, rff_sigma, device)
 
   def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
     data_emb = data_label_embedding(data_enc, labels, w_freq, labels_to_one_hot=True, device=device)  # (d_rff, n_labels)
@@ -58,6 +62,27 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, ba
     return pt.sum((noisy_emb - gen_emb) ** 2)
 
   return rff_mmd_loss
+
+
+def get_real_mmd_loss(rff_sigma, n_labels, batch_size):
+
+  def real_loss(data_enc, data_labels, gen_enc, gen_labels):
+    # set gen labels to scalars from one-hot
+    _, gen_labels = pt.max(gen_labels, dim=1)
+
+    # for each label, take the associated encodings
+    # print('label shapes:', data_labels.shape, gen_labels.shape)
+    mmd_sum = 0
+    for idx in range(n_labels):
+      idx_data_enc = data_enc[data_labels == idx]
+      idx_gen_enc = gen_enc[gen_labels == idx]
+      # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
+      # then for that label compute mmd:
+      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
+      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=np.sqrt(rff_sigma))
+    return mmd_sum
+
+  return real_loss
 
 
 def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
@@ -142,7 +167,7 @@ def get_args():
 
   # MODEL DEFINITION
   # parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
-  parser.add_argument('--conv-gen', action='store_true', default=False, help='use convolutional generator')
+  parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
   parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
@@ -217,7 +242,10 @@ def main():
   else:
     single_release_loss = None
 
-  rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
+  if ar.real_mmd:
+    rff_mmd_loss = get_real_mmd_loss(ar.rff_sigma, ar.n_labels, ar.batch_size)
+  else:
+    rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
 
   # init optimizer
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
@@ -238,6 +266,9 @@ def main():
   if ar.synth_mnist:
     syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, device)
     np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
+
+    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
+    log_final_score(ar.log_dir, final_score)
 
 
 if __name__ == '__main__':

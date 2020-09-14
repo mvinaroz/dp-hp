@@ -75,13 +75,15 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, ba
   return rff_mmd_loss, w_freq
 
 
-def get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type):
+def get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type,
+                            pca_vecs=None):
   assert d_rff % 2 == 0
   # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
   minibatch_loss, w_freq = get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor,
                                             train_loader.batch_size, mmd_type)
 
-  noisy_emb = noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor, mmd_type)
+  noisy_emb = noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor, mmd_type,
+                                      pca_vecs=pca_vecs)
 
   def single_release_loss(gen_enc, gen_labels):
     gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq, mmd_type)
@@ -90,7 +92,8 @@ def get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_lab
   return single_release_loss, minibatch_loss, noisy_emb
 
 
-def noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor, mmd_type, sum_frequency=25):
+def noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor, mmd_type, sum_frequency=25,
+                            pca_vecs=None):
   emb_acc = []
   n_data = 0
 
@@ -98,6 +101,7 @@ def noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise
     data, labels = data.to(device), labels.to(device)
     data = flat_data(data, labels, device, n_labels=10, add_label=False)
 
+    data = data if pca_vecs is None else apply_pca(pca_vecs, data)
     emb_acc.append(data_label_embedding(data, labels, w_freq, mmd_type, labels_to_one_hot=True, device=device,
                                         reduce='sum'))
     # emb_acc.append(pt.sum(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), one_hots]), 0))
@@ -154,11 +158,80 @@ def get_multi_sigma_losses(train_loader, d_enc, d_rff, rff_sigmas, device, n_lab
   return sr_multi_loss, mb_multi_loss, noisy_embs
 
 
-def get_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type):
+def get_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type, pca_vecs=None,
+               nested_losses=False):
   assert mmd_type in {'sphere', 'r+r'}
   assert isinstance(rff_sigma, str)
   rff_sigma = [float(sig) for sig in rff_sigma.split(',')]
-  if len(rff_sigma) == 1:
-    return get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma[0], device, n_labels, noise_factor, mmd_type)
+  if nested_losses:
+    return get_nested_losses(train_loader, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type)
+  elif len(rff_sigma) == 1:
+    return get_single_sigma_losses(train_loader, d_enc, d_rff, rff_sigma[0], device, n_labels, noise_factor, mmd_type,
+                                   pca_vecs)
   else:
     return get_multi_sigma_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type)
+
+
+def apply_pca(sing_vecs, x):
+  return x @ sing_vecs
+
+
+def get_nested_losses(train_loader, d_rff, rff_sigmas, device, n_labels, noise_factor, mmd_type):
+  mb_multi_loss, w_freqs = get_nested_minibatch_loss(d_rff, rff_sigmas, device, n_labels, noise_factor,
+                                                          train_loader.batch_size, mmd_type)
+
+  sr_losses = []
+  noisy_embs = []
+  for w_freq in w_freqs:
+    noisy_emb = noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise_factor, mmd_type)
+    noisy_embs.append(noisy_emb)
+
+    def single_release_loss(gen_enc, gen_labels):
+      gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq, mmd_type)
+      return pt.sum((noisy_emb - gen_emb) ** 2)
+    sr_losses.append(single_release_loss)
+
+  def sr_multi_loss(gen_enc, gen_labels):
+    loss_acc = 0
+    for loss in sr_losses:
+      loss_acc += loss(gen_enc, gen_labels)
+    return loss_acc
+
+  return sr_multi_loss, mb_multi_loss, noisy_embs
+
+
+def get_nested_minibatch_loss(d_rff, rff_sigma, device, n_labels, noise_factor, batch_size, mmd_type):
+  w_freqs = []
+
+  macro_mb_loss, w_freq = get_nested_loss(28**2, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size, mmd_type)
+  w_freqs.append(w_freq)
+
+  micro_mb_loss, w_freq = get_nested_loss(7**2, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size, mmd_type)
+  w_freqs.append(w_freq)
+
+  def mb_multi_loss(data_enc, labels, gen_enc, gen_labels):
+
+    macro_loss = macro_mb_loss(data_enc, labels, gen_enc, gen_labels)
+
+    micro_loss = 0
+    return macro_loss + micro_loss
+
+  return mb_multi_loss, w_freqs
+
+
+def get_nested_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size, mmd_type):
+  assert d_rff % 2 == 0
+
+  if mmd_type == 'sphere':
+    w_freq = weights_sphere(d_rff, d_enc, rff_sigma, device)
+  else:
+    w_freq = weights_rahimi_recht(d_rff, d_enc, rff_sigma, device)
+
+  def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
+    data_emb = data_label_embedding(data_enc, labels, w_freq, mmd_type, labels_to_one_hot=True, device=device)
+    gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq, mmd_type)
+    noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
+    noisy_emb = data_emb + noise
+    return pt.sum((noisy_emb - gen_emb) ** 2)
+
+  return rff_mmd_loss, w_freq

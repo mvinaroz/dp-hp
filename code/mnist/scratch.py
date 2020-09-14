@@ -175,8 +175,30 @@ def dpcgan_dummmy_eval():
 
   print(fpr, tpr, thresholds, auc(fpr, tpr))
 
+
+
+# import numpy as np
+# import os
+# run_types = [20, 30, 40, 50, 60, 70]
+# run_seeds = [1, 2, 3, 4, 5]
+# for run in run_types:
+#   run_results = []
+#   for seed in run_seeds:
+#     path = f'logs/gen/aug3_sig{run}_s{seed}/final_score'
+#     if os.path.exists(path):
+#       with open(path) as f:
+#         line = f.readlines()[0]
+#         assert line[:5] == 'acc: '
+#         run_results.append(float(line[5:]))
+#     else:
+#       print(f'{path} not found')
+#   print(f'{run}: {np.mean(np.asarray(run_results))}')
+#   print(run_results)
+
+
 if __name__ == '__main__':
-  dpcgan_dummmy_eval()
+  pass
+  # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
   # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
@@ -185,4 +207,4 @@ if __name__ == '__main__':
   # collect_arp4_grid()
   # collect_apr4_sr_conv()
   # collect_apr6_better_conv()
-  collect_apr6_noconv_grid()
+  # collect_apr6_noconv_grid()

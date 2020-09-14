@@ -102,6 +102,8 @@ def get_args():
   parser.add_argument('--rff-sigma', '-rffsig', type=str, default=None, help='standard dev. for filter sampling')
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
+  parser.add_argument('--flip-mnist', action='store_true', default=False, help='')
+
   ar = parser.parse_args()
 
   preprocess_args(ar)
@@ -151,7 +153,8 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
 
   # load data
-  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data)
+  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data,
+                                                    flip=ar.flip_mnist)
 
   # init model
   gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
@@ -179,8 +182,10 @@ def main():
     syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, device)
     np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
 
-    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
+    test_model_key = 'mlp' if ar.flip_mnist else 'logistic_reg'
+    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys=test_model_key)
     log_final_score(ar.log_dir, final_score)
+
 
 if __name__ == '__main__':
   main()
