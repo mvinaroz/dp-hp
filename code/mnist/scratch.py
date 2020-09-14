@@ -182,7 +182,8 @@ def collect_sep14_real_mmd_grid():
     os.makedirs(log_dir)
 
   scores = []
-  for run in range(64):
+  run_range = ['00', '01', '02', '03', '04', '05', '06', '07', '08',  '09'] + [str(k) for k in range(10, 64)]
+  for run in run_range:
     run_score = f'logs/gen/sep14_realmmd_{run}/final_score'
     if os.path.exists(run_score):
       with open(run_score) as f:
