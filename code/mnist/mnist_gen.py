@@ -7,7 +7,8 @@ from models_gen import FCCondGen, ConvCondGen
 from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
 from mmd_approx import rff_sphere, weights_sphere
 from synth_data_benchmark import test_gen_data
-from real_mmd_loss import mmd_g, get_squared_dist
+from real_mmd_loss import get_real_mmd_loss
+from kmeans import get_kmeans_mmd_loss
 
 
 def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=None, reduce='mean'):
@@ -42,8 +43,8 @@ def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, n_lab
   noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / n_data)
   noisy_emb = emb_acc + noise
 
-  def rff_mmd_loss(gen_enc, gen_labels):
-    gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq)
+  def rff_mmd_loss(gen_data, gen_labels):
+    gen_emb = data_label_embedding(gen_data, gen_labels, w_freq)
     return pt.sum((noisy_emb - gen_emb) ** 2)
 
   return rff_mmd_loss, noisy_emb
@@ -62,27 +63,6 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, ba
     return pt.sum((noisy_emb - gen_emb) ** 2)
 
   return rff_mmd_loss
-
-
-def get_real_mmd_loss(rff_sigma, n_labels, batch_size):
-
-  def real_loss(data_enc, data_labels, gen_enc, gen_labels):
-    # set gen labels to scalars from one-hot
-    _, gen_labels = pt.max(gen_labels, dim=1)
-
-    # for each label, take the associated encodings
-    # print('label shapes:', data_labels.shape, gen_labels.shape)
-    mmd_sum = 0
-    for idx in range(n_labels):
-      idx_data_enc = data_enc[data_labels == idx]
-      idx_gen_enc = gen_enc[gen_labels == idx]
-      # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
-      # then for that label compute mmd:
-      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
-      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=np.sqrt(rff_sigma))
-    return mmd_sum
-
-  return real_loss
 
 
 def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
@@ -170,7 +150,6 @@ def get_args():
   parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
-  parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
 
@@ -179,7 +158,13 @@ def get_args():
   parser.add_argument('--rff-sigma', '-rffsig', type=float, default=None, help='standard dev. for filter sampling')
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
+  # ALTERNATE MODES
   parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
+  parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
+
+  parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
+  parser.add_argument('--n-means', type=int, default=10, help='number of means to find per class')
+
   ar = parser.parse_args()
 
   preprocess_args(ar)
@@ -239,6 +224,10 @@ def main():
   if ar.single_release:
     single_release_loss, _ = get_single_release_loss(train_loader, 784, ar.d_rff, ar.rff_sigma, device, ar.n_labels,
                                                      ar.noise_factor)
+  elif ar.kmeans_mmd:
+    single_release_loss = get_kmeans_mmd_loss(train_loader, ar.n_labels, ar.noise_factor, ar.n_means,
+                                              ar.rff_sigma, ar.batch_size)
+
   else:
     single_release_loss = None
 
@@ -258,7 +247,8 @@ def main():
     else:
       train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval)
 
-    test(gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size, ar.log_dir)
+    # testing doesn't really inform how training is going, so it's commented out
+    # test(gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size, ar.log_dir)
     scheduler.step()
 
   # save trained model and data
