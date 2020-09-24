@@ -372,10 +372,10 @@ def aggregate_sep18_realmmd():
         for e_idx, e in enumerate(eval_metrics):
           score = mat[e][1]
           scores[e].append(score)
-        accs = np.asarray(scores["accuracies"])
-        print(f'model: {m}')
-        print(f'acc avg: {np.mean(accs)}')
-        print(f'accs: {accs}')
+      accs = np.asarray(scores["accuracies"])
+      print(f'model: {m}')
+      print(f'acc avg: {np.mean(accs)}')
+      print(f'accs: {accs}')
 
 
 if __name__ == '__main__':
