@@ -164,6 +164,11 @@ def get_args():
 
   parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   parser.add_argument('--n-means', type=int, default=10, help='number of means to find per class')
+  parser.add_argument('--dp-kmeans-encoding-dim', type=int, default=10, help='dimension the data is projected to')
+  parser.add_argument('--tgt-epsilon', type=float, default=1000.0, help='privacy epsilon for dp k-means')
+  parser.add_argument('--kmeans-delta', type=float, default=0.01, help='soft failure probability in dp k-means')
+
+  parser.add_argument('--center-data', action='store_true', default=False, help='k-means requires centering')
 
   ar = parser.parse_args()
 
@@ -184,6 +189,9 @@ def preprocess_args(ar):
   assert ar.data in {'digits', 'fashion'}
   if ar.rff_sigma is None:
     ar.rff_sigma = 105 if ar.data == 'digits' else 127
+
+  if ar.kmeans_mmd and ar.tgt_epsilon > 0.0:
+    assert ar.center_data, 'dp kmeans requires centering of data'
 
 
 def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -212,7 +220,8 @@ def main():
   device = pt.device("cuda" if use_cuda else "cpu")
 
   # load data
-  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data)
+  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data,
+                                                    normalize=ar.center_data)
 
   # init model
   if ar.conv_gen:
@@ -226,7 +235,7 @@ def main():
                                                      ar.noise_factor)
   elif ar.kmeans_mmd:
     single_release_loss = get_kmeans_mmd_loss(train_loader, ar.n_labels, ar.noise_factor, ar.n_means,
-                                              ar.rff_sigma, ar.batch_size)
+                                              ar.rff_sigma, ar.batch_size, ar.dp_kmeans_encoding_dim)
 
   else:
     single_release_loss = None

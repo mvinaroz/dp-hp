@@ -196,6 +196,27 @@ def collect_sep14_real_mmd_grid():
     for idx, score in scores:
       f.write(f'{idx}: {score}')
 
+
+def collect_sep21_nonp_kmeans_grid():
+  log_dir = 'logs/gen/sep21_kmeans_grid_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  scores = []
+  run_range = [str(k) for k in range(28)]
+  for run in run_range:
+    run_score = f'logs/gen/sep21_kmeans_grid_{run}/final_score'
+    if os.path.exists(run_score):
+      with open(run_score) as f:
+        scores.append((run, f.readline()))
+
+  for idx, score in scores:
+    print(f'{idx}: {score}')
+
+  with open(log_dir + 'scores', mode='w') as f:
+    for idx, score in scores:
+      f.write(f'{idx}: {score}')
+
 # import numpy as np
 # import os
 # run_types = [20, 30, 40, 50, 60, 70]
@@ -216,7 +237,7 @@ def collect_sep14_real_mmd_grid():
 
 
 if __name__ == '__main__':
-  collect_sep14_real_mmd_grid()
+  collect_sep21_nonp_kmeans_grid()
   # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
