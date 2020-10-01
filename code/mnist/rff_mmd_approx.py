@@ -44,11 +44,12 @@ def weights_rahimi_recht(d_rff, d_enc, sig, device):
   return rff_param_tuple(w=w_freq, b=b_freq)
 
 
-def data_label_embedding(data, labels, rff_params, mmd_type, labels_to_one_hot=False, device=None, reduce='mean'):
+def data_label_embedding(data, labels, rff_params, mmd_type,
+                         labels_to_one_hot=False, n_labels=None, device=None, reduce='mean'):
   assert reduce in {'mean', 'sum'}
   if labels_to_one_hot:
     batch_size = data.shape[0]
-    one_hots = pt.zeros(batch_size, 10, device=device)
+    one_hots = pt.zeros(batch_size, n_labels, device=device)
     one_hots.scatter_(1, labels[:, None], 1)
     labels = one_hots
 
@@ -66,7 +67,8 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, ba
     w_freq = weights_rahimi_recht(d_rff, d_enc, rff_sigma, device)
 
   def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
-    data_emb = data_label_embedding(data_enc, labels, w_freq, mmd_type, labels_to_one_hot=True, device=device)
+    data_emb = data_label_embedding(data_enc, labels, w_freq, mmd_type, labels_to_one_hot=True,
+                                    n_labels=n_labels, device=device)
     gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq, mmd_type)
     noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
     noisy_emb = data_emb + noise
@@ -102,8 +104,8 @@ def noisy_dataset_embedding(train_loader, w_freq, d_rff, device, n_labels, noise
     data = flat_data(data, labels, device, n_labels=10, add_label=False)
 
     data = data if pca_vecs is None else apply_pca(pca_vecs, data)
-    emb_acc.append(data_label_embedding(data, labels, w_freq, mmd_type, labels_to_one_hot=True, device=device,
-                                        reduce='sum'))
+    emb_acc.append(data_label_embedding(data, labels, w_freq, mmd_type, labels_to_one_hot=True, n_labels=n_labels,
+                                        device=device, reduce='sum'))
     # emb_acc.append(pt.sum(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), one_hots]), 0))
     n_data += data.shape[0]
 
@@ -158,8 +160,8 @@ def get_multi_sigma_losses(train_loader, d_enc, d_rff, rff_sigmas, device, n_lab
   return sr_multi_loss, mb_multi_loss, noisy_embs
 
 
-def get_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type, pca_vecs=None,
-               nested_losses=False):
+def get_rff_losses(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, mmd_type, pca_vecs=None,
+                   nested_losses=False):
   assert mmd_type in {'sphere', 'r+r'}
   assert isinstance(rff_sigma, str)
   rff_sigma = [float(sig) for sig in rff_sigma.split(',')]
@@ -228,7 +230,8 @@ def get_nested_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, bat
     w_freq = weights_rahimi_recht(d_rff, d_enc, rff_sigma, device)
 
   def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
-    data_emb = data_label_embedding(data_enc, labels, w_freq, mmd_type, labels_to_one_hot=True, device=device)
+    data_emb = data_label_embedding(data_enc, labels, w_freq, mmd_type, labels_to_one_hot=True,
+                                    n_labels=n_labels, device=device)
     gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq, mmd_type)
     noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
     noisy_emb = data_emb + noise

@@ -97,14 +97,31 @@ import torch.nn as nn
 
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, n_labels, use_sigmoid=True, batch_norm=True, d_out=784):
+  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=True, batch_norm=True):
     super(FCCondGen, self).__init__()
     d_hid = [int(k) for k in d_hid.split(',')]
+    assert len(d_hid) < 5
+
     self.fc1 = nn.Linear(d_code + n_labels, d_hid[0])
     self.fc2 = nn.Linear(d_hid[0], d_hid[1])
-    self.fc3 = nn.Linear(d_hid[1], d_out)
+
     self.bn1 = nn.BatchNorm1d(d_hid[0]) if batch_norm else None
     self.bn2 = nn.BatchNorm1d(d_hid[1]) if batch_norm else None
+    if len(d_hid) == 2:
+      self.fc3 = nn.Linear(d_hid[1], d_out)
+    elif len(d_hid) == 3:
+      self.fc3 = nn.Linear(d_hid[1], d_hid[2])
+      self.fc4 = nn.Linear(d_hid[2], d_out)
+      self.bn3 = nn.BatchNorm1d(d_hid[2]) if batch_norm else None
+    elif len(d_hid) == 4:
+      self.fc3 = nn.Linear(d_hid[1], d_hid[2])
+      self.fc4 = nn.Linear(d_hid[2], d_hid[3])
+      self.fc5 = nn.Linear(d_hid[3], d_out)
+      self.bn3 = nn.BatchNorm1d(d_hid[2]) if batch_norm else None
+      self.bn4 = nn.BatchNorm1d(d_hid[3]) if batch_norm else None
+
+    self.use_bn = batch_norm
+    self.n_layers = len(d_hid)
     self.relu = nn.ReLU()
     self.sigmoid = nn.Sigmoid()
     self.use_sigmoid = use_sigmoid
@@ -113,10 +130,17 @@ class FCCondGen(nn.Module):
 
   def forward(self, x):
     x = self.fc1(x)
-    x = self.bn1(x) if self.bn1 is not None else x
+    x = self.bn1(x) if self.use_bn else x
     x = self.fc2(self.relu(x))
-    x = self.bn2(x) if self.bn1 is not None else x
+    x = self.bn2(x) if self.use_bn else x
     x = self.fc3(self.relu(x))
+    if self.n_layers > 2:
+      x = self.bn3(x) if self.use_bn else x
+      x = self.fc4(self.relu(x))
+      if self.n_layers > 3:
+        x = self.bn4(x) if self.use_bn else x
+        x = self.fc5(self.relu(x))
+
     if self.use_sigmoid:
       x = self.sigmoid(x)
     return x

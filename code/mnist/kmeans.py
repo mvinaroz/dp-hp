@@ -42,7 +42,8 @@ def extract_kmeans(train_loader, n_labels, n_means, tgt_epsilon, encoding_dim):
     if tgt_epsilon is None:
       means_l = MiniBatchKMeans(n_clusters=n_means).fit(data_l).cluster_centers_
     else:
-      means_l, _ = alg4_private_clustering(data_l, tgt_epsilon, delta, n_means, data_radius, encoding_dim)
+      means_l, _ = alg4_private_clustering(data_l, tgt_epsilon, delta, n_means, data_radius, encoding_dim,
+                                           alg4_max_iter=1)
     print(f'label {l} with {data_l.shape[0]} samples done')
     means.append(means_l)
     new_labels.append(np.ones(means_l.shape[0]) * l)

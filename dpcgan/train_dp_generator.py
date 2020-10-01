@@ -5,8 +5,9 @@ import argparse
 import numpy as np
 from models_ae import FCEnc, FCDec, ConvEnc, ConvDec
 from models_gen import FCGen, FCLabelGen, FCCondGen
-from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
-from mmd_approx import rff_sphere
+from aux import plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from data_loading import get_mnist_dataloaders
+from rff_mmd_approx import rff_sphere
 
 
 def train(enc, gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval, ae_conv, ae_label,

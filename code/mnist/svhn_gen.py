@@ -5,7 +5,7 @@ import argparse
 import numpy as np
 from models_gen import ConvCondGenSVHN, ConvGenSVHN
 from aux import get_svhn_dataloaders, plot_svhn_batch, meddistance, save_gen_labels, log_args, flat_data
-from mmd_approx import rff_sphere
+from rff_mmd_approx import rff_sphere
 from real_mmd_loss import mmd_g, get_squared_dist
 
 

@@ -1,5 +1,5 @@
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import numpy as np
 import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
@@ -8,7 +8,7 @@ import xgboost
 import time
 
 
-def load_real_data(data_key, data_from_torch):
+def load_mnist_data(data_key, data_from_torch):
   if not data_from_torch:
     if data_key == 'digits':
       d = np.load('data/MNIST/numpy_dmnist.npz')  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
@@ -117,9 +117,12 @@ def parse():
   return ar
 
 
+datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
+                                                            'x_real_train', 'y_real_train',
+                                                            'x_real_test', 'y_real_test'])
+
 def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels):
-  x_real_train, y_real_train, x_real_test, y_real_test = load_real_data(data_key, data_from_torch)
-  time.sleep(5)
+  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, data_from_torch)
   gen_data = np.load(data_path)
   x_gen, y_gen = gen_data['data'], gen_data['labels']
   if len(y_gen.shape) == 2:  # remove onehot
@@ -145,7 +148,7 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
   print(f'label ranges: [{np.min(y_real_test)}, {np.max(y_real_test)}], [{np.min(y_real_train)}, '
         f'{np.max(y_real_train)}], [{np.min(y_gen)}, {np.max(y_gen)}]')
 
-  return x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test
+  return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
 
 
 def prep_models(custom_keys, skip_slow_models, only_slow_models):
@@ -207,53 +210,67 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
 
 
 def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_path=None,
-                  data_from_torch=False, shuffle_data=False,
-                  subsample=1., sub_balanced_labels=True,
+                  data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
                   custom_keys=None, skip_slow_models=False, only_slow_models=False,
                   skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
                   print_conf_mat=False, norm_data=False):
 
+  gen_data_dir = os.path.join(data_base_dir, data_log_name)
+  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
+  if data_path is None:
+    data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+  datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
+  mean_acc = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
+                                  subsample, custom_keys, skip_slow_models, only_slow_models,
+                                  skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
+                                  print_conf_mat, norm_data)
+  return mean_acc
+
+
+def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
+                         subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
+                         skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
+                         print_conf_mat=False, norm_data=False):
   if data_log_name is not None:
     print(f'processing {data_log_name}')
 
-  gen_data_dir = os.path.join(data_base_dir, data_log_name)
-  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
   if log_results:
     os.makedirs(log_save_dir, exist_ok=True)
-
-  if data_path is None:
-    data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
-
-  data_tup = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
-  x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test = data_tup
 
   models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
 
   g_to_r_acc_summary = []
-
+  dc = datasets_colletion
   for key in run_keys:
     print(f'Model: {key}')
-    g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
-    base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
-    r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
     a_str, f_str = 'acc:', 'f1:'
 
     if not skip_gen_to_real:
       model = models[key](**model_specs[key])
-      g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, x_gen, y_gen, x_real_test, y_real_test,
+      g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str, f_str)
       g_to_r_acc_summary.append(g_to_r_acc)
+    else:
+      g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 
     if compute_real_to_real:
       model = models[key](**model_specs[key])
-      base_acc, base_f1, base_conf, a_str, f_str = model_test_run(model, x_real_train, y_real_train, x_real_test,
-                                                                  y_real_test, norm_data, a_str, f_str)
+      base_acc, base_f1, base_conf, a_str, f_str = model_test_run(model,
+                                                                  dc.x_real_train, dc.y_real_train,
+                                                                  dc.x_real_test, dc.y_real_test,
+                                                                  norm_data, a_str, f_str)
+    else:
+      base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
 
     if compute_real_to_gen:
       model = models[key](**model_specs[key])
-      r_to_g_acc, r_to_g_f1, r_to_g_conv, a_str, f_str = model_test_run(model, x_real_train, y_real_train,
-                                                                        x_gen[:10000], y_gen[:10000],
+      r_to_g_acc, r_to_g_f1, r_to_g_conv, a_str, f_str = model_test_run(model,
+                                                                        dc.x_real_train, dc.y_real_train,
+                                                                        dc.x_gen[:10000], dc.y_gen[:10000],
                                                                         norm_data, a_str, f_str)
+    else:
+      r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
 
     print(a_str)
     print(f_str)

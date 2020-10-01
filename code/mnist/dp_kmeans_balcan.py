@@ -6,11 +6,12 @@ cube_tup = namedtuple('cube_tuple', ['min', 'max', 'center', 'data'])
 
 
 def alg1_private_partition(epsilon, delta, initial_cube):
+  print(f'alg1 eps: {epsilon}')
   depth = 0
   active_cubes = [initial_cube]
   grid_set = []
 
-  epsilon = 1.  # TODO remove debug
+  # epsilon = 1.  # TODO remove debug
 
   n_data = initial_cube.data.shape[0]
   dp_add_select = _get_dp_selector(n_data, epsilon, delta)
@@ -57,7 +58,7 @@ def _split_cube(cube, axis=0):
 def _get_dp_selector(n_data, epsilon, delta):
   epsilon_prime = epsilon / (2 * np.log(n_data))
   gamma = 20 / epsilon_prime * np.log(n_data / delta)
-  print(f'eps prime: {epsilon_prime}, gamma {gamma}')
+  print(f'eps: {epsilon}, log ndata: {np.log(n_data)}, eps prime: {epsilon_prime}, gamma {gamma}')
 
   def dp_add_select(m):
     if m <= gamma:
@@ -71,6 +72,7 @@ def _get_dp_selector(n_data, epsilon, delta):
 
 
 def alg2_candidate(dataset, epsilon, delta, n_centers, data_radius, max_iter=None):
+  print(f'alg2 eps: {epsilon}')
   # n_data = dataset.shape[0]
   n_feat = dataset.shape[1]
   grid_set = []
@@ -99,7 +101,7 @@ def alg3_localswap(dataset, grid_set, epsilon, delta, n_centers, data_radius, ma
 
   candidate_loss = np.sum(np.min(dist_mat[:, centers_z], axis=1))  # also, we compute the initial loss L(Z^(0))
 
-  max_iter = 1000  # TODO remove debug
+  # max_iter = 1000  # TODO remove debug
   if max_iter is None:  # if not set, we fix number of iterations
     max_iter = int(np.round(100 * n_centers * np.log(dataset.shape[0] / delta)))
 
@@ -201,7 +203,7 @@ def get_candidate_set(centers_z, dist_mat, n_centers, old_loss, eps_term, grid_s
 
 def alg4_private_clustering(dataset, epsilon, delta, n_centers, data_radius,
                             encoding_dim=None, alg2_max_iter=None, alg3_max_iter=None, alg4_max_iter=None):
-
+  print(f'alg4 eps: {epsilon}')
   n_data, n_feat = dataset.shape
 
   if encoding_dim is None:

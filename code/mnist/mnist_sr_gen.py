@@ -4,8 +4,9 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import ConvCondGen
-from aux import get_mnist_dataloaders, plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
-from mmd_approx import get_losses
+from aux import plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
+from data_loading import get_mnist_dataloaders
+from rff_mmd_approx import get_rff_losses
 from synth_data_benchmark import test_gen_data
 
 
@@ -161,8 +162,8 @@ def main():
 
   # define loss function
 
-  sr_loss, mb_loss, _ = get_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor,
-                                   ar.mmd_type)
+  sr_loss, mb_loss, _ = get_rff_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor,
+                                       ar.mmd_type)
 
   # rff_mmd_loss = get_rff_mmd_loss(n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
 
