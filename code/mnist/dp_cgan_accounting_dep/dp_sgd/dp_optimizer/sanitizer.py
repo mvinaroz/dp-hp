@@ -26,7 +26,7 @@ import collections
 
 import tensorflow as tf
 
-from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import utils
 
 
 ClipOption = collections.namedtuple("ClipOption",

@@ -30,12 +30,12 @@ import argparse
 baseDir = "../"
 sys.path.append(baseDir)
 
-from dp_cgan_accounting.dp_sgd.dp_optimizer import dp_optimizer
-from dp_cgan_accounting.dp_sgd.dp_optimizer import sanitizer
-from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
-from dp_cgan_accounting.privacy_accountant.tf import accountant
-from dp_cgan_accounting.analysis.rdp_accountant import compute_rdp
-from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import dp_optimizer
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import sanitizer
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import utils
+from dp_cgan_accounting_dep.privacy_accountant.tf import accountant
+from dp_cgan_accounting_dep.analysis.rdp_accountant import compute_rdp
+from dp_cgan_accounting_dep.analysis.rdp_accountant import get_privacy_spent
 
 
 def compute_fpr_tpr_roc(y_test, y_score):
