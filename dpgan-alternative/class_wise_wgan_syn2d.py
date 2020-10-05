@@ -2,14 +2,24 @@
 
 import argparse
 import os
+import sys
 import numpy as np
-
 import torch as pt
 from torchvision.utils import save_image
-from wgan_models import Generator, Discriminator
-from dpgan_data_loading import get_single_label_dataloader
+from wgan_models import GeneratorSyn2d, DiscriminatorSyn2d
+from dpgan_data_loading import get_single_label_dataloader_syn2d
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
+
+try:
+    from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
+except ImportError:
+    print('importing through relative path')
+    # Import required Differential Privacy packages
+    baseDir = "../code/mnist/"
+    sys.path.append(baseDir)
+
+    from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
 
 
 def parse_arguments():
@@ -20,15 +30,12 @@ def parse_arguments():
   parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
   parser.add_argument("--n-cpu", type=int, default=4, help="number of cpu threads to use during batch generation")
   parser.add_argument("--latent-dim", type=int, default=100, help="dimensionality of the latent space")
-  parser.add_argument("--img-size", type=int, default=28, help="size of each image dimension")
-  parser.add_argument("--channels", type=int, default=1, help="number of image channels")
   parser.add_argument("--n-critic", type=int, default=5, help="number of training steps for discriminator per iter")
 
+  parser.add_argument('--synth-spec-string', type=str, default='disc_k5_n100000_row5_col5_noise0.2', help='')
   parser.add_argument("--clip-value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
   parser.add_argument("--sample-interval", type=int, default=1000, help="interval betwen image samples")
   parser.add_argument("--print-interval", type=int, default=50, help="interval betwen image samples")
-
-  parser.add_argument("--data-key", '-data', type=str, default='digits', help="either digits or fashion")
   parser.add_argument("--seed", type=int, default=42, help="random seed")
   parser.add_argument("--log-name", type=str, default='test', help="name of folder where results are stored")
   parser.add_argument('--overwrite', action='store_true', default=False, help='only write to existing log-name if true')
@@ -37,10 +44,12 @@ def parse_arguments():
   parser.add_argument('--dp-clip', '-clip', type=float, default=0.01, help='samplewise gradient L2 clip norm')
   parser.add_argument('--dp-noise', '-noise', type=float, default=0.0, help='DP-SGD noise parameter')
 
+  parser.add_argument("--gen-d-hid", type=str, default='128,256,512,1024')
+  parser.add_argument("--dis-d-hid", type=str, default='512,256,128')
   return parser.parse_args()
 
 
-def make_log_dirs(ar, n_labels=10):
+def make_log_dirs(ar, n_labels):
   if ar.synth_data:
     os.makedirs(f"synth_data/{ar.log_name}", exist_ok=ar.overwrite or ar.log_name == 'test')
 
@@ -79,7 +88,6 @@ def train_batch(real_imgs, device, dis_opt, gen_opt, dis, gen, clip_value, train
                                                                          device, dp_clip, dp_noise, dis_opt)
 
   dis_opt.step()
-
 
   # Clip weights of discriminator
   for p in dis.parameters():
@@ -159,13 +167,13 @@ def log_progress(log_vals, batches_done, ep_len, epoch, ar, label, is_final_batc
       cf_mean, cf_max = pt.mean(clips_fake), pt.max(clips_fake)
       print(f'Clips - Real: mean {cr_mean}, max {cr_max} Fake: mean {cf_mean}, max {cf_max}')
 
-  if batches_done % ar.sample_interval == 0 or is_final_batch:
-    save_image(gen_imgs.data[:25], f"run_logs/{ar.log_name}/l{label}/{batches_done}.png", nrow=5, normalize=True)
+  # if batches_done % ar.sample_interval == 0 or is_final_batch:
+    # save_image(gen_imgs.data[:25], f"run_logs/{ar.log_name}/l{label}/{batches_done}.png", nrow=5, normalize=True)
 
 
 def make_synth_data(gen, n_data, device, log_name, label, batch_size=300):
-  gen_labels = np.zeros((n_data, 10))
-  gen_labels[:, label] = 1
+  gen_labels = np.zeros(n_data) + label
+  # gen_labels[:, label] = 1
   gen_data = []
   while n_data > 0:
     if n_data < batch_size:
@@ -174,13 +182,13 @@ def make_synth_data(gen, n_data, device, log_name, label, batch_size=300):
     gen_data.append(gen(gen.get_noise(batch_size, device)).detach().cpu().numpy())
     n_data -= batch_size
   gen_data = np.concatenate(gen_data)
-  gen_data = np.reshape(gen_data, (gen_data.shape[0], 784))
-  gen_data = gen_data * 0.5 + 0.5  # revert normalization
+  # gen_data = np.reshape(gen_data, (gen_data.shape[0], 784))
+  # gen_data = gen_data * 0.5 + 0.5  # revert normalization
 
   np.savez(f'synth_data/{log_name}/synth_l{label}.npz', data=gen_data, labels=gen_labels)
 
 
-def combine_synth_data(labels, log_name):
+def combine_synth_data(labels, log_name, data_spec_string):
   gen_data = []
   gen_labels = []
   for label in labels:
@@ -192,18 +200,29 @@ def combine_synth_data(labels, log_name):
   rand_perm = np.random.permutation(gen_data.shape[0])
   gen_data = gen_data[rand_perm]  # mix em up
   gen_labels = gen_labels[rand_perm]
-  np.savez(f'synth_data/{log_name}/synthetic_mnist.npz', data=gen_data, labels=gen_labels)
+  np.savez(f'synth_data/{log_name}/generated_samples.npz', data=gen_data, labels=gen_labels)
+
+  # now test
+  # dataloader, n_data = get_single_label_dataloader_syn2d(ar.batch_size, label, ar.synth_spec_string)
+  _, _, eval_func, class_centers = make_data_from_specstring(data_spec_string)
+  eval_score = eval_func(gen_data, gen_labels)
+  print('likelhood:', eval_score)
+  plot_data(gen_data, gen_labels, f'synth_data/{log_name}/data_plot')
+  plot_data(gen_data, gen_labels, f'synth_data/{log_name}/data_plot_centered', center_frame=True)
 
 
-def train_model_for_label(ar, label):
-  img_shape = (ar.channels, ar.img_size, ar.img_size)
+def train_model_for_label(ar, label, n_features):
+  # img_shape = (ar.channels, ar.img_size, ar.img_size)
   device = pt.device("cuda" if pt.cuda.is_available() else "cpu")
-  gen = Generator(ar.latent_dim, img_shape).to(device)  # Initialize generator and discriminator
-  dis = Discriminator(img_shape).to(device)
+
+  gen_d_hid_list = [int(k) for k in ar.gen_d_hid.split(',')]
+  dis_d_hid_list = [int(k) for k in ar.dis_d_hid.split(',')]
+  gen = GeneratorSyn2d(ar.latent_dim, gen_d_hid_list, n_features).to(device)  # Initialize generator and discriminator
+  dis = DiscriminatorSyn2d(n_features, dis_d_hid_list).to(device)
   if ar.dp_noise > 0.:
     dis = extend(dis)
-
-  dataloader, n_data = get_single_label_dataloader(ar.batch_size, label, ar.data_key)
+  dataloader, n_data = get_single_label_dataloader_syn2d(ar.batch_size, label, ar.synth_spec_string)
+  # dataloader, n_data = get_single_label_dataloader(ar.batch_size, label, ar.data_key)
 
   # Optimizers
   gen_opt = pt.optim.RMSprop(gen.parameters(), lr=ar.lr)
@@ -227,17 +246,20 @@ def train_model_for_label(ar, label):
 def main():
 
   ar = parse_arguments()
-  make_log_dirs(ar)
+  n_labels = int(ar.synth_spec_string.split('_')[1][1:])
+  print(n_labels)
+  make_log_dirs(ar, n_labels)
   pt.manual_seed(ar.seed)
   log_args(f"synth_data/{ar.log_name}/", ar)
 
-  labels = list(range(10))
+
+  labels = list(range(n_labels))
   for label in labels:
     print(f'training label {label}')
-    train_model_for_label(ar, label)
+    train_model_for_label(ar, label, n_features=2)
 
   if ar.synth_data:
-    combine_synth_data(labels, ar.log_name)
+    combine_synth_data(labels, ar.log_name, ar.synth_spec_string)
 
 
 if __name__ == '__main__':
