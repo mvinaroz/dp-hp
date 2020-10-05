@@ -251,7 +251,7 @@ def collect_oct4_dpcgan_grid():
 
 def collect_oct4_dpcgan_grid_scores():
   for run in range(90):
-    run_file = f'../../dpcgan/joblogs/oct4_dpcgan_grid_{run}.out.txt '
+    run_file = f'../../dpcgan/joblogs/oct4_dpcgan_grid_{run}.out.txt'
 
     # if os.path.exists(run_file):
     try:
