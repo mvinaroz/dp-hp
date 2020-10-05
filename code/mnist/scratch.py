@@ -236,8 +236,22 @@ def collect_sep21_nonp_kmeans_grid():
 #   print(run_results)
 
 
+def collect_oct4_dpcgan_grid():
+  log_dir = 'logs/oct4_synd_2d_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+    for run in range(90):
+      run_dir = f'logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_{run}/'
+      run_plot_path = run_dir + f'gen_data.png.png'
+      tgt_plot_path = log_dir + f'gen_data_{run}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+
+
 if __name__ == '__main__':
-  collect_sep21_nonp_kmeans_grid()
+  # collect_sep21_nonp_kmeans_grid()
+  collect_oct4_dpcgan_grid()
   # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')

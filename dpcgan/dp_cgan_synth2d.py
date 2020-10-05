@@ -274,7 +274,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             # Update the generator network
             _, g_loss_curr = sess.run([g_solver, g_loss], feed_dict={z_pl: z_sample, y_pl: y_mb, lr_pl: curr_lr})
 
-            # print(f'checking eps: eps: {eps}/{max_target_eps}')
+            print(f'checking eps: eps: {eps}/{max_target_eps}')
             if eps >= max_target_eps or step >= num_training_steps:
                 print(f"TERMINATE!!!!")
                 print("Termination Step : " + str(step))
@@ -310,9 +310,9 @@ def test_data(save_dir, data_spec_str):
     gen_x = samples['data']
     gen_y = samples['labels']
     data_samples, label_samples, eval_func, class_centers = make_data_from_specstring(data_spec_str)
-    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data.png'))
-    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_sub0.1.png'), subsample=0.1)
-    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_centered.png'), center_frame=True)
+    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data'))
+    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_sub0.1'), subsample=0.1)
+    plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_centered'), center_frame=True)
     print(f'gen samples eval score: {eval_func(gen_x, gen_y)}')
 
 
