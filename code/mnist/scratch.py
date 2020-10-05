@@ -2,9 +2,9 @@ import os
 import shutil
 import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import numpy as np
-from torchvision import datasets
+# from torchvision import datasets
 from aux import plot_mnist_batch, NamedArray
 from sklearn.metrics import roc_curve, auc
 
