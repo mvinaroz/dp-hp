@@ -257,9 +257,9 @@ def collect_oct4_dpcgan_grid_scores():
     if os.path.exists(run_file):
     # try:
       with open(run_file) as f:
-        last_line = f.readlines()[-1]
-        if last_line.startswith('gen samples eval score: '):
-          score = last_line.split()[-1]
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
           print(f'{run}: {score}')
         else:
           print(f'{run} wrong format')
