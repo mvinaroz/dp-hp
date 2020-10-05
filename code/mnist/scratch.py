@@ -259,6 +259,10 @@ def collect_oct4_dpcgan_grid_scores():
         if last_line.startswith('gen samples eval score: '):
           score = last_line.split()[-1]
           print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+      print(f'{run} not found')
 
 
 if __name__ == '__main__':
