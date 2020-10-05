@@ -1,7 +1,7 @@
 import os
 import shutil
-import matplotlib
-matplotlib.use('Agg')  # to plot without Xserver
+# import matplotlib
+# matplotlib.use('Agg')  # to plot without Xserver
 # import matplotlib.pyplot as plt
 import numpy as np
 # from torchvision import datasets
@@ -249,9 +249,22 @@ def collect_oct4_dpcgan_grid():
         shutil.copy(run_plot_path, tgt_plot_path)
 
 
+def collect_oct4_dpcgan_grid_scores():
+  for run in range(90):
+    run_file = f'../../dpcgan/joblogs/oct4_dpcgan_grid_{run}.out.txt '
+
+    if os.path.exists(run_file):
+      with open(run_file) as f:
+        last_line = f.readlines()[-1]
+        if last_line.startswith('gen samples eval score: '):
+          score = last_line.split()[-1]
+          print(f'{run}: {score}')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
-  collect_oct4_dpcgan_grid()
+  # collect_oct4_dpcgan_grid()
+  collect_oct4_dpcgan_grid_scores()
   # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
