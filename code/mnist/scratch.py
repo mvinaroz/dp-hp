@@ -253,7 +253,8 @@ def collect_oct4_dpcgan_grid_scores():
   for run in range(90):
     run_file = f'../../dpcgan/joblogs/oct4_dpcgan_grid_{run}.out.txt '
 
-    if os.path.exists(run_file):
+    # if os.path.exists(run_file):
+    try:
       with open(run_file) as f:
         last_line = f.readlines()[-1]
         if last_line.startswith('gen samples eval score: '):
@@ -261,7 +262,7 @@ def collect_oct4_dpcgan_grid_scores():
           print(f'{run}: {score}')
         else:
           print(f'{run} wrong format')
-    else:
+    except IOError:
       print(f'{run} not found')
 
 
