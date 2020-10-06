@@ -287,7 +287,7 @@ def collect_oct5_dpgan_grid_scores_and_plots():
     # try:
       with open(run_file) as f:
         lines = f.readlines()
-        score_lines = [l.split()[-1] for l in lines if l.startswith('gen samples eval score: ')]
+        score_lines = [l.split()[-1] for l in lines if l.startswith('likelhood: ')]
 
         if len(score_lines) == 2:
           print(f'{2*run}: {score_lines[0]}')
