@@ -268,10 +268,42 @@ def collect_oct4_dpcgan_grid_scores():
       print(f'{run} not found')
 
 
+def collect_oct5_dpgan_grid_scores_and_plots():
+  log_dir = '../../dpgan-alternative/synth_data/oct5_synd_2d_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+    for run in range(162):
+      run_dir = f'../../dpgan-alternative/synth_data/oct5_grid_{run}/'
+      run_plot_path = run_dir + f'data_plot.png'
+      tgt_plot_path = log_dir + f'gen_data_{run}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+
+  for run in range(81):
+    run_file = f'../../dpgan-alternative/joblogs/oct5_dpgan_syn2d_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+    # try:
+      with open(run_file) as f:
+        lines = f.readlines()
+        score_lines = [l.split()[-1] for l in lines if l.startswith('gen samples eval score: ')]
+
+        if len(score_lines) == 2:
+          print(f'{2*run}: {score_lines[0]}')
+          print(f'{2*run+1}: {score_lines[1]}')
+        else:
+          print(f'{2*run}, {2*run+1} wrong format')
+    else:
+    # except IOError:
+      print(f'{run} not found')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
-  collect_oct4_dpcgan_grid_scores()
+  # collect_oct4_dpcgan_grid_scores()
+  collect_oct5_dpgan_grid_scores_and_plots()
   # dpcgan_dummmy_eval()
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
