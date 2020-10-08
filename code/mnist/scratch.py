@@ -339,7 +339,7 @@ def collect_oct7_dpgan_grid_scores_and_plots():
 
 
 def collect_oct8_dpgan_grid_scores_and_plots():
-  log_dir = 'logs/gen/oct8_dpmerf_syn2d_grid_summary'
+  log_dir = 'logs/gen/oct8_dpmerf_syn2d_grid_summary/'
   gather_syn_plots(log_dir,
                    run_dir_fun=lambda x: f'logs/gen/oct8_dpmerf_syn2d_grid{x}/',
                    run_plot_name='plot_gen.png',
