@@ -354,7 +354,7 @@ def collect_oct8_dpgan_grid_scores_and_plots():
         lines = f.readlines()
 
         if len(lines) == 1:
-          print(f'{run}: {lines[0]}')
+          print(f'{run}: {lines[0].rstrip()}')
         else:
           print(f'{run} wrong format')
     else:
