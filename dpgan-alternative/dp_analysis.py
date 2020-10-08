@@ -6,6 +6,7 @@
 from autodp import rdp_acct, rdp_bank
 import time
 import numpy as np
+import argparse
 
 def conservative_analysis():
   """ input arguments """
@@ -57,17 +58,17 @@ def conservative_analysis():
     print(f'data subset {subset_count} done')
 
 
-def conservative_analysis_syn2d(sigma=10.):
+def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_class, n_classes):
   """ input arguments """
 
   # (2) desired delta level
-  delta = 1e-5
+  # delta = 1e-5
 
-  n_epochs = 20
-  batch_size = 256
+  # n_epochs = 20
+  # batch_size = 256
   acct = rdp_acct.anaRDPacct()
 
-  n_data_by_class = [18000]*5
+  n_data_by_class = [n_data_per_class]*n_classes
 
   start_time = time.time()
   subset_count = 0
@@ -144,4 +145,15 @@ def main():
 if __name__ == '__main__':
     # main()
     # conservative_analysis()
-    conservative_analysis_syn2d(sigma=10.)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--sigma', type=float, default=0.01)
+    parser.add_argument('--delta', type=float, default=1e-5)
+    parser.add_argument("--n-epochs", type=int, default=200)
+    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--n-data-per-class", type=int, default=18000)
+    parser.add_argument("--n-classes", type=int, default=5)
+
+    ar = parser.parse_args()
+
+    conservative_analysis_syn2d(ar.sigma, ar.delta, ar.n_epochs, ar.batch_size, ar.n_data_per_class, ar.n_classes)

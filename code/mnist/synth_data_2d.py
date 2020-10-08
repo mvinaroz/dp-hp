@@ -175,11 +175,11 @@ def get_discrete_in_out_test(class_centers, noise_scale):
   return discrete_in_out_test
 
 
-def plot_data(data, labels, save_str, class_centers=None, subsample=None, center_frame=False):
+def plot_data(data, labels, save_str, class_centers=None, subsample=None, center_frame=False, title=''):
   n_classes = int(np.max(labels)) + 1
   colors = ['r', 'b', 'g', 'y', 'orange', 'black', 'grey', 'cyan', 'magenta', 'brown']
   plt.figure()
-  plt.title(f'data plot')
+  plt.title(title)
   if center_frame:
     plt.xlim(-0.5, n_classes - 0.5)
     plt.ylim(-0.5, n_classes - 0.5)
@@ -199,7 +199,7 @@ def plot_data(data, labels, save_str, class_centers=None, subsample=None, center
 
   plt.xlabel('x')
   plt.ylabel('y')
-  plt.legend()
+  # plt.legend()
   plt.savefig(f'{save_str}.png')
 
 
@@ -236,12 +236,12 @@ def make_data_from_specstring(spec_string):
 
 def main():
   data_samples, label_samples, eval_func, class_centers = make_dataset(n_classes=5,
-                                                                       n_samples=10000,
+                                                                       n_samples=100000,
                                                                        n_rows=5,
                                                                        n_cols=5,
                                                                        noise_scale=0.2,
                                                                        discrete=False)
-  plot_data(data_samples, label_samples, 'synth_2d_trial_plot', class_centers)
+  plot_data(data_samples, label_samples, 'synth_2d_data_plot', center_frame=True, title='')
   print(eval_func(data_samples, label_samples))
 
 
