@@ -328,7 +328,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--log-name', type=str, default=None)  # name run for saving
     # parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-    parser.add_argument('--synth-spec-string', type=str, default='disc_k5_n100000_row5_col5_noise0.2', help='')
+    parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n100000_row5_col5_noise0.2', help='')
     parser.add_argument('--base-save-dir', type=str, default='logs/')
     parser.add_argument('--epsilon', type=float, default=1.0, help='privacy epsilon')
     parser.add_argument('--delta', type=float, default=1e-5, help='privacy delta')
