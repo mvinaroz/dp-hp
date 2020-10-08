@@ -279,6 +279,8 @@ def collect_oct5_dpcgan_grid():
       tgt_plot_path = log_dir + f'gen_data_{run}.png'
       if os.path.exists(run_plot_path):
         shutil.copy(run_plot_path, tgt_plot_path)
+      else:
+        print(f'{run} not found')
 
   for run in range(108):
     run_file = f'../../dpcgan/joblogs/oct5_dpcgan_grid_{run}.out.txt'
