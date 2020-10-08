@@ -274,7 +274,7 @@ def collect_oct5_dpcgan_grid():
     os.makedirs(log_dir)
 
     for run in range(108):
-      run_dir = f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_{run}/'
+      run_dir = f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_oct5_{run}/'
       run_plot_path = run_dir + f'gen_data.png.png'
       tgt_plot_path = log_dir + f'gen_data_{run}.png'
       if os.path.exists(run_plot_path):

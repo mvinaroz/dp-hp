@@ -305,6 +305,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             step = step + 1
     return save_dir
 
+
 def test_data(save_dir, data_spec_str):
     samples = np.load(os.path.join(save_dir, 'samples.npz'))
     gen_x = samples['data']
@@ -314,7 +315,6 @@ def test_data(save_dir, data_spec_str):
     plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_sub0.1'), subsample=0.1)
     plot_data(gen_x, gen_y, os.path.join(save_dir, 'gen_data_centered'), center_frame=True)
     print(f'gen samples eval score: {eval_func(gen_x, gen_y)}')
-
 
 
 def main():
