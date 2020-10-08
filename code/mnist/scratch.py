@@ -268,19 +268,27 @@ def collect_oct4_dpcgan_grid_scores():
       print(f'{run} not found')
 
 
-def collect_oct5_dpcgan_grid():
-  log_dir = '../../dpcgan/logs/oct5_synd_2d_summary/'
+def gather_syn_plots(log_dir, run_dir_fun, run_plot_name, log_plot_name_fun, n_runs):
   if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
-  for run in range(108):
-    run_dir = f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_oct5_{run}/'
-    run_plot_path = run_dir + f'gen_data.png'
-    tgt_plot_path = log_dir + f'gen_data_{run}.png'
+  for run in range(n_runs):
+
+    run_plot_path = run_dir_fun(run) + run_plot_name
+    tgt_plot_path = log_dir + log_plot_name_fun(run)
     if os.path.exists(run_plot_path):
       shutil.copy(run_plot_path, tgt_plot_path)
     else:
       print(f'{run} not found')
+
+
+def collect_oct5_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct5_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_oct5_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=108)
+
 
   for run in range(108):
     run_file = f'../../dpcgan/joblogs/oct5_dpcgan_grid_{run}.out.txt'
@@ -330,12 +338,36 @@ def collect_oct7_dpgan_grid_scores_and_plots():
       print(f'{run} not found')
 
 
+def collect_oct8_dpgan_grid_scores_and_plots():
+  log_dir = 'logs/gen/oct8_dpmerf_syn2d_grid_summary'
+  gather_syn_plots(log_dir,
+                   run_dir_fun=lambda x: f'logs/gen/oct8_dpmerf_syn2d_grid{x}/',
+                   run_plot_name='plot_gen.png',
+                   log_plot_name_fun=lambda x: f'plot_gen_{x}.png',
+                   n_runs=298)
+
+  for run in range(298):
+    run_file = f'logs/gen/oct8_dpmerf_syn2d_grid{run}/final_score'
+
+    if os.path.exists(run_file):
+      with open(run_file) as f:
+        lines = f.readlines()
+
+        if len(lines) == 1:
+          print(f'{run}: {lines[0]}')
+        else:
+          print(f'{run} wrong format')
+    else:
+      print(f'{run} not found')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
   # collect_oct4_dpcgan_grid_scores()
   # collect_oct7_dpgan_grid_scores_and_plots()
-  collect_oct5_dpcgan_grid()
+  # collect_oct5_dpcgan_grid()
+  collect_oct8_dpgan_grid_scores_and_plots()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'
