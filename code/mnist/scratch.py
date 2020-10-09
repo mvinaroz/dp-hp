@@ -361,7 +361,7 @@ def collect_oct8_dpmerf_grid_scores_and_plots():
 
 def collect_oct8_dpcgan_grid():
   gather_syn_plots(log_dir='../../dpcgan/logs/oct8_synd_2d_summary/',
-                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps1.0/syn2d_grid_oct58_{x}/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps1.0/syn2d_grid_oct8_{x}/',
                    run_plot_name='gen_data.png',
                    log_plot_name_fun=lambda x: f'gen_data_{x}.png',
                    n_runs=24)
@@ -381,7 +381,6 @@ def collect_oct8_dpcgan_grid():
     else:
 
       print(f'{run} not found')
-
 
 
 if __name__ == '__main__':
