@@ -58,7 +58,8 @@ def conservative_analysis():
     print(f'data subset {subset_count} done')
 
 
-def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_class, n_classes):
+def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_class, n_classes,
+                                print_intermediate_results):
   """ input arguments """
 
   # (2) desired delta level
@@ -72,7 +73,7 @@ def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_c
 
   start_time = time.time()
   subset_count = 0
-  for n_data in n_data_by_class:
+  for model_idx, n_data in enumerate(n_data_by_class):
 
     steps_per_epoch = int(np.ceil(n_data / batch_size))
     n_steps = steps_per_epoch * n_epochs
@@ -95,7 +96,7 @@ def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_c
         print(f'Epoch {epochs_done} done - Time used: {t_used:.2f}, Total: {t_total:.2f} ({t_total_min:.2f} minutes)')
         old_time = new_time
 
-      if i == n_steps:
+      if i == n_steps and (print_intermediate_results or model_idx + 1 == len(n_data_by_class)):
         pre_eps_time = time.time()
         subset_count += 1
         print("[", i, "]Privacy loss is", (acct.get_eps(delta)))
@@ -105,55 +106,20 @@ def conservative_analysis_syn2d(sigma, delta, n_epochs, batch_size, n_data_per_c
     print(f'data subset {subset_count} done')
 
 
-def main():
-    """ input arguments """
-
-    # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 0.7
-
-    # (2) desired delta level
-    delta = 1e-5
-
-    # (5) number of training steps
-    n_epochs = 17  # 5 for DP-MERF and 17 for DP-MERF+AE
-    batch_size = 500  # the same across experiments
-
-    n_data = 60000  # fixed for mnist
-    steps_per_epoch = n_data // batch_size
-    n_steps = steps_per_epoch * n_epochs
-    # n_steps = 1
-
-    # (6) sampling rate
-    prob = batch_size / n_data
-    # prob = 1
-
-    """ end of input arguments """
-
-    """ now use autodp to calculate the cumulative privacy loss """
-    # declare the moment accountants
-    acct = rdp_acct.anaRDPacct()
-
-    eps_seq = []
-
-    for i in range(1, n_steps+1):
-        acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma}, x), prob)
-        if i % steps_per_epoch == 0 or i == n_steps:
-            eps_seq.append(acct.get_eps(delta))
-            print("[", i, "]Privacy loss is", (eps_seq[-1]))
-
-
 if __name__ == '__main__':
     # main()
     # conservative_analysis()
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--sigma', type=float, default=0.01)
+    parser.add_argument('--sigma', type=float, default=1.)
     parser.add_argument('--delta', type=float, default=1e-5)
     parser.add_argument("--n-epochs", type=int, default=200)
-    parser.add_argument("--batch-size", type=int, default=64)
+    parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--n-data-per-class", type=int, default=18000)
     parser.add_argument("--n-classes", type=int, default=5)
+    parser.add_argument('--print-intermediate_results', action='store_true', default=False)
 
     ar = parser.parse_args()
 
-    conservative_analysis_syn2d(ar.sigma, ar.delta, ar.n_epochs, ar.batch_size, ar.n_data_per_class, ar.n_classes)
+    conservative_analysis_syn2d(ar.sigma, ar.delta, ar.n_epochs, ar.batch_size, ar.n_data_per_class,
+                                ar.n_classes, ar.print_intermediate_results)
