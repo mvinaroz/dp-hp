@@ -8,6 +8,7 @@ import time
 import numpy as np
 import argparse
 
+
 def conservative_analysis():
   """ input arguments """
 
@@ -117,9 +118,9 @@ if __name__ == '__main__':
     parser.add_argument("--batch-size", type=int, default=256)
     parser.add_argument("--n-data-per-class", type=int, default=18000)
     parser.add_argument("--n-classes", type=int, default=5)
-    parser.add_argument('--print-intermediate_results', action='store_true', default=False)
+    parser.add_argument('--verbose', action='store_true', default=False)
 
     ar = parser.parse_args()
 
     conservative_analysis_syn2d(ar.sigma, ar.delta, ar.n_epochs, ar.batch_size, ar.n_data_per_class,
-                                ar.n_classes, ar.print_intermediate_results)
+                                ar.n_classes, ar.verbose)

@@ -110,7 +110,7 @@ def get_args():
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
+  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
 
   parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
                       choices=['rff', 'kmeans', 'real_mmd'])
