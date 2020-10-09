@@ -323,7 +323,6 @@ def collect_oct7_dpgan_grid_scores_and_plots():
     run_file = f'../../dpgan-alternative/joblogs/oct7_dpgan_syn2d_grid_{run}.out.txt'
 
     if os.path.exists(run_file):
-    # try:
       with open(run_file) as f:
         lines = f.readlines()
         score_lines = [l.split()[-1] for l in lines if l.startswith('likelhood: ')]
@@ -334,11 +333,10 @@ def collect_oct7_dpgan_grid_scores_and_plots():
         else:
           print(f'{2*run}, {2*run+1} wrong format')
     else:
-    # except IOError:
       print(f'{run} not found')
 
 
-def collect_oct8_dpgan_grid_scores_and_plots():
+def collect_oct8_dpmerf_grid_scores_and_plots():
   log_dir = 'logs/gen/oct8_dpmerf_syn2d_grid_summary/'
   gather_syn_plots(log_dir,
                    run_dir_fun=lambda x: f'logs/gen/oct8_dpmerf_syn2d_grid{x}/',
@@ -361,13 +359,39 @@ def collect_oct8_dpgan_grid_scores_and_plots():
       print(f'{run} not found')
 
 
+def collect_oct8_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct8_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps1.0/syn2d_grid_oct58_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=24)
+
+  for run in range(24):
+    run_file = f'../../dpcgan/joblogs/oct8_dpcgan_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
   # collect_oct4_dpcgan_grid_scores()
   # collect_oct7_dpgan_grid_scores_and_plots()
   # collect_oct5_dpcgan_grid()
-  collect_oct8_dpgan_grid_scores_and_plots()
+  # collect_oct8_dpgan_grid_scores_and_plots()
+  collect_oct8_dpcgan_grid()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'
