@@ -277,8 +277,7 @@ def extract_numpy_data_mats():
 
 def log_final_score(log_dir, final_acc):
   """ print and save all args """
-  if not os.path.exists(log_dir):
-    os.makedirs(log_dir)
+  os.makedirs(log_dir, exist_ok=True)
   with open(os.path.join(log_dir, 'final_score'), 'w') as f:
     lines = [f'acc: {final_acc}\n']
     f.writelines(lines)

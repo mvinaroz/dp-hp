@@ -383,6 +383,27 @@ def collect_oct8_dpcgan_grid():
       print(f'{run} not found')
 
 
+def collect_oct8_dpmerf_log_likelihoods():
+
+  for run in range(64):
+    run_file = f'joblogs/oct8_dpmerf_syn2d_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        print('job', run)
+        lines = [line for line in f.readlines() if line.startswith('Score of evaluation function: ')]
+
+        if len(lines) > 0:
+          for line in lines:
+            print(line.split()[-1])
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
@@ -390,7 +411,8 @@ if __name__ == '__main__':
   # collect_oct7_dpgan_grid_scores_and_plots()
   # collect_oct5_dpcgan_grid()
   # collect_oct8_dpgan_grid_scores_and_plots()
-  collect_oct8_dpcgan_grid()
+  # collect_oct8_dpcgan_grid()
+  collect_oct8_dpmerf_log_likelihoods()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'

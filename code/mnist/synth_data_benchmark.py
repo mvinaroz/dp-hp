@@ -204,8 +204,8 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   acc = accuracy_score(y_pred, y_ts)
   f1 = f1_score(y_true=y_ts, y_pred=y_pred, average='macro')
   conf = confusion_matrix(y_true=y_ts, y_pred=y_pred)
-  acc_str = acc_str + f' gen to real {acc}'
-  f1_str = f1_str + f' gen to real {f1}'
+  acc_str = acc_str + f' {acc}'
+  f1_str = f1_str + f' {f1}'
   return acc, f1, conf, acc_str, f1_str
 
 
@@ -249,7 +249,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
       model = models[key](**model_specs[key])
       g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str, f_str)
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
       g_to_r_acc_summary.append(g_to_r_acc)
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
@@ -259,7 +259,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
       base_acc, base_f1, base_conf, a_str, f_str = model_test_run(model,
                                                                   dc.x_real_train, dc.y_real_train,
                                                                   dc.x_real_test, dc.y_real_test,
-                                                                  norm_data, a_str, f_str)
+                                                                  norm_data, a_str + 'r2r', f_str + 'r2r')
     else:
       base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
 
@@ -268,7 +268,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
       r_to_g_acc, r_to_g_f1, r_to_g_conv, a_str, f_str = model_test_run(model,
                                                                         dc.x_real_train, dc.y_real_train,
                                                                         dc.x_gen[:10000], dc.y_gen[:10000],
-                                                                        norm_data, a_str, f_str)
+                                                                        norm_data, a_str + 'r2g', f_str + 'r2g')
     else:
       r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
 

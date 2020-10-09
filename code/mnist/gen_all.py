@@ -188,6 +188,9 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func):
     log_final_score(log_dir, final_score)
     eval_score = eval_func(data_tuple.x_gen, data_tuple.y_gen.flatten())
     print(f'Score of evaluation function: {eval_score}')
+    with open(os.path.join(log_dir, 'eval_score'), 'w') as f:
+      f.writelines([f'{eval_score}'])
+
     plot_data(data_tuple.x_real_train, data_tuple.y_real_train.flatten(), os.path.join(log_dir, 'plot_train'),
               center_frame=True)
     plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
