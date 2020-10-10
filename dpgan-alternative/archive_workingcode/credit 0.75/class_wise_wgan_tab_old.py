@@ -14,7 +14,7 @@ from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
 
 sys.path.append("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR")
-from data.dataloader import test_models
+from data.tab_dataloader import test_models
 
 
 
