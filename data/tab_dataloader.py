@@ -610,4 +610,4 @@ def test_models(X_tr, y_tr, X_te, y_te, datasettype, n_classes=2):
 
 #load_epileptic()
 #load_adult()_
-#load_cervical()
+load_covtype()

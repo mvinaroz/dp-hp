@@ -6,6 +6,8 @@ import torchvision.transforms as transforms
 import numpy as np
 import sys
 
+sys.path.append("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR")
+# from data.tab_dataloader import load_credit, load_isolet, load_epileptic, load_adult, load_cervical, load_census, load_intrusion, load_covtype
 try:
     from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
 except ImportError:

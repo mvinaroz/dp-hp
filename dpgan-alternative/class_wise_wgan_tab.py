@@ -13,6 +13,7 @@ from data_loading import get_single_label_dataloader, get_single_label_dataloade
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
 
+
 # sys.path.append("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR")
 sys.path.append('/home/frederik/PycharmProjects/DPDR')
 from data.tab_dataloader import test_models
@@ -28,11 +29,11 @@ def parse_arguments():
 
   parser.add_argument("--n-epochs", type=int, default=5, help="number of epochs of training")
   parser.add_argument("--batch-size", type=int, default=64, help="size of the batches")
-  parser.add_argument("--data-key", '-data', type=str, default='intrusion', help="isolet, credit, epileptic, adult, census, cervical")
+  parser.add_argument("--data-key", '-data', type=str, default='isolet', help="isolet, credit, epileptic, adult, census, cervical")
 
 
   parser.add_argument("--lr", type=float, default=0.00005, help="learning rate")
-  parser.add_argument("--n-cpu", type=int, default=4, help="number of cpu threads to use during batch generation")
+  parser.add_argument("--n-cpu", type=i                                                                                                                                                                                                         nt, default=4, help="number of cpu threads to use during batch generation")
   parser.add_argument("--latent-dim", type=int, default=100, help="dimensionality of the latent space")
   parser.add_argument("--img-size", type=int, default=617, help="size of each image dimension")
   parser.add_argument("--channels", type=int, default=1, help="number of image channels")
