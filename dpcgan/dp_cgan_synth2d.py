@@ -222,9 +222,15 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     # Generator optimizer
     g_solver = tf.compat.v1.train.AdamOptimizer().minimize(g_loss, var_list=theta_g)
     # Discriminator Optimizer
-    d_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
-                                                       batches_per_lot=1)
-    d_solver = d_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
+
+    if epsilon > 0:
+        d_optim = dp_optimizer.DPGradientDescentOptimizer(lr_pl, [None, None], gaussian_sanitizer, sigma=sigma,
+                                                          batches_per_lot=1)
+
+        d_solver = d_optim.minimize_ours(d_loss_real, d_loss_fake, var_list=theta_d)
+    else:
+        d_optim = tf.compat.v1.train.MomentumOptimizer(lr_pl, momentum=0.)
+        d_solver = d_optim.minimize(d_loss_real + d_loss_fake, var_list=theta_d)
     # ------------------------------------------------------------------------------
 
     # Set output directory
@@ -260,7 +266,10 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             epoch = step
             curr_lr = utils.VaryRate(start_lr, end_lr, lr_saturate_epochs, epoch)
 
-            eps = compute_epsilon(batch_size, (step + 1), sigma * clipping_value)
+            if sigma > 0:
+                eps = compute_epsilon(batch_size, (step + 1), sigma * clipping_value)
+            else:
+                eps = 0
 
             # x_mb, y_mb = mnist.train.next_batch(batch_size, shuffle=True)
             x_mb, y_mb = next(batch_generator)
