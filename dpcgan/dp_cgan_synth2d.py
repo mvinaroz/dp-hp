@@ -274,8 +274,8 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             # Update the generator network
             _, g_loss_curr = sess.run([g_solver, g_loss], feed_dict={z_pl: z_sample, y_pl: y_mb, lr_pl: curr_lr})
 
-            print(f'checking eps: eps: {eps}/{max_target_eps}')
-            if eps >= max_target_eps or step >= num_training_steps:
+            # print(f'checking eps: eps: {eps}/{max_target_eps}')
+            if (max_target_eps > 0. and eps >= max_target_eps) or step >= num_training_steps:
                 print(f"TERMINATE!!!!")
                 print("Termination Step : " + str(step))
 
