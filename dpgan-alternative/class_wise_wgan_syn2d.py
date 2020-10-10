@@ -32,7 +32,7 @@ def parse_arguments():
   parser.add_argument("--latent-dim", type=int, default=100, help="dimensionality of the latent space")
   parser.add_argument("--n-critic", type=int, default=5, help="number of training steps for discriminator per iter")
 
-  parser.add_argument('--synth-spec-string', type=str, default='disc_k5_n100000_row5_col5_noise0.2', help='')
+  parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n100000_row5_col5_noise0.2', help='')
   parser.add_argument("--clip-value", type=float, default=0.01, help="lower and upper clip value for disc. weights")
   parser.add_argument("--sample-interval", type=int, default=1000, help="interval betwen image samples")
   parser.add_argument("--print-interval", type=int, default=50, help="interval betwen image samples")
