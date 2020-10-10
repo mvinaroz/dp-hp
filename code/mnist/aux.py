@@ -8,20 +8,6 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 
-def rff_gauss(x, w):
-  """
-  this is a Pytorch version of anon's code for RFFKGauss
-  Fourier transform formula from http://mathworld.wolfram.com/FourierTransformGaussian.html
-  """
-  xwt = pt.mm(x, w.t())
-  z_1 = pt.cos(xwt)
-  z_2 = pt.sin(xwt)
-  z_cat = pt.cat((z_1, z_2), 1)
-  norm_const = pt.sqrt(pt.tensor(w.shape[0]).to(pt.float32))
-  z = z_cat / norm_const  # w.shape[0] == n_features / 2
-  return z
-
-
 def expand_vector(v, tgt_vec):
   tgt_dims = len(tgt_vec.shape)
   if tgt_dims == 2:
@@ -38,30 +24,14 @@ def expand_vector(v, tgt_vec):
     return ValueError
 
 
-def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False,
-                          dataset='digits', data_dir='data'):
-  if not os.path.exists(data_dir):
-    os.makedirs(data_dir)
-  kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-  transforms_list = [transforms.ToTensor()]
-  if dataset == 'digits':
-    if normalize:
-      mnist_mean = 0.1307
-      mnist_sdev = 0.3081
-      transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
-    prep_transforms = transforms.Compose(transforms_list)
-    trn_data = datasets.MNIST(data_dir, train=True, download=True, transform=prep_transforms)
-    tst_data = datasets.MNIST(data_dir, train=False, transform=prep_transforms)
-    train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
-    test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
-  elif dataset == 'fashion':
-    assert not normalize
-    prep_transforms = transforms.Compose(transforms_list)
-    trn_data = datasets.FashionMNIST(data_dir, train=True, download=True, transform=prep_transforms)
-    tst_data = datasets.FashionMNIST(data_dir, train=False, transform=prep_transforms)
-    train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
-    test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
-  return train_loader, test_loader
+def flip_mnist_data(dataset):
+  data = dataset.data
+  flipped_data = 255 - data
+  selections = np.zeros(data.shape[0], dtype=np.int)
+  selections[:data.shape[0]//2] = 1
+  selections = pt.tensor(np.random.permutation(selections), dtype=pt.uint8)
+  print(selections.shape, data.shape, flipped_data.shape)
+  dataset.data = pt.where(selections[:, None, None], data, flipped_data)
 
 
 def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw=True):
@@ -205,7 +175,6 @@ def parse_n_hid(n_hid, conv=False):
 
 
 def flat_data(data, labels, device, n_labels=10, add_label=False):
-  # then make one_hot
   bs = data.shape[0]
   if add_label:
     gen_one_hots = pt.zeros(bs, n_labels, device=device)
@@ -213,7 +182,17 @@ def flat_data(data, labels, device, n_labels=10, add_label=False):
     labels = gen_one_hots
     return pt.cat([pt.reshape(data, (bs, -1)), labels], dim=1)
   else:
-    return pt.reshape(data, (bs, -1))
+    if len(data.shape) > 2:
+      return pt.reshape(data, (bs, -1))
+    else:
+      return data
+
+
+def flatten_features(data):
+  if len(data.shape) == 2:
+    return data
+  else:
+    return pt.reshape(data, (data.shape[0], -1))
 
 
 class NamedArray:
@@ -281,4 +260,24 @@ class NamedArray:
     return NamedArray(merged_array, self.dim_names, merged_idx_names)
 
 
+def extract_numpy_data_mats():
+  def prep_data(dataset):
+    x, y = dataset.data.numpy(), dataset.targets.numpy()
+    x = np.reshape(x, (-1, 784)) / 255
+    return x, y
 
+  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True))
+  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False))
+  np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
+
+  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True))
+  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False))
+  np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
+
+
+def log_final_score(log_dir, final_acc):
+  """ print and save all args """
+  os.makedirs(log_dir, exist_ok=True)
+  with open(os.path.join(log_dir, 'final_score'), 'w') as f:
+    lines = [f'acc: {final_acc}\n']
+    f.writelines(lines)

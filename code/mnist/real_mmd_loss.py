@@ -2,8 +2,30 @@ import torch as pt
 # implementation of non-appriximate mmd loss mostly for debugging purposes
 
 
+def get_real_mmd_loss(rff_sigma, n_labels, batch_size):
+
+  def real_loss(data_enc, data_labels, gen_enc, gen_labels):
+    # set gen labels to scalars from one-hot
+    _, gen_labels = pt.max(gen_labels, dim=1)
+
+    # for each label, take the associated encodings
+    # print('label shapes:', data_labels.shape, gen_labels.shape)
+    mmd_sum = 0
+    for idx in range(n_labels):
+      idx_data_enc = data_enc[data_labels == idx]
+      idx_gen_enc = gen_enc[gen_labels == idx]
+      # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
+      # then for that label compute mmd:
+      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
+      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(rff_sigma))
+    return mmd_sum
+
+  return real_loss
+
+
 def get_squared_dist(x, y=None):
-    """ This function calculates the pairwise distance between x and x, x and y, y and y
+    """
+    This function calculates the pairwise distance between x and x, x and y, y and y
     Warning: when x, y has mean far away from zero, the distance calculation is not accurate; use get_dist_ref instead
     :param x: batch_size-by-d matrix
     :param y: batch_size-by-d matrix
@@ -24,7 +46,7 @@ def get_squared_dist(x, y=None):
     return dist_xx, dist_xy, dist_yy
 
 
-def mmd_g(dist_xx, dist_xy, dist_yy, batch_size, sigma=1.0, upper_bound=None, lower_bound=None):
+def mmd_g(dist_xx, dist_xy, dist_yy, batch_size, sigma, upper_bound=None, lower_bound=None):
   """This function calculates the maximum mean discrepancy with Gaussian distribution kernel
   The kernel is taken from following paper:
   Li, C.-L., Chang, W.-C., Cheng, Y., Yang, Y., & Póczos, B. (2017).

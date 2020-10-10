@@ -13,6 +13,9 @@ def dp_sgd_backward(params, loss, device, clip_norm, noise_factor):
   :param noise_factor:
   :return:
   """
+  if not isinstance(params, list):
+    params = [p for p in params]
+
   with backpack(BatchGrad(), BatchL2Grad()):
     loss.backward()
 
@@ -51,6 +54,9 @@ def dp_sgd_backward_debug(params, loss, device, clip_norm, noise_factor, debug=T
   :param terminate_after_iteration: in debug mode, you likely only want to run one iteration
   :return:
   """
+  if not isinstance(params, list):
+    params = [p for p in params]
+
   with backpack(BatchGrad(), BatchL2Grad()):
     loss.backward()
 
@@ -79,6 +85,8 @@ def dp_sgd_backward_debug(params, loss, device, clip_norm, noise_factor, debug=T
       print(f'L2 dist of noisy grad from true one: {pt.norm(param.grad - perturbed_grad)}')
 
     param.grad = perturbed_grad  # now we set the parameter gradient to what we just computed
+
+  assert idx + 1 == len(squared_param_norms)
 
   if debug:
     post_clip_global_norms = pt.sqrt(pt.sum(pt.stack([k**2 for k in post_clip_norms]), dim=0))

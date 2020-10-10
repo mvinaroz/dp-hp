@@ -4,7 +4,9 @@ from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
 from models_gen import FCCondGen, ConvCondGen  # FCGen, FCLabelGen, FCGenBig
-from aux import rff_gauss, get_mnist_dataloaders, plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from aux import plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
+from data_loading import get_mnist_dataloaders
+from rff_mmd_approx import rff_sphere
 from real_mmd_loss import mmd_g, get_squared_dist
 
 
@@ -19,12 +21,12 @@ def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, do_ge
     data, labels = data.to(device), labels.to(device)
     data = flat_data(data, labels, device, n_labels=10, add_label=False)
     if not do_gen_labels:
-      data_emb = rff_gauss(data, w_freq)
+      data_emb = rff_sphere(data, w_freq)
       emb_acc.append(pt.sum(data_emb, 0))
     else:
       one_hots = pt.zeros(batch_size, 10, device=device)
       one_hots.scatter_(1, labels[:, None], 1)
-      data_emb = rff_gauss(data, w_freq)
+      data_emb = rff_sphere(data, w_freq)
       kernel_emb = pt.einsum('ki,kj->kij', [data_emb, one_hots])
       emb_acc.append(pt.sum(kernel_emb, 0))
     n_data += data.shape[0]
@@ -41,14 +43,14 @@ def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, do_ge
   if not do_gen_labels:
 
     def mean_embedding(x):
-      return pt.mean(rff_gauss(x, w_freq), dim=0)
+      return pt.mean(rff_sphere(x, w_freq), dim=0)
 
     def rff_mmd_loss(gen_out):
       gen_emb = mean_embedding(gen_out)
       return pt.sum((noisy_emb - gen_emb) ** 2)
   else:
     def label_mean_embedding(data, labels):
-      return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
+      return pt.mean(pt.einsum('ki,kj->kij', [rff_sphere(data, w_freq), labels]), 0)
 
     def rff_mmd_loss(gen_enc, gen_labels):
       gen_emb = label_mean_embedding(gen_enc, gen_labels)
@@ -178,7 +180,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
   elif not do_gen_labels:
 
     def mean_embedding(x):
-      return pt.mean(rff_gauss(x, w_freq), dim=0)
+      return pt.mean(rff_sphere(x, w_freq), dim=0)
 
     def rff_mmd_loss(data_enc, gen_out):
       data_emb = mean_embedding(data_enc)
@@ -194,7 +196,7 @@ def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, do_gen_labels, n_labels, n
     # print('we use the random feature mean embeddings here')
 
     def label_mean_embedding(data, labels):
-      return pt.mean(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), labels]), 0)
+      return pt.mean(pt.einsum('ki,kj->kij', [rff_sphere(data, w_freq), labels]), 0)
 
     def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
       data_emb = label_mean_embedding(data_enc, labels)  # (d_rff, n_labels)

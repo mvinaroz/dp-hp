@@ -8,7 +8,8 @@ from collections import namedtuple
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
 from models_ae import FCEnc, FCDec, ConvEnc, ConvDec, ConvDecFlat
-from aux import get_mnist_dataloaders, plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
+from aux import plot_mnist_batch, save_gen_labels, log_args, flat_data, expand_vector
+from data_loading import get_mnist_dataloaders
 from tensorboardX import SummaryWriter
 
 

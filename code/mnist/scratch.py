@@ -1,11 +1,12 @@
 import os
 import shutil
-import matplotlib
-matplotlib.use('Agg')  # to plot without Xserver
-import matplotlib.pyplot as plt
+# import matplotlib
+# matplotlib.use('Agg')  # to plot without Xserver
+# import matplotlib.pyplot as plt
 import numpy as np
-from torchvision import datasets
+# from torchvision import datasets
 from aux import plot_mnist_batch, NamedArray
+from sklearn.metrics import roc_curve, auc
 
 
 def expand_vector(v, tgt_vec):
@@ -153,7 +154,292 @@ def plot_dpcgan_data():
   plot_mnist_batch(mat_select, 10, 10, 'dmnist-eps9.6-plot', save_raw=False)
 
 
+def dpcgan_dummmy_eval():
+  targets = np.zeros(60000)
+  targets[:6000] = 1.
+  print(sum(targets))
+  preds = np.zeros(60000)
+  # preds[:12000] = .5
+  # preds[6000:12000] = 1.
+
+  # preds[6600:12000] = 1.
+  # preds[:600] = 1.
+
+  preds[6000:12000] = .51
+  preds[:6000] = .49
+
+  # preds[:12000] = .5
+
+  print(sum(preds))
+  fpr, tpr, thresholds = roc_curve(targets, preds)
+
+  print(fpr, tpr, thresholds, auc(fpr, tpr))
+
+
+def collect_sep14_real_mmd_grid():
+  log_dir = 'logs/gen/sep14_realmmd2_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  scores = []
+  run_range = ['00', '01', '02', '03', '04', '05', '06', '07', '08',  '09'] + [str(k) for k in range(10, 28)]
+  for run in run_range:
+    run_score = f'logs/gen/sep14_realmmd2_{run}/final_score'
+    if os.path.exists(run_score):
+      with open(run_score) as f:
+        scores.append((run, f.readline()))
+
+  for idx, score in scores:
+    print(f'{idx}: {score}')
+
+  with open(log_dir + 'scores', mode='w') as f:
+    for idx, score in scores:
+      f.write(f'{idx}: {score}')
+
+
+def collect_sep21_nonp_kmeans_grid():
+  log_dir = 'logs/gen/sep21_kmeans_grid_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  scores = []
+  run_range = [str(k) for k in range(28)]
+  for run in run_range:
+    run_score = f'logs/gen/sep21_kmeans_grid_{run}/final_score'
+    if os.path.exists(run_score):
+      with open(run_score) as f:
+        scores.append((run, f.readline()))
+
+  for idx, score in scores:
+    print(f'{idx}: {score}')
+
+  with open(log_dir + 'scores', mode='w') as f:
+    for idx, score in scores:
+      f.write(f'{idx}: {score}')
+
+# import numpy as np
+# import os
+# run_types = [20, 30, 40, 50, 60, 70]
+# run_seeds = [1, 2, 3, 4, 5]
+# for run in run_types:
+#   run_results = []
+#   for seed in run_seeds:
+#     path = f'logs/gen/aug3_sig{run}_s{seed}/final_score'
+#     if os.path.exists(path):
+#       with open(path) as f:
+#         line = f.readlines()[0]
+#         assert line[:5] == 'acc: '
+#         run_results.append(float(line[5:]))
+#     else:
+#       print(f'{path} not found')
+#   print(f'{run}: {np.mean(np.asarray(run_results))}')
+#   print(run_results)
+
+
+def collect_oct4_dpcgan_grid():
+  log_dir = '../../dpcgan/logs/oct4_synd_2d_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for run in range(90):
+    run_dir = f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_{run}/'
+    run_plot_path = run_dir + f'gen_data.png.png'
+    tgt_plot_path = log_dir + f'gen_data_{run}.png'
+    if os.path.exists(run_plot_path):
+      shutil.copy(run_plot_path, tgt_plot_path)
+
+
+def collect_oct4_dpcgan_grid_scores():
+  for run in range(90):
+    run_file = f'../../dpcgan/joblogs/oct4_dpcgan_grid_{run}.out.txt'
+
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
+def gather_syn_plots(log_dir, run_dir_fun, run_plot_name, log_plot_name_fun, n_runs):
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  for run in range(n_runs):
+
+    run_plot_path = run_dir_fun(run) + run_plot_name
+    tgt_plot_path = log_dir + log_plot_name_fun(run)
+    if os.path.exists(run_plot_path):
+      shutil.copy(run_plot_path, tgt_plot_path)
+    else:
+      print(f'{run} not found')
+
+
+def collect_oct5_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct5_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-disc_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_oct5_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=108)
+
+
+  for run in range(108):
+    run_file = f'../../dpcgan/joblogs/oct5_dpcgan_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
+def collect_oct7_dpgan_grid_scores_and_plots():
+  log_dir = '../../dpgan-alternative/synth_data/oct7_synd_2d_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+    for run in range(162):
+      run_dir = f'../../dpgan-alternative/synth_data/oct7_grid_{run}/'
+      run_plot_path = run_dir + f'data_plot.png'
+      tgt_plot_path = log_dir + f'gen_data_{run}.png'
+      if os.path.exists(run_plot_path):
+        shutil.copy(run_plot_path, tgt_plot_path)
+
+  for run in range(81):
+    run_file = f'../../dpgan-alternative/joblogs/oct7_dpgan_syn2d_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+      with open(run_file) as f:
+        lines = f.readlines()
+        score_lines = [l.split()[-1] for l in lines if l.startswith('likelhood: ')]
+
+        if len(score_lines) == 2:
+          print(f'{2*run}: {score_lines[0]}')
+          print(f'{2*run+1}: {score_lines[1]}')
+        else:
+          print(f'{2*run}, {2*run+1} wrong format')
+    else:
+      print(f'{run} not found')
+
+
+def collect_oct8_dpmerf_grid_scores_and_plots():
+  log_dir = 'logs/gen/oct8_dpmerf_syn2d_grid_summary/'
+  gather_syn_plots(log_dir,
+                   run_dir_fun=lambda x: f'logs/gen/oct8_dpmerf_syn2d_grid{x}/',
+                   run_plot_name='plot_gen.png',
+                   log_plot_name_fun=lambda x: f'plot_gen_{x}.png',
+                   n_runs=298)
+
+  for run in range(298):
+    run_file = f'logs/gen/oct8_dpmerf_syn2d_grid{run}/final_score'
+
+    if os.path.exists(run_file):
+      with open(run_file) as f:
+        lines = f.readlines()
+
+        if len(lines) == 1:
+          print(f'{run}: {lines[0].rstrip()}')
+        else:
+          print(f'{run} wrong format')
+    else:
+      print(f'{run} not found')
+
+
+def collect_oct8_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct8_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps1.0/syn2d_grid_oct8_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=24)
+
+  for run in range(24):
+    run_file = f'../../dpcgan/joblogs/oct8_dpcgan_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
+def collect_oct8_dpmerf_log_likelihoods():
+
+  for run in range(64):
+    run_file = f'joblogs/oct8_dpmerf_syn2d_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        print('job', run)
+        lines = [line for line in f.readlines() if line.startswith('Score of evaluation function: ')]
+
+        if len(lines) > 0:
+          for line in lines:
+            print(line.split()[-1])
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
+def collect_oct9_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct9_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps9.6/syn2d_grid_oct9_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=8)
+
+  for run in range(8):
+    run_file = f'../../dpcgan/joblogs/oct9_dpcgan_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
+
 if __name__ == '__main__':
+  # collect_sep21_nonp_kmeans_grid()
+  # collect_oct4_dpcgan_grid()
+  # collect_oct4_dpcgan_grid_scores()
+  # collect_oct7_dpgan_grid_scores_and_plots()
+  # collect_oct5_dpcgan_grid()
+  # collect_oct8_dpgan_grid_scores_and_plots()
+  # collect_oct8_dpcgan_grid()
+  # collect_oct8_dpmerf_log_likelihoods()
+  collect_oct9_dpcgan_grid()
+  # dpcgan_dummmy_eval()
+
   # 'dpmerf-high-eps-f0'
   # mat = np.load('logs/gen/dpmerf-high-eps-d4/synth_eval/sub0.1_bagging_log.npz')
   # mat = np.load('logs/gen/dpmerf-high-eps-f4/synth_eval/sub0.1_bagging_log.npz')
@@ -162,4 +448,4 @@ if __name__ == '__main__':
   # collect_arp4_grid()
   # collect_apr4_sr_conv()
   # collect_apr6_better_conv()
-  collect_apr6_noconv_grid()
+  # collect_apr6_noconv_grid()

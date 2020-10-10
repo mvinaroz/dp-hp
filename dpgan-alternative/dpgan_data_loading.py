@@ -1,13 +1,22 @@
 import os
 import torch as pt
-from torch.utils.data import DataLoader, TensorDataset
+from torch.utils.data import DataLoader, TensorDataset, Dataset
 from torchvision import datasets
 import torchvision.transforms as transforms
 import numpy as np
 import sys
 
 sys.path.append("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR")
-from data.tab_dataloader import load_credit, load_isolet, load_epileptic, load_adult, load_cervical, load_census, load_intrusion, load_covtype
+# from data.tab_dataloader import load_credit, load_isolet, load_epileptic, load_adult, load_cervical, load_census, load_intrusion, load_covtype
+try:
+    from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
+except ImportError:
+    print('importing through relative path')
+    # Import required Differential Privacy packages
+    baseDir = "../code/mnist/"
+    sys.path.append(baseDir)
+
+    from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
 
 
 def get_dataloader(batch_size):
@@ -35,12 +44,44 @@ def get_single_label_dataloader(batch_size, label_idx, data_key='digits'):
   dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
   return dataloader, n_data
 
-def get_single_label_dataloader_tab(batch_size, label_idx, data_key='isolet'):
 
+class Synth2DDataset(Dataset):
+  def __init__(self, data, labels):
+
+    self.data = data
+    self.labels = labels
+
+  def __len__(self):
+    return len(self.data)
+
+  def __getitem__(self, idx):
+    return self.data[idx], self.labels[idx]
+
+
+def get_single_label_dataloader_syn2d(batch_size, label_idx, data_spec_string):
+  # os.makedirs("../data", exist_ok=True)
+  # data_transform = transforms.Compose([transforms.ToTensor()])
+
+  # assert data_key in {'digits', 'fashion'}
+  data_samples, label_samples, eval_func, class_centers = make_data_from_specstring(data_spec_string)
+  dataset = Synth2DDataset(data_samples, label_samples)
+  # dataset = datasets.MNIST("../data", train=True, download=True, transform=data_transform)
+
+  selected_ids = dataset.labels == label_idx
+  dataset.data = dataset.data[selected_ids]
+  dataset.targets = dataset.labels[selected_ids]
+  n_data = dataset.data.shape[0]
+  dataloader = pt.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True)
+  return dataloader, n_data
+
+
+
+def get_single_label_dataloader_tab(batch_size, label_idx, data_key='isolet'):
+  sys.path.append("/home/kamil/Desktop/Dropbox/Current_research/privacy/DPDR")
+  from data.tab_dataloader import load_credit, load_isolet, load_epileptic, load_adult, load_cervical, load_census, \
+    load_intrusion, load_covtype
 
   [load_isolet, load_credit, load_cervical, load_epileptic, load_adult, load_intrusion, load_covtype]
-
-
 
   X_train, y_train, X_test, y_test = globals()["load_"+data_key]()
   print(f"Shape of the training data is {X_train.shape}")

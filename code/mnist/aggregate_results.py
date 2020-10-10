@@ -348,5 +348,35 @@ def collect_results():
   return array_dict
 
 
+def aggregate_sep18_realmmd():
+  data_suffix = {'digits': '', 'fashion': '_fashion'}
+
+  # setups = ['sep18_real_mmd_baseline_s']
+  # sub_ratios = ['1.0']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [1, 2, 3, 4, 5]
+  eval_metrics = ['accuracies', 'f1_scores']
+  # save_str = 'sep18_real_mmd_baseline'
+
+  for data in data_suffix:
+    for m in models:
+      scores = {'accuracies': [], 'f1_scores': []}
+      for run in runs:
+        load_file = f'logs/gen/sep18_real_mmd_baseline_s{run}{data_suffix[data]}/synth_eval/sub1.0_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          print('failed to load', load_file)
+          continue
+        for e_idx, e in enumerate(eval_metrics):
+          score = mat[e][1]
+          scores[e].append(score)
+      accs = np.asarray(scores["accuracies"])
+      print(f'model: {m}')
+      print(f'acc avg: {np.mean(accs)}')
+      print(f'accs: {accs}')
+
+
 if __name__ == '__main__':
-  aggregate_apr6_sr_conv()
+  aggregate_sep18_realmmd()

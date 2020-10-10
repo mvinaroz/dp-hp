@@ -3,67 +3,11 @@ import torch as pt
 from torch.optim.lr_scheduler import StepLR
 import argparse
 import numpy as np
-from models_gen import FCCondGen, ConvCondGen
+from models_gen import ConvCondGen
 from aux import plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
 from data_loading import get_mnist_dataloaders
-from rff_mmd_approx import rff_sphere, weights_sphere
+from rff_mmd_approx import get_rff_losses
 from synth_data_benchmark import test_gen_data
-from real_mmd_loss import get_real_mmd_loss
-from kmeans import get_kmeans_mmd_loss
-
-
-def data_label_embedding(data, labels, w_freq, labels_to_one_hot=False, device=None, reduce='mean'):
-  assert reduce in {'mean', 'sum'}
-  if labels_to_one_hot:
-    batch_size = data.shape[0]
-    one_hots = pt.zeros(batch_size, 10, device=device)
-    one_hots.scatter_(1, labels[:, None], 1)
-    labels = one_hots
-  embedding = pt.einsum('ki,kj->kij', [rff_sphere(data, w_freq), labels])
-  return pt.mean(embedding, 0) if reduce == 'mean' else pt.sum(embedding, 0)
-
-
-def get_single_release_loss(train_loader, d_enc, d_rff, rff_sigma, device, n_labels, noise_factor):
-  assert d_rff % 2 == 0
-  # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
-  w_freq = weights_sphere(d_rff, d_enc, rff_sigma, device)
-
-  emb_acc = []
-  n_data = 0
-  for data, labels in train_loader:
-    data, labels = data.to(device), labels.to(device)
-    data = flat_data(data, labels, device, n_labels=10, add_label=False)
-
-    emb_acc.append(data_label_embedding(data, labels, w_freq, labels_to_one_hot=True, device=device, reduce='sum'))
-    # emb_acc.append(pt.sum(pt.einsum('ki,kj->kij', [rff_gauss(data, w_freq), one_hots]), 0))
-    n_data += data.shape[0]
-
-  print('done collecting batches, n_data', n_data)
-  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
-  print(pt.norm(emb_acc), emb_acc.shape)
-  noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / n_data)
-  noisy_emb = emb_acc + noise
-
-  def rff_mmd_loss(gen_data, gen_labels):
-    gen_emb = data_label_embedding(gen_data, gen_labels, w_freq)
-    return pt.sum((noisy_emb - gen_emb) ** 2)
-
-  return rff_mmd_loss, noisy_emb
-
-
-def get_rff_mmd_loss(d_enc, d_rff, rff_sigma, device, n_labels, noise_factor, batch_size):
-  assert d_rff % 2 == 0
-  # w_freq = pt.tensor(np.random.randn(d_rff // 2, d_enc) / np.sqrt(rff_sigma)).to(pt.float32).to(device)
-  w_freq = weights_sphere(d_rff, d_enc, rff_sigma, device)
-
-  def rff_mmd_loss(data_enc, labels, gen_enc, gen_labels):
-    data_emb = data_label_embedding(data_enc, labels, w_freq, labels_to_one_hot=True, device=device)  # (d_rff, n_labels)
-    gen_emb = data_label_embedding(gen_enc, gen_labels, w_freq)
-    noise = pt.randn(d_rff, n_labels, device=device) * (2 * noise_factor / batch_size)
-    noisy_emb = data_emb + noise
-    return pt.sum((noisy_emb - gen_emb) ** 2)
-
-  return rff_mmd_loss
 
 
 def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
@@ -132,11 +76,11 @@ def get_args():
   # BASICS
   parser.add_argument('--seed', type=int, default=None, help='sets random seed')
   parser.add_argument('--n-labels', type=int, default=10, help='number of labels/classes in data')
-  parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
+  parser.add_argument('--log-interval', type=int, default=10000, help='print updates after n steps')
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
   parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
-  parser.add_argument('--data', type=str, default='digits', help='options are digits, fashion and 2d')
+  parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
   parser.add_argument('--synth-mnist', action='store_true', default=True, help='if true, make 60k synthetic mnist')
 
   # OPTIMIZATION
@@ -148,28 +92,18 @@ def get_args():
 
   # MODEL DEFINITION
   # parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
-  parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
+  parser.add_argument('--mmd-type', type=str, default='sphere', help='how to approx mmd', choices=['sphere', 'r+r'])
 
   # DP SPEC
   parser.add_argument('--d-rff', type=int, default=1000, help='number of random filters for apprixmate mmd')
-  parser.add_argument('--rff-sigma', '-rffsig', type=float, default=None, help='standard dev. for filter sampling')
+  parser.add_argument('--rff-sigma', '-rffsig', type=str, default=None, help='standard dev. for filter sampling')
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
-  # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
-  parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
-
-  parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
-  parser.add_argument('--n-means', type=int, default=10, help='number of means to find per class')
-  parser.add_argument('--dp-kmeans-encoding-dim', type=int, default=10, help='dimension the data is projected to')
-  parser.add_argument('--tgt-epsilon', type=float, default=1.0, help='privacy epsilon for dp k-means')
-  parser.add_argument('--kmeans-delta', type=float, default=0.01, help='soft failure probability in dp k-means')
-
-  parser.add_argument('--center-data', action='store_true', default=False, help='k-means requires centering')
+  parser.add_argument('--flip-mnist', action='store_true', default=False, help='')
 
   ar = parser.parse_args()
 
@@ -187,17 +121,9 @@ def preprocess_args(ar):
 
   if ar.seed is None:
     ar.seed = np.random.randint(0, 1000)
-  assert ar.data in {'digits', 'fashion', '2d'}
+  assert ar.data in {'digits', 'fashion'}
   if ar.rff_sigma is None:
-    ar.rff_sigma = 105 if ar.data == 'digits' else 127
-
-  if ar.kmeans_mmd and ar.tgt_epsilon > 0.0:
-    assert ar.center_data, 'dp kmeans requires centering of data'
-
-  if ar.data == '2d':
-    assert not ar.conv_gen
-  else:
-    assert ar.conv_gen
+    ar.rff_sigma = '105' if ar.data == 'digits' else '127'
 
 
 def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -220,36 +146,26 @@ def synthesize_mnist_with_uniform_labels(gen, device, gen_batch_size=1000, n_dat
 
 def main():
   # load settings
+  n_data, n_feat = 60000, 784
+
   ar = get_args()
   pt.manual_seed(ar.seed)
   use_cuda = pt.cuda.is_available()
   device = pt.device("cuda" if use_cuda else "cpu")
 
   # load data
-  train_loader, _ = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data,
-                                                    normalize=ar.center_data)
+  train_loader, test_loader = get_mnist_dataloaders(ar.batch_size, ar.test_batch_size, use_cuda, dataset=ar.data,
+                                                    flip=ar.flip_mnist)
 
   # init model
-  if ar.conv_gen:
-    gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
-  else:
-    gen = FCCondGen(ar.d_code, ar.gen_spec, ar.n_labels, batch_norm=True).to(device)
+  gen = ConvCondGen(ar.d_code, ar.gen_spec, ar.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
 
   # define loss function
-  if ar.single_release:
-    single_release_loss, _ = get_single_release_loss(train_loader, 784, ar.d_rff, ar.rff_sigma, device, ar.n_labels,
-                                                     ar.noise_factor)
-  elif ar.kmeans_mmd:
-    single_release_loss = get_kmeans_mmd_loss(train_loader, ar.n_labels, ar.tgt_epsilon, ar.n_means,
-                                              ar.rff_sigma, ar.batch_size, ar.dp_kmeans_encoding_dim)
 
-  else:
-    single_release_loss = None
+  sr_loss, mb_loss, _ = get_rff_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor,
+                                       ar.mmd_type)
 
-  if ar.real_mmd:
-    rff_mmd_loss = get_real_mmd_loss(ar.rff_sigma, ar.n_labels, ar.batch_size)
-  else:
-    rff_mmd_loss = get_rff_mmd_loss(784, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
+  # rff_mmd_loss = get_rff_mmd_loss(n_feat, ar.d_rff, ar.rff_sigma, device, ar.n_labels, ar.noise_factor, ar.batch_size)
 
   # init optimizer
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
@@ -257,13 +173,8 @@ def main():
 
   # training loop
   for epoch in range(1, ar.epochs + 1):
-    if ar.single_release:
-      train_single_release(gen, device, optimizer, epoch, single_release_loss, ar.log_interval, ar.batch_size, 60000)
-    else:
-      train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, ar.log_interval)
-
-    # testing doesn't really inform how training is going, so it's commented out
-    # test(gen, device, test_loader, rff_mmd_loss, epoch, ar.batch_size, ar.log_dir)
+    train_single_release(gen, device, optimizer, epoch, sr_loss, ar.log_interval, ar.batch_size, n_data)
+    test(gen, device, test_loader, mb_loss, epoch, ar.batch_size, ar.log_dir)
     scheduler.step()
 
   # save trained model and data
@@ -272,7 +183,8 @@ def main():
     syn_data, syn_labels = synthesize_mnist_with_uniform_labels(gen, device)
     np.savez(ar.log_dir + 'synthetic_mnist', data=syn_data, labels=syn_labels)
 
-    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
+    test_model_key = 'mlp' if ar.flip_mnist else 'logistic_reg'
+    final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys=test_model_key)
     log_final_score(ar.log_dir, final_score)
 
 

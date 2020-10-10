@@ -10,14 +10,15 @@ def main():
     """ input arguments """
 
     # (1) privacy parameters for four types of Gaussian mechanisms
-    sigma = 0.7
+    # sigma = 0.7
+    sigma = 2.4
 
     # (2) desired delta level
     delta = 1e-5
 
     # (5) number of training steps
-    n_epochs = 17  # 5 for DP-MERF and 17 for DP-MERF+AE
-    batch_size = 500  # the same across experiments
+    n_epochs = 3  # 5 for DP-MERF and 17 for DP-MERF+AE
+    batch_size = 256  # the same across experiments
 
     n_data = 60000  # fixed for mnist
     steps_per_epoch = n_data // batch_size
@@ -42,5 +43,18 @@ def main():
             print("[", i, "]Privacy loss is", (eps_seq[-1]))
 
 
+def single_release_comp(sigma_1, sigma_2=None, delta=1e-5):
+    """ input arguments """
+    acct = rdp_acct.anaRDPacct()
+
+    acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma_1}, x), prob=1.)
+    if sigma_2 is not None:
+        acct.compose_subsampled_mechanism(lambda x: rdp_bank.RDP_gaussian({'sigma': sigma_2}, x), prob=1.)
+
+    print("Privacy loss is", acct.get_eps(delta))
+
+
 if __name__ == '__main__':
-    main()
+    # main()
+    # single sigma: sig=5 -> eps<1, sig=25 -> eps<0.2
+    single_release_comp(25., sigma_2=None, delta=1e-5)

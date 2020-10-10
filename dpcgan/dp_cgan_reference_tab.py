@@ -19,7 +19,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 # Import the requiered python packages
 import tensorflow as tf
-from tensorflow.examples.tutorials.mnist import input_data
+# from tensorflow.examples.tutorials.mnist import input_data
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -36,24 +36,24 @@ warnings.filterwarnings('ignore')
 baseDir = "../"
 sys.path.append(baseDir)
 
-from dp_cgan_accounting.dp_sgd.dp_optimizer import dp_optimizer
-from dp_cgan_accounting.dp_sgd.dp_optimizer import sanitizer
-from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
-from dp_cgan_accounting.privacy_accountant.tf import accountant
-from dp_cgan_accounting.analysis.rdp_accountant import compute_rdp
-from dp_cgan_accounting.analysis.rdp_accountant import get_privacy_spent
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import dp_optimizer
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import sanitizer
+from dp_cgan_accounting_dep.dp_sgd.dp_optimizer import utils
+from dp_cgan_accounting_dep.privacy_accountant.tf import accountant
+from dp_cgan_accounting_dep.analysis.rdp_accountant import compute_rdp
+from dp_cgan_accounting_dep.analysis.rdp_accountant import get_privacy_spent
 
 
 #tf.enable_eager_execution()
 
 import sys
 
-sys.path.insert(0, "../data")
-sys.path.insert(0, "../../code")
-sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
-sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
+# sys.path.insert(0, "../data")
+# sys.path.insert(0, "../../code")
+# sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/data")
+# sys.path.insert(0, "/home/kadamczewski/Dropbox_from/Current_research/privacy/DPDR/code")
 
-from dataloader import load_isolet, test_models, load_credit, load_census, load_epileptic, load_intrusion, load_covtype, load_adult, load_cervical
+from tab_dataloader import load_isolet, test_models, load_credit, load_census, load_epileptic, load_intrusion, load_covtype, load_adult, load_cervical
 
 
 import argparse

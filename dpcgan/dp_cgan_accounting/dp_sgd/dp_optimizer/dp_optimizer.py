@@ -23,7 +23,8 @@ from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
 from dp_cgan_accounting.dp_sgd.per_example_gradients import per_example_gradients
 
 
-class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
+# class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
+class DPGradientDescentOptimizer(tf.compat.v1.train.GradientDescentOptimizer):
     """Differentially private gradient descent optimizer.
     """
 
@@ -152,7 +153,7 @@ class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
 
         update_cond = tf.equal(tf.constant(0),
                                tf.mod(self._batch_count,
-                                      tf.constant(self._batches_per_lot)))
+                                                tf.constant(self._batches_per_lot)))
 
         # Things to do for batches other than last of the lot.
         # Add non-noisy clipped grads to shadow variables.
@@ -313,7 +314,7 @@ class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
                                    tf.mod(self._batch_count,
                                           tf.constant(self._batches_per_lot)))
 
-    def non_last_in_lot_op(loss, var_list):
+    def non_last_in_lot_op(self, loss, var_list):
         """Ops to do for a typical batch.
 
         For a batch that is not the last one in the lot, we simply compute the
@@ -339,7 +340,7 @@ class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
         # Add noisy clipped grads to accumulator.
         # Apply accumulated grads to vars.
 
-    def last_in_lot_op(loss, var_list, global_step):
+    def last_in_lot_op(self, loss, var_list, global_step):
         """Ops to do for last batch in a lot.
 
         For the last batch in the lot, we first add the sanitized gradients to

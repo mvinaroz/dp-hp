@@ -4,8 +4,7 @@ import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
 import numpy as np
-from torchvision import datasets
-from aux import plot_mnist_batch, NamedArray
+from aux import plot_mnist_batch
 from aggregate_results import collect_results
 
 
@@ -232,21 +231,6 @@ def apr4_plot_subsampling_performance():
       plt.ylim((0.4, 0.6))
       plt.legend()
       plt.savefig(f'apr4_plot_subsampling_{d}_{e}.png')
-
-
-def extract_numpy_data_mats():
-  def prep_data(dataset):
-    x, y = dataset.data.numpy(), dataset.targets.numpy()
-    x = np.reshape(x, (-1, 784)) / 255
-    return x, y
-
-  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False))
-  np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
-
-  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False))
-  np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
 
 
 def spot_synth_mnist_mar19():
@@ -539,9 +523,9 @@ def apr6_plot_overfit_conv(plot_var=False):
 
 
 def apr6_plot_better_conv(plot_var=False):
-  queried_setups = [  # 'real_data',
+  queried_setups = [  'real_data',
                     'dpcgan', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
-  setup_names = [  # 'real data',
+  setup_names = [  'real data',
                  'DP-CGAN $\epsilon=9.6$', 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
                  'DP-MERF $\epsilon=0.2$']
   colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
@@ -549,6 +533,7 @@ def apr6_plot_better_conv(plot_var=False):
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  # metric = 'accuracies'
   metric = 'accuracies'
   data_ids = ['d', 'f']
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
@@ -561,19 +546,28 @@ def apr6_plot_better_conv(plot_var=False):
   # digit plot
   for d_id in data_ids:
     plt.figure()
-    plt.title(f'DP-MERF single release + convolutional generator: {"MNIST" if d_id == "d" else "FashionMNIST"}')
+    # plt.title(f'DP-MERF single release + convolutional generator: {"MNIST" if d_id == "d" else "FashionMNIST"}')
     plt.xscale('log')
     # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
     plt.xticks(sub_ratios[::-1], data_used[::-1])
+    print('data', d_id)
     for s_idx, s in enumerate(queried_setups):
       sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
 
+      print(f'setup: {s}')
+      print(sub_mat.shape)
+      print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      print(np.mean(sub_mat, axis=1)[0])  # avg over runs
       if plot_var:
         plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
         plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+
+        print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
 
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
@@ -587,8 +581,9 @@ def apr6_plot_better_conv(plot_var=False):
       plt.yticks([0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65])
       plt.hlines([0.4, 0.45, 0.5, 0.55, 0.6], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.35, 0.65))
-    plt.legend(loc='upper left')
-    plt.savefig(f'plots/apr6_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_dpcgan.png')
+    # plt.legend(loc='upper left')
+    plt.legend(loc='lower center')
+    plt.savefig(f'plots/jun2_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_dpcgan_notitle.png')
 
 
 

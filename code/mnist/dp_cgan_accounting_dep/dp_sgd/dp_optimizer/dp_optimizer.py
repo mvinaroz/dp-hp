@@ -23,7 +23,8 @@ from dp_cgan_accounting.dp_sgd.dp_optimizer import utils
 from dp_cgan_accounting.dp_sgd.per_example_gradients import per_example_gradients
 
 
-class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
+# class DPGradientDescentOptimizer(tf.train.GradientDescentOptimizer):
+class DPGradientDescentOptimizer(tf.compat.v1.train.GradientDescentOptimizer):
     """Differentially private gradient descent optimizer.
     """
 

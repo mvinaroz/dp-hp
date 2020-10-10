@@ -1,7 +1,6 @@
 import os
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import numpy as np
-# from torchvision import datasets
 import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
@@ -9,19 +8,10 @@ import xgboost
 import time
 
 
-def test_model(model, x_trn, y_trn, x_tst, y_tst):
-  model.fit(x_trn, y_trn)
-  y_pred = model.predict(x_tst)
-  acc = accuracy_score(y_pred, y_tst)
-  f1 = f1_score(y_true=y_tst, y_pred=y_pred, average='macro')
-  conf = confusion_matrix(y_true=y_tst, y_pred=y_pred)
-  return acc, f1, conf
-
-
-def load_real_data(data_key, data_from_torch):
+def load_mnist_data(data_key, data_from_torch):
   if not data_from_torch:
     if data_key == 'digits':
-      d = np.load('data/MNIST/numpy_dmnist.npz') # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
+      d = np.load('data/MNIST/numpy_dmnist.npz')  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
       return d['x_train'], d['y_train'], d['x_test'], d['y_test']
     elif data_key == 'fashion':
       d = np.load('data/FashionMNIST/numpy_fmnist.npz')
@@ -29,24 +19,22 @@ def load_real_data(data_key, data_from_torch):
     else:
       raise ValueError
   else:
-    # if data_key == 'digits':
-    #   train_data = datasets.MNIST('data', train=True)
-    #   test_data = datasets.MNIST('data', train=False)
-    # elif data_key == 'fashion':
-    #   train_data = datasets.FashionMNIST('data', train=True)
-    #   test_data = datasets.FashionMNIST('data', train=False)
-    # else:
-    #   raise ValueError
+    from torchvision import datasets
+    if data_key == 'digits':
+      train_data = datasets.MNIST('data', train=True)
+      test_data = datasets.MNIST('data', train=False)
+    elif data_key == 'fashion':
+      train_data = datasets.FashionMNIST('data', train=True)
+      test_data = datasets.FashionMNIST('data', train=False)
+    else:
+      raise ValueError
 
+    x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
+    x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
 
-    # print('got dataset')
-    # x_real_train, y_real_train = train_data.data.numpy(), train_data.targets.numpy()
-    # x_real_train = np.reshape(x_real_train, (-1, 784)) / 255
-    # print('reshaped train set')
-    # x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
-    # x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
-    # return x_real_train, y_real_train, x_real_test, y_real_test
-    raise NotImplementedError
+    x_real_test, y_real_test = test_data.data.numpy(), test_data.targets.numpy()
+    x_real_test = np.reshape(x_real_test, (-1, 784)) / 255
+    return x_real_train, y_real_train, x_real_test, y_real_test
 
 
 def subsample_data(x, y, frac, balance_classes=True):
@@ -58,8 +46,8 @@ def subsample_data(x, y, frac, balance_classes=True):
   else:
     n_data_per_class = new_n_data // n_classes
     assert n_data_per_class * n_classes == new_n_data
-    print(f'starting label count {[sum(y == k) for k in range(n_classes)]}')
-    print('DEBUG: NCLASSES', n_classes, 'NDATA', n_data)
+    # print(f'starting label count {[sum(y == k) for k in range(n_classes)]}')
+    # print('DEBUG: NCLASSES', n_classes, 'NDATA', n_data)
     rand_perm = np.random.permutation(n_data)
     x = x[rand_perm]
     y = y[rand_perm]
@@ -88,7 +76,17 @@ def subsample_data(x, y, frac, balance_classes=True):
   return x, y
 
 
-def main():
+def normalize_data(x_train, x_test):
+  mean = np.mean(x_train)
+  sdev = np.std(x_train)
+  x_train_normed = (x_train - mean) / sdev
+  x_test_normed = (x_test - mean) / sdev
+  assert not np.any(np.isnan(x_train_normed)) and not np.any(np.isnan(x_test_normed))
+
+  return x_train_normed, x_test_normed
+
+
+def parse():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
@@ -113,26 +111,19 @@ def main():
 
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
 
+  parser.add_argument('--norm-data', action='store_true', default=False, help='if true, load data from pytorch')
+
   ar = parser.parse_args()
+  return ar
 
-  if ar.data_log_name is not None:
-    print(f'processing {ar.data_log_name}')
 
-  gen_data_dir = os.path.join(ar.data_base_dir, ar.data_log_name)
-  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
-  print('attempting to make dir')
-  if ar.log_results and not os.path.exists(log_save_dir):
-    os.makedirs(log_save_dir)
-  print('made dir')
-  if ar.data_path is None:
-    ar.data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
+                                                            'x_real_train', 'y_real_train',
+                                                            'x_real_test', 'y_real_test'])
 
-  print('loading real data')
-  x_real_train, y_real_train, x_real_test, y_real_test = load_real_data(ar.data, ar.data_from_torch)
-  print('loading gen data')
-  time.sleep(5)
-  gen_data = np.load(ar.data_path)
-  print('loaded gen data')
+def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels):
+  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, data_from_torch)
+  gen_data = np.load(data_path)
   x_gen, y_gen = gen_data['data'], gen_data['labels']
   if len(y_gen.shape) == 2:  # remove onehot
     if y_gen.shape[1] == 1:
@@ -142,22 +133,26 @@ def main():
     else:
       raise ValueError
 
-  print('shuffling data')
-  if ar.shuffle_data:
+  if shuffle_data:
     rand_perm = np.random.permutation(y_gen.shape[0])
     x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
 
-  print('checking subsample')
-  if ar.subsample < 1.:
-    x_gen, y_gen = subsample_data(x_gen, y_gen, ar.subsample, ar.sub_balanced_labels)
-    x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, ar.subsample, ar.sub_balanced_labels)
+  if subsample < 1.:
+    x_gen, y_gen = subsample_data(x_gen, y_gen, subsample, sub_balanced_labels)
+    x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, subsample, sub_balanced_labels)
 
-    print(f'training on {ar.subsample * 100.}% of the original syntetic dataset')
+    print(f'training on {subsample * 100.}% of the original syntetic dataset')
 
   print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
         f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
   print(f'label ranges: [{np.min(y_real_test)}, {np.max(y_real_test)}], [{np.min(y_real_train)}, '
         f'{np.max(y_real_train)}], [{np.min(y_gen)}, {np.max(y_gen)}]')
+
+  return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
+
+
+def prep_models(custom_keys, skip_slow_models, only_slow_models):
+  assert not (skip_slow_models and only_slow_models)
 
   models = {'logistic_reg': linear_model.LogisticRegression,
             'random_forest': ensemble.RandomForestClassifier,
@@ -183,73 +178,128 @@ def main():
   model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
-  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
+  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
+  # model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}  best so far
   model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
 
-  print('got models, setting keys')
-  if ar.custom_keys is not None:
-    run_keys = ar.custom_keys.split(',')
-  elif ar.skip_slow_models:
+  if custom_keys is not None:
+    run_keys = custom_keys.split(',')
+  elif skip_slow_models:
     run_keys = [k for k in models.keys() if k not in slow_models]
-  elif ar.only_slow_models:
+  elif only_slow_models:
     run_keys = [k for k in models.keys() if k in slow_models]
   else:
     run_keys = models.keys()
 
-  g_to_r_acc_summary = []
+  return models, model_specs, run_keys
 
+
+def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
+  x_tr, x_ts = normalize_data(x_tr, x_ts) if norm_data else (x_tr, x_ts)
+  model.fit(x_tr, y_tr)
+  y_pred = model.predict(x_ts)
+  acc = accuracy_score(y_pred, y_ts)
+  f1 = f1_score(y_true=y_ts, y_pred=y_pred, average='macro')
+  conf = confusion_matrix(y_true=y_ts, y_pred=y_pred)
+  acc_str = acc_str + f' {acc}'
+  f1_str = f1_str + f' {f1}'
+  return acc, f1, conf, acc_str, f1_str
+
+
+def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_path=None,
+                  data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
+                  custom_keys=None, skip_slow_models=False, only_slow_models=False,
+                  skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
+                  print_conf_mat=False, norm_data=False):
+
+  gen_data_dir = os.path.join(data_base_dir, data_log_name)
+  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
+  if data_path is None:
+    data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+  datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
+  mean_acc = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
+                                  subsample, custom_keys, skip_slow_models, only_slow_models,
+                                  skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
+                                  print_conf_mat, norm_data)
+  return mean_acc
+
+
+def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
+                         subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
+                         skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
+                         print_conf_mat=False, norm_data=False):
+  if data_log_name is not None:
+    print(f'processing {data_log_name}')
+
+  if log_results:
+    os.makedirs(log_save_dir, exist_ok=True)
+
+  models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
+
+  g_to_r_acc_summary = []
+  dc = datasets_colletion
   for key in run_keys:
     print(f'Model: {key}')
+    a_str, f_str = 'acc:', 'f1:'
 
-    acc_str = 'acc:'
-    f1_str = 'f1:'
-
-    if not ar.skip_gen_to_real:
+    if not skip_gen_to_real:
       model = models[key](**model_specs[key])
-      g_to_r_acc, g_to_r_f1, g_to_r_conf = test_model(model, x_gen, y_gen, x_real_test, y_real_test)
-      acc_str = acc_str + f' gen to real {g_to_r_acc}'
-      f1_str = f1_str + f' gen to real {g_to_r_f1}'
+      g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
       g_to_r_acc_summary.append(g_to_r_acc)
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 
-    if ar.compute_real_to_real:
+    if compute_real_to_real:
       model = models[key](**model_specs[key])
-      base_acc, base_f1, base_conf = test_model(model, x_real_train, y_real_train, x_real_test, y_real_test)
-      acc_str = acc_str + f' real to real {base_acc}'
-      f1_str = f1_str + f' real to real {base_f1}'
+      base_acc, base_f1, base_conf, a_str, f_str = model_test_run(model,
+                                                                  dc.x_real_train, dc.y_real_train,
+                                                                  dc.x_real_test, dc.y_real_test,
+                                                                  norm_data, a_str + 'r2r', f_str + 'r2r')
     else:
       base_acc, base_f1, base_conf = -1, -1, -np.ones((10, 10))
 
-    if ar.compute_real_to_gen:
+    if compute_real_to_gen:
       model = models[key](**model_specs[key])
-      r_to_g_acc, r_to_g_f1, r_to_g_conv = test_model(model, x_real_train, y_real_train, x_gen[:10000], y_gen[:10000])
-      acc_str = acc_str + f' real to gen {r_to_g_acc}'
-      f1_str = f1_str + f' real to gen {r_to_g_f1}'
+      r_to_g_acc, r_to_g_f1, r_to_g_conv, a_str, f_str = model_test_run(model,
+                                                                        dc.x_real_train, dc.y_real_train,
+                                                                        dc.x_gen[:10000], dc.y_gen[:10000],
+                                                                        norm_data, a_str + 'r2g', f_str + 'r2g')
     else:
       r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
 
-    # print(f'acc: real {base_acc}, gen to real {g_to_r_acc}, real to gen {r_to_g_acc}')
-    # print(f'f1:  real {base_f1}, gen to real {g_to_r_f1}, real to gen {r_to_g_f1}')
-    print(acc_str)
-    print(f1_str)
-    if ar.print_conf_mat:
+    print(a_str)
+    print(f_str)
+    if print_conf_mat:
       print('gen to real confusion matrix:')
       print(g_to_r_conf)
 
-    if ar.log_results:
+    if log_results:
       accs = np.asarray([base_acc, g_to_r_acc, r_to_g_acc])
       f1_scores = np.asarray([base_f1, g_to_r_f1, r_to_g_f1])
       conf_mats = np.stack([base_conf, g_to_r_conf, r_to_g_conv])
-      file_name = f'sub{ar.subsample}_{key}_log'
+      file_name = f'sub{subsample}_{key}_log'
       np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
   print('acc summary:')
   for acc in g_to_r_acc_summary:
     print(acc)
-  print(f'mean: {np.mean(g_to_r_acc_summary)}')
+  mean_acc = np.mean(g_to_r_acc_summary)
+  print(f'mean: {mean_acc}')
+  return mean_acc
+
+
+def main():
+  ar = parse()
+  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_path, ar.data_from_torch,
+                ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
+                ar.skip_slow_models, ar.only_slow_models,
+                ar.skip_gen_to_real, ar.compute_real_to_real, ar.compute_real_to_gen,
+                ar.print_conf_mat, ar.norm_data)
+
 
 if __name__ == '__main__':
   main()

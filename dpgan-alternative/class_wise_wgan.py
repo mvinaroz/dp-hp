@@ -7,7 +7,7 @@ import numpy as np
 import torch as pt
 from torchvision.utils import save_image
 from wgan_models import Generator, Discriminator
-from data_loading import get_single_label_dataloader
+from dpgan_data_loading import get_single_label_dataloader
 from backpack import extend, backpack
 from backpack.extensions import BatchGrad, BatchL2Grad
 
