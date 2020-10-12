@@ -463,7 +463,7 @@ def collect_oct9_dpmerf_mnist_scores():
     run_score = f'logs/gen/oct9_mnist_grid_{run}/final_score'
     if os.path.exists(run_score):
       with open(run_score) as f:
-        scores.append((run, f.readline()))
+        scores.append((run, f.readline().rstrip()))
 
   for idx, score in scores:
     print(f'{idx}: {score}')
