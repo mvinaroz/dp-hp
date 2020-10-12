@@ -436,7 +436,7 @@ def collect_oct10_dpcgan_grid():
                    n_runs=48)
 
   for run in range(48):
-    run_file = f'../../dpcgan/joblogs/oct10_dpcgan_grid_{run}.out.txt'
+    run_file = f'../../dpcgan/joblogs/oct10_dpcgan_nondp_grid_{run}.out.txt'
 
     if os.path.exists(run_file):
 
