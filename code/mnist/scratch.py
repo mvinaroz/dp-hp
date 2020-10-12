@@ -451,6 +451,28 @@ def collect_oct10_dpcgan_grid():
 
       print(f'{run} not found')
 
+
+def collect_oct9_dpmerf_mnist_scores():
+  log_dir = 'logs/gen/oct9_mnist_grid_summary/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  scores = []
+  run_range = [str(k) for k in range(216)]
+  for run in run_range:
+    run_score = f'logs/gen/oct9_mnist_grid_{run}/final_score'
+    if os.path.exists(run_score):
+      with open(run_score) as f:
+        scores.append((run, f.readline()))
+
+  for idx, score in scores:
+    print(f'{idx}: {score}')
+
+  with open(log_dir + 'scores', mode='w') as f:
+    for idx, score in scores:
+      f.write(f'{idx}: {score}')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
@@ -460,7 +482,8 @@ if __name__ == '__main__':
   # collect_oct8_dpgan_grid_scores_and_plots()
   # collect_oct8_dpcgan_grid()
   # collect_oct8_dpmerf_log_likelihoods()
-  collect_oct10_dpcgan_grid()
+  # collect_oct10_dpcgan_grid()
+  collect_oct9_dpmerf_mnist_scores()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'
