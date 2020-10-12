@@ -428,6 +428,29 @@ def collect_oct9_dpcgan_grid():
       print(f'{run} not found')
 
 
+def collect_oct10_dpcgan_grid():
+  gather_syn_plots(log_dir='../../dpcgan/logs/oct10_synd_2d_summary/',
+                   run_dir_fun=lambda x: f'../../dpcgan/logs/dp-cgan-synth-2d-norm_k5_n100000_row5_col5_noise0.2-eps0.0/syn2d_grid_oct10_{x}/',
+                   run_plot_name='gen_data.png',
+                   log_plot_name_fun=lambda x: f'gen_data_{x}.png',
+                   n_runs=48)
+
+  for run in range(48):
+    run_file = f'../../dpcgan/joblogs/oct10_dpcgan_grid_{run}.out.txt'
+
+    if os.path.exists(run_file):
+
+      with open(run_file) as f:
+        lines = f.readlines()
+        if len(lines) > 0 and lines[-1].startswith('gen samples eval score: '):
+          score = lines[-1].split()[-1]
+          print(f'{run}: {score}')
+        else:
+          print(f'{run} wrong format')
+    else:
+
+      print(f'{run} not found')
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
@@ -437,7 +460,7 @@ if __name__ == '__main__':
   # collect_oct8_dpgan_grid_scores_and_plots()
   # collect_oct8_dpcgan_grid()
   # collect_oct8_dpmerf_log_likelihoods()
-  collect_oct9_dpcgan_grid()
+  collect_oct10_dpcgan_grid()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'
