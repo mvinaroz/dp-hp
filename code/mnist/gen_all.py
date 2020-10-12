@@ -250,8 +250,8 @@ def main():
     np.savez(ar.log_dir + data_id, data=syn_data, labels=syn_labels)
 
     data_tuple = datasets_colletion_def(syn_data, syn_labels,
-                                        data_pkg.train_data.data, data_pkg.train_data.labels,
-                                        data_pkg.test_data.data, data_pkg.test_data.labels)
+                                        data_pkg.train_data.data, data_pkg.train_data.targets,
+                                        data_pkg.test_data.data, data_pkg.test_data.targets)
     test_results(ar.data, ar.log_name, ar.log_dir, data_tuple, data_pkg.eval_func)
     # final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
     # log_final_score(ar.log_dir, final_score)

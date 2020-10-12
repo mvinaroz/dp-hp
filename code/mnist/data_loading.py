@@ -77,16 +77,16 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
 
 
 class Synth2DDataset(Dataset):
-  def __init__(self, data, labels):
+  def __init__(self, data, targets):
 
     self.data = data
-    self.labels = labels
+    self.targets = targets
 
   def __len__(self):
     return len(self.data)
 
   def __getitem__(self, idx):
-    return self.data[idx], self.labels[idx]
+    return self.data[idx], self.targets[idx]
 
 
 def get_2d_synth_dataloaders(batch_size, use_cuda, spec_string, normalize=False, test_split=None):
