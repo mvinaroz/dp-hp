@@ -378,7 +378,7 @@ def aggregate_sep18_realmmd():
       print(f'accs: {accs}')
 
 
-def aggregate_oct13_mnist_redo():
+def aggregate_oct13_mnist_redo(verbose):
   data_suffix = {'digits': 'd', 'fashion': 'f'}
 
   epsilons = [0, 5, 25]
@@ -406,11 +406,16 @@ def aggregate_oct13_mnist_redo():
             score = mat[e][1]
             scores[e].append(score)
         accs = np.asarray(scores["accuracies"])
-        print(f'model: {m}')
-        print(f'acc avg: {np.mean(accs)}')
-        print(f'accs: {accs}')
+        if verbose:
+          print(f'model: {m}')
+          print(f'acc avg: {np.mean(accs)}')
+          print(f'accs: {accs}')
+        else:
+          print(np.mean(accs))
+
 
 
 if __name__ == '__main__':
   # aggregate_sep18_realmmd()
-  aggregate_oct13_mnist_redo()
+  aggregate_oct13_mnist_redo(True)
+  aggregate_oct13_mnist_redo(False)
