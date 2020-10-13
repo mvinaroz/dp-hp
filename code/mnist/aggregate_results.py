@@ -378,5 +378,39 @@ def aggregate_sep18_realmmd():
       print(f'accs: {accs}')
 
 
+def aggregate_oct13_mnist_redo():
+  data_suffix = {'digits': 'd', 'fashion': 'f'}
+
+  epsilons = [0, 5, 25]
+  # sub_ratios = ['1.0']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies']
+  # save_str = 'sep18_real_mmd_baseline'
+
+  for data in data_suffix:
+    print(data)
+    for eps in epsilons:
+      print(f'eps={eps}')
+      for m in models:
+        scores = {'accuracies': []}
+        for run in runs:
+          load_file = f'logs/gen/oct12_eps_{data_suffix[data]}{eps}_s{run}/synth_eval/sub1.0_{m}_log.npz'
+          if os.path.isfile(load_file):
+            mat = np.load(load_file)
+          else:
+            print('failed to load', load_file)
+            continue
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]
+            scores[e].append(score)
+        accs = np.asarray(scores["accuracies"])
+        print(f'model: {m}')
+        print(f'acc avg: {np.mean(accs)}')
+        print(f'accs: {accs}')
+
+
 if __name__ == '__main__':
-  aggregate_sep18_realmmd()
+  # aggregate_sep18_realmmd()
+  aggregate_oct13_mnist_redo()

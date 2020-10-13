@@ -111,7 +111,7 @@ def parse():
 
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
 
-  parser.add_argument('--norm-data', action='store_true', default=False, help='if true, load data from pytorch')
+  parser.add_argument('--norm-data', action='store_true', default=False, help='if true, normalize data (mostly debug)')
 
   ar = parser.parse_args()
   return ar
