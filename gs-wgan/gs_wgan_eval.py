@@ -63,26 +63,6 @@ def first_look():
   test_passed_gen_data('gs_first_look', data_col, '.', subsample=subsample, custom_keys='mlp')
 
 
-def first_look_dpgan():
-  # mat = np.load('../dpgan-alternative/synth_data/apr17_sigma1.5_test/synthetic_mnist.npy')
-  mat = np.load('../dpgan-alternative/synth_data/apr18_sigma1.5_baseline/synthetic_mnist.npz')
-  # print(mat['data'])
-  data = mat['data']
-  targets = mat['labels']
-  print(data.shape)
-  print(targets.shape)
-  print(np.max(data), np.min(data))
-
-  data = np.reshape(data, (-1, 784))
-  print(data.shape)
-
-  mat1 = np.reshape(data[:100, :], (100, 784))
-  plot_mnist_batch(mat1, 10, 10, save_path='dpgan_test_plot')
-
-  mat2 = data[6000:6100, :]
-  plot_mnist_batch(mat2, 10, 10, save_path='dpgan_test_zeros')
-
-
 def gs_wgan_eval(load_path, save_dir, data_key, run_slow_models, subsample=1.0, custom_keys=None):
   mat = np.load(load_path)
   mat = np.reshape(mat, (10, 6000, 784))
@@ -117,7 +97,7 @@ if __name__ == '__main__':
   parser.add_argument('--load-path', type=str, default=None)
   parser.add_argument('--save-dir', type=str, default=None)
   parser.add_argument('--data-key', type=str, default=None)
-  parser.add_argument('--run-slow-models', action='store_true', default=True)
+  parser.add_argument('--run-slow-models', action='store_true', default=False)
 
   ar = parser.parse_args()
 
