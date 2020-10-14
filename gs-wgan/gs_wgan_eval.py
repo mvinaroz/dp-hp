@@ -29,7 +29,7 @@ def first_look():
   print(np.max(mat), np.min(mat))
 
   mat = np.reshape(mat, (10, 6000, 784))
-  print(mat.s0.525765hape)
+  print(mat.shape)
 
   mat1 = np.reshape(mat[:, :10, :], (100, 784))
   plot_mnist_batch(mat1, 10, 10, save_path='gs_test_plot_fashion')
