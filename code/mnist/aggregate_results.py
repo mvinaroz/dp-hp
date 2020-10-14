@@ -419,7 +419,7 @@ def aggregate_oct14_gs_wgan_eval(verbose):
 
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  runs = [0, 1, 2, 3, 4]
+  runs = [1, 2, 3, 4, 5]
   eval_metrics = ['accuracies']
 
   for data in data_suffix:
