@@ -414,8 +414,40 @@ def aggregate_oct13_mnist_redo(verbose):
           print(np.mean(accs))
 
 
+def aggregate_oct14_gs_wgan_eval(verbose):
+  data_suffix = ('digits', 'fashion')
+
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies']
+
+  for data in data_suffix:
+    print(data)
+    for m in models:
+      scores = {'accuracies': []}
+      for run in runs:
+        load_file = f'../../gs-wgan/eval/{data}_s{run}/sub1.0_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          print('failed to load', load_file)
+          continue
+        for e_idx, e in enumerate(eval_metrics):
+          score = mat[e][1]
+          scores[e].append(score)
+      accs = np.asarray(scores["accuracies"])
+      if verbose:
+        print(f'model: {m}')
+        print(f'acc avg: {np.mean(accs)}')
+        print(f'accs: {accs}')
+      else:
+        print(np.mean(accs))
+
 
 if __name__ == '__main__':
   # aggregate_sep18_realmmd()
-  aggregate_oct13_mnist_redo(True)
-  aggregate_oct13_mnist_redo(False)
+  # aggregate_oct13_mnist_redo(True)
+  # aggregate_oct13_mnist_redo(False)
+  aggregate_oct14_gs_wgan_eval(True)
+  aggregate_oct14_gs_wgan_eval(False)
