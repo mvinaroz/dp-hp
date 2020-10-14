@@ -102,44 +102,60 @@ def get_samples_from_center(center, noise_scale, n_samples, discrete):
 
 def get_mix_of_gaussian_pdf(class_centers, noise_scale, get_avg_sample_prob=True, log_prob=True):
   print(class_centers.shape)
-  n_classes, n_clusters_per_class = class_centers.shape[:2]
+  n_classes, n_gaussians_per_class = class_centers.shape[:2]
+  n_gaussians = n_classes * n_gaussians_per_class
 
-  def mix_of_gaussian_pdf(data, labels, return_per_class=False):
+  # def mix_of_gaussian_pdf(data, labels, return_per_class=False):
+  #   # evaluate each class separately
+  #   data_prob_by_class = []
+  #   n_data_by_class = []
+  #   for c_idx in range(n_classes):
+  #     c_data = data[labels == c_idx]  # shape (n_c, 2)
+  #     norms = np.linalg.norm(class_centers[c_idx].T[:, :, None] - c_data.T[:, None, :], axis=0)  # (c, n_c)
+  #     # because we're using spherical gaussians, we can compute pdf as in 1D based on the norms
+  #     gauss_probs = 1 / (np.sqrt(2 * np.pi) * noise_scale) * np.exp(-1/(2 * noise_scale**2) * norms**2)
+  #
+  #     prob_per_sample = np.sum(gauss_probs, axis=0) / (n_clusters_per_class * n_classes)
+  #
+  #     if log_prob:
+  #       prob_per_sample = np.log(prob_per_sample)
+  #
+  #     if get_avg_sample_prob:
+  #       prob_c = np.sum(prob_per_sample)
+  #       n_data_by_class.append(len(c_data))
+  #     else:
+  #       prob_c = np.sum(prob_per_sample) if log_prob else np.prod(prob_per_sample)
+  #
+  #     data_prob_by_class.append(prob_c)
+  #
+  #   data_prob_by_class = np.asarray(data_prob_by_class)
+  #   if get_avg_sample_prob:
+  #     n_data_by_class = np.asarray(n_data_by_class)
+  #     data_prob = np.sum(data_prob_by_class) / np.sum(n_data_by_class)
+  #     data_prob_by_class = data_prob_by_class / n_data_by_class
+  #   else:
+  #     data_prob = np.sum(data_prob_by_class) if log_prob else np.prod(data_prob_by_class)
+  #
+  #   if return_per_class:
+  #     return data_prob, data_prob_by_class
+  #   else:
+  #     return data_prob
+
+  def mix_of_gaussian_pdf(data, labels):
     # evaluate each class separately
     data_prob_by_class = []
-    n_data_by_class = []
     for c_idx in range(n_classes):
       c_data = data[labels == c_idx]  # shape (n_c, 2)
       norms = np.linalg.norm(class_centers[c_idx].T[:, :, None] - c_data.T[:, None, :], axis=0)  # (c, n_c)
       # because we're using spherical gaussians, we can compute pdf as in 1D based on the norms
-      gauss_probs = 1 / (np.sqrt(2 * np.pi) * noise_scale) * np.exp(-1/(2 * noise_scale**2) * norms**2)
-
-      prob_per_sample = np.sum(gauss_probs, axis=0) / (n_clusters_per_class * n_classes)
-
-      if log_prob:
-        prob_per_sample = np.log(prob_per_sample)
-
-      if get_avg_sample_prob:
-        prob_c = np.sum(prob_per_sample)
-        n_data_by_class.append(len(c_data))
-      else:
-        prob_c = np.sum(prob_per_sample) if log_prob else np.prod(prob_per_sample)
-
+      gauss_probs = 1 / (np.sqrt(2 * np.pi) * noise_scale) * np.exp(-1/(2 * noise_scale**2) * norms**2) / n_gaussians
+      prob_per_sample = np.sum(gauss_probs, axis=0)
+      prob_per_sample = np.log(prob_per_sample)
+      prob_c = np.sum(prob_per_sample)
       data_prob_by_class.append(prob_c)
 
-    data_prob_by_class = np.asarray(data_prob_by_class)
-    if get_avg_sample_prob:
-      n_data_by_class = np.asarray(n_data_by_class)
-      data_prob = np.sum(data_prob_by_class) / np.sum(n_data_by_class)
-      data_prob_by_class = data_prob_by_class / n_data_by_class
-    else:
-      data_prob = np.sum(data_prob_by_class) if log_prob else np.prod(data_prob_by_class)
-
-    if return_per_class:
-      return data_prob, data_prob_by_class
-    else:
-      return data_prob
-
+    data_prob = np.sum(np.asarray(data_prob_by_class))
+    return data_prob
   return mix_of_gaussian_pdf
 
 
@@ -236,7 +252,7 @@ def make_data_from_specstring(spec_string):
 
 def main():
   data_samples, label_samples, eval_func, class_centers = make_dataset(n_classes=5,
-                                                                       n_samples=100000,
+                                                                       n_samples=90000,
                                                                        n_rows=5,
                                                                        n_cols=5,
                                                                        noise_scale=0.2,

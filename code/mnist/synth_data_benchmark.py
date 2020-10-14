@@ -8,13 +8,13 @@ import xgboost
 import time
 
 
-def load_mnist_data(data_key, data_from_torch):
+def load_mnist_data(data_key, data_from_torch, base_dir='data/'):
   if not data_from_torch:
     if data_key == 'digits':
-      d = np.load('data/MNIST/numpy_dmnist.npz')  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
+      d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
       return d['x_train'], d['y_train'], d['x_test'], d['y_test']
     elif data_key == 'fashion':
-      d = np.load('data/FashionMNIST/numpy_fmnist.npz')
+      d = np.load(os.path.join(base_dir, 'FashionMNIST/numpy_fmnist.npz'))
       return d['x_train'], d['y_train'], d['x_test'], d['y_test']
     else:
       raise ValueError
@@ -233,8 +233,10 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
   if data_log_name is not None:
     print(f'processing {data_log_name}')
 
+
   if log_results:
     os.makedirs(log_save_dir, exist_ok=True)
+
 
   models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
 
