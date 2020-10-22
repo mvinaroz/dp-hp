@@ -166,7 +166,7 @@ def get_args():
   parser.add_argument('--log-name', type=str, default=None)
   parser.add_argument('--log-dir', type=str, default=None)  # constructed if None
   parser.add_argument('--data', type=str, default='digits')  # options are digits and fashion
-  parser.add_argument('--synth-mnist', action='store_true', default=False)
+  parser.add_argument('--synth-code_balanced', action='store_true', default=False)
 
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=200)

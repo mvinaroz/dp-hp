@@ -28,7 +28,7 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 
 ### High-dimensional data
-`code/mnist` contains code for mnist data experiments. See `code/mnist/README.md` for instructions on how to run the experiments.
+`code/mnist` contains code for mnist data experiments. See `code_/README.md` for instructions on how to run the experiments.
 - `code/mnist/train_dp_generator_directly.py` trains a DP-MERF generator and can create a synthetic dataset afterwards.
 - `code/mnist/train_dp_autoencoder.py` trains the autoencoder for a DP-MERF+AE model.
 - `code/mnist/train_dp_generator.py` trains the generator for a DP-MERF+AE model and can create a synthetic dataset afterwards.

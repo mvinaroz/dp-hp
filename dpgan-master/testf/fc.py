@@ -66,7 +66,7 @@ class Discriminator(object):
         self.name = 'mimiciii/fc/d_net'
 
     def __call__(self, x, reuse=True):
-        with tf.variable_scope(self.name) as vs: # all variable below are prefixed with self.name = 'mnist/mlp/d_net'
+        with tf.variable_scope(self.name) as vs: # all variable below are prefixed with self.name = 'code_balanced/mlp/d_net'
             if reuse:
                 vs.reuse_variables()
             bs = tf.shape(x)[0] # batch size

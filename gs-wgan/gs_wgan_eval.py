@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 
 import numpy as np
-sys.path.insert(0, '../code/mnist/')
+sys.path.insert(0, '../code_balanced/')
 from synth_data_benchmark import test_passed_gen_data, datasets_colletion_def, load_mnist_data, subsample_data
 
 
@@ -38,7 +38,7 @@ def first_look():
   y_gen = np.concatenate([np.zeros(6000, dtype=np.int) + k for k in range(10)])
 
   data_key = 'fashion'
-  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, False, base_dir='../code/mnist/data')
+  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, False, base_dir='../code_balanced/data')
 
   if len(y_gen.shape) == 2:  # remove onehot
     if y_gen.shape[1] == 1:
@@ -86,7 +86,7 @@ def gs_wgan_eval():
 
   # data_key = 'digits'
   x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(ar.data_key, False,
-                                                                         base_dir='../code/mnist/data')
+                                                                         base_dir='../code_balanced/data')
 
   rand_perm = np.random.permutation(y_gen.shape[0])
   x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]

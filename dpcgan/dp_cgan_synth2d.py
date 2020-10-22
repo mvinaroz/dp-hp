@@ -26,7 +26,7 @@ try:
 except ImportError:
     print('importing through relative path')
     # Import required Differential Privacy packages
-    baseDir = "../code/mnist/"
+    baseDir = "../code_balanced/"
     sys.path.append(baseDir)
 
     from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data
@@ -142,12 +142,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
 
     # num_training_images = 60000
     # Initializations for a two-layer discriminator network
-    # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
+    # code_balanced = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     # if dataset_key == 'digits':
-    #     mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
+    #     code_balanced = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     # elif dataset_key == 'fashion':
     #     print('using FashionMNIST')
-    #     mnist = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)
+    #     code_balanced = input_data.read_data_sets("../../data/FashionMNIST/raw", one_hot=True)
     # else:
     #     raise ValueError
 
@@ -271,7 +271,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
             else:
                 eps = 0
 
-            # x_mb, y_mb = mnist.train.next_batch(batch_size, shuffle=True)
+            # x_mb, y_mb = code_balanced.train.next_batch(batch_size, shuffle=True)
             x_mb, y_mb = next(batch_generator)
             z_sample = sample_z(batch_size, z_dim)
 

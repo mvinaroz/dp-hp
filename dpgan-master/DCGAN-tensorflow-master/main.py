@@ -17,7 +17,7 @@ flags.DEFINE_integer("input_height", 64, "The size of image to use (will be cent
 flags.DEFINE_integer("input_width", None, "The size of image to use (will be center cropped). If None, same value as input_height [None]")
 flags.DEFINE_integer("output_height", 64, "The size of the output images to produce [64]")
 flags.DEFINE_integer("output_width", None, "The size of the output images to produce. If None, same value as output_height [None]")
-flags.DEFINE_string("dataset", "celebA", "The name of dataset [celebA, mnist, lsun]")
+flags.DEFINE_string("dataset", "celebA", "The name of dataset [celebA, code_balanced, lsun]")
 flags.DEFINE_string("input_fname_pattern", "*.png", "Glob pattern of filename of input images [*]") # also see "model.py" line 26
 flags.DEFINE_string("checkpoint_dir", "checkpoint", "Directory name to save the checkpoints [checkpoint]")
 flags.DEFINE_string("sample_dir", "samples", "Directory name to save the image samples [samples]")
@@ -44,7 +44,7 @@ def main(_):
   run_config.gpu_options.allow_growth=True
 
   with tf.Session(config=run_config) as sess:
-    if FLAGS.dataset == 'mnist':
+    if FLAGS.dataset == 'code_balanced':
       dcgan = DCGAN(
           sess,
           input_width=FLAGS.input_width,

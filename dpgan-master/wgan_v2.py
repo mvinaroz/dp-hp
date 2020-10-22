@@ -93,7 +93,7 @@ class WassersteinGAN(object):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('')
-    parser.add_argument('--data', type=str, default='mnist')
+    parser.add_argument('--data', type=str, default='code_balanced')
     parser.add_argument('--model', type=str, default='dcgan')
     parser.add_argument('--gpus', type=str, default='0')
     args = parser.parse_args()

@@ -190,7 +190,7 @@ class WassersteinGAN(object):
 
 def main():
     parser = argparse.ArgumentParser('')
-    parser.add_argument('--data', type=str, default='mnist')
+    parser.add_argument('--data', type=str, default='code_balanced')
     parser.add_argument('--model', type=str, default='mlp')
     parser.add_argument('--gpus', type=str, default='0')
     args = parser.parse_args()
@@ -202,9 +202,9 @@ def main():
         tf.reset_default_graph()
         data = importlib.import_module(args.data)  # from parser
         model = importlib.import_module(args.data + '.' + args.model)
-        xs = data.DataSampler()  # mnist/__init__.py, xs is a instance of class DataSampler
+        xs = data.DataSampler()  # code_balanced/__init__.py, xs is a instance of class DataSampler
         zs = data.NoiseSampler()
-        d_net = model.Discriminator()  # mnist/mlp.py, d_net is a instance of class Discriminator
+        d_net = model.Discriminator()  # code_balanced/mlp.py, d_net is a instance of class Discriminator
         g_net = model.Generator()
         # sigma_all = 0.001  # total noise std added
         sigma_all = 0.0000000001  # total noise std added

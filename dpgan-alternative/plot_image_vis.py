@@ -4,7 +4,7 @@ import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 
 import numpy as np
-sys.path.insert(0, '../code/mnist/')
+sys.path.insert(0, '../code_balanced/')
 
 from aux import plot_mnist_batch
 

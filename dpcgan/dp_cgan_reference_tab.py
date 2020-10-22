@@ -19,7 +19,7 @@ from sklearn.preprocessing import OneHotEncoder
 
 # Import the requiered python packages
 import tensorflow as tf
-# from tensorflow.examples.tutorials.mnist import input_data
+# from tensorflow.examples.tutorials.code_balanced import input_data
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
@@ -233,12 +233,12 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
     #ds_counter = tf.data.Dataset.from_generator(train_dataset, args=[25], output_types=tf.int32, output_shapes=(), )
 
     # Initializations for a two-layer discriminator network
-    # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
-    #mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
-    x_dim = tab_dataset[0].shape[1] #mnist.train.images.shape[1]
+    # code_balanced = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
+    #code_balanced = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
+    x_dim = tab_dataset[0].shape[1] #code_balanced.train.images.shape[1]
 
     if (args.dataset=="covtype"):
-        y_dim = 7#mnist.train.labels.shape[1]
+        y_dim = 7#code_balanced.train.labels.shape[1]
     elif (args.dataset=="intrusion"):
         y_dim = 4
     else:
@@ -400,7 +400,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                   #  val = sess.run(next_element)
 
 
-            x_mb, y_mb_sing = sess.run(next_element)#iterator.get_next() #mnist.train.next_batch(batch_size, shuffle=True)
+            x_mb, y_mb_sing = sess.run(next_element)#iterator.get_next() #code_balanced.train.next_batch(batch_size, shuffle=True)
             onehot_encoder = OneHotEncoder(sparse=False)
             y_train = np.expand_dims(y_mb_sing, 1)
             y_mb = onehot_encoder.fit_transform(y_train)
@@ -504,7 +504,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration):
                 print("prc: ", prc)
 
                 print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
-                np.savez(f'dp-cgan-synth-mnist-eps={max_target_eps}.npz', data=images, labels=image_labels)
+                np.savez(f'dp-cgan-synth-code_balanced-eps={max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 
                 x_test, y_test = loadlocal_mnist(

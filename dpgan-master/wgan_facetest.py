@@ -238,9 +238,9 @@ if __name__ == '__main__':
     os.environ['CUDA_VISIBLE_DEVICES'] = args.gpus
     data = importlib.import_module(args.data) # from parser
     model = importlib.import_module(args.data + '.' + args.model)
-    xs = data.DataSampler() # mnist/__init__.py, xs is a instance of class DataSampler
+    xs = data.DataSampler() # code_balanced/__init__.py, xs is a instance of class DataSampler
     zs = data.NoiseSampler()
-    d_net = model.Discriminator() # mnist/mlp.py, d_net is a instance of class Discriminator
+    d_net = model.Discriminator() # code_balanced/mlp.py, d_net is a instance of class Discriminator
     g_net = model.Generator()
     wgan = WassersteinGAN(g_net, d_net, xs, zs, args.data, args.model)
     wgan.train()

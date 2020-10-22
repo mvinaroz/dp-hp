@@ -1,6 +1,6 @@
 import numpy as np
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets('./mnist/MNIST')
+mnist = input_data.read_data_sets('./code_balanced/MNIST')
 
 
 class DataSampler(object):
@@ -9,9 +9,9 @@ class DataSampler(object):
 
     def __call__(self, batch_size): # __call__ method is executed when the instance is called
         return mnist.train.next_batch(batch_size)
-        # mnist.train.next_batch(batch_size) is a tuple with shape: (batch_size*784, batch_size), 2nd component is the row array for label
+        # code_balanced.train.next_batch(batch_size) is a tuple with shape: (batch_size*784, batch_size), 2nd component is the row array for label
         # the data here is already normlized (/255)
-        # type(mnist.train.next_batch(2)[0][0][0]): numpy.float32
+        # type(code_balanced.train.next_batch(2)[0][0][0]): numpy.float32
 
     def data2img(self, data):
         return np.reshape(data, [data.shape[0]] + self.shape)

@@ -326,7 +326,7 @@ def find_M(gen, train, M):
 with open('/home/decs/2017-DPGAN/result/07302017dp15/genefinalfig/x_gene.pickle', 'rb') as fp:
     x_gene = pickle.load(fp)
 list = [1, 4, 5, 6, 9, 10, 12, 14, 16, 18]
-MNIST_data, MNIST_labels = loaddata('0123456789', 'training', r'./mnist/MNIST')  # # load whole training set of MNIST database
+MNIST_data, MNIST_labels = loaddata('0123456789', 'training', r'./code_balanced/MNIST')  # # load whole training set of MNIST database
 MNIST_data_n = [] # normlized (/255)
 for i in range(len(MNIST_data)):
     MNIST_data_n.append(normlization(MNIST_data[i]))

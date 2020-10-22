@@ -175,7 +175,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
     Z_dim = 100
 
     # Initializations for a two-layer discriminator network
-    # mnist = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
+    # code_balanced = input_data.read_data_sets(baseDir + "our_dp_conditional_gan_mnist/mnist_dataset", one_hot=True)
     if dataset_key == 'digits':
         mnist = input_data.read_data_sets("data/MNIST/raw", one_hot=True)
     elif dataset_key == 'fashion':
@@ -362,7 +362,7 @@ def runTensorFlow(sigma, clipping_value, batch_size, epsilon, delta, iteration, 
                 images = sess.run(g_sample, feed_dict={z_pl: z_sample, y_pl: image_labels})
 
                 print(f'saving genereated data of shape {images.shape} and {image_labels.shape}')
-                save_str = 'dp-cgan-synth-mnist' if data_save_str is None else data_save_str
+                save_str = 'dp-cgan-synth-code_balanced' if data_save_str is None else data_save_str
                 np.savez(f'{save_str}-eps{max_target_eps}.npz', data=images, labels=image_labels)
                 print('done saving')
 

@@ -15,7 +15,7 @@ def norm_w(v):
 
 # Import MNIST data
 from tensorflow.examples.tutorials.mnist import input_data
-mnist = input_data.read_data_sets("/home/decs/2017-DPGAN/code/wgan/mnist/MNIST", one_hot=True)
+mnist = input_data.read_data_sets("/home/decs/2017-DPGAN/code/wgan/code_balanced/MNIST", one_hot=True)
 
 # Parameters, use the ones in medgan
 # learning_rate = 0.001

@@ -13,7 +13,7 @@ try:
 except ImportError:
     print('importing through relative path')
     # Import required Differential Privacy packages
-    baseDir = "../code/mnist/"
+    baseDir = "../code/code_balanced/"
     sys.path.append(baseDir)
 
     from synth_data_2d import make_data_from_specstring, string_to_specs, plot_data

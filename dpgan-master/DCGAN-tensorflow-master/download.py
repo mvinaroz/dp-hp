@@ -21,8 +21,8 @@ import subprocess
 from six.moves import urllib
 
 parser = argparse.ArgumentParser(description='Download dataset for DCGAN.')
-parser.add_argument('datasets', metavar='N', type=str, nargs='+', choices=['celebA', 'lsun', 'mnist'],
-           help='name of dataset to download [celebA, lsun, mnist]')
+parser.add_argument('datasets', metavar='N', type=str, nargs='+', choices=['celebA', 'lsun', 'code_balanced'],
+           help='name of dataset to download [celebA, lsun, code_balanced]')
 
 def download(url, dirpath):
   filename = url.split('/')[-1]
@@ -142,7 +142,7 @@ def download_lsun(dirpath):
   _download_lsun(data_dir, '', 'test', tag)
 
 def download_mnist(dirpath):
-  data_dir = os.path.join(dirpath, 'mnist')
+  data_dir = os.path.join(dirpath, 'code_balanced')
   if os.path.exists(data_dir):
     print('Found MNIST - skip')
     return
@@ -176,5 +176,5 @@ if __name__ == '__main__':
     download_celeb_a('./data')
   if 'lsun' in args.datasets:
     download_lsun('./data')
-  if 'mnist' in args.datasets:
+  if 'code_balanced' in args.datasets:
     download_mnist('./data')
