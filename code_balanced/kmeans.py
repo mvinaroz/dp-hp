@@ -1,7 +1,7 @@
 import torch as pt
 import numpy as np
 from sklearn.cluster import MiniBatchKMeans
-from real_mmd_loss import get_real_mmd_loss
+from mmd_real import get_real_mmd_loss
 from dp_kmeans_balcan import alg4_private_clustering
 
 

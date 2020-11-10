@@ -6,11 +6,13 @@ import numpy as np
 from models_gen import FCCondGen, ConvCondGen
 from aux import plot_mnist_batch, log_args, flatten_features, log_final_score
 from data_loading import get_dataloaders
-from rff_mmd_approx import get_rff_losses
+from mmd_approx_rff import get_rff_losses
+from mmd_approx_eigen import get_eigen_losses
 from synth_data_benchmark import test_gen_data, test_passed_gen_data, datasets_colletion_def
-from real_mmd_loss import get_real_mmd_loss
+from mmd_real import get_real_mmd_loss
 from kmeans import get_kmeans_mmd_loss
 from synth_data_2d import plot_data
+from synth_data_1d import plot_data_1d
 
 
 def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
@@ -70,6 +72,10 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
   elif ar.loss_type == 'rff':
     single_release_loss, minibatch_loss, _ = get_rff_losses(train_loader, n_feat, ar.d_rff, ar.rff_sigma, device,
                                                             n_labels, ar.noise_factor, ar.mmd_type)
+  elif ar.loss_type == 'eigen':
+    single_release_loss, _ = get_eigen_losses(train_loader, device, n_labels,
+                                              ar.n_eigen_degrees, ar.kernel_length, ar.px_sigma)
+    minibatch_loss = None
   else:
     raise ValueError
 
@@ -100,7 +106,7 @@ def get_args():
   # parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
   parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
-  parser.add_argument('--gen-spec', type=str, default='200', help='specifies hidden layers of generator')
+  parser.add_argument('--gen-spec', type=str, default='500,500', help='specifies hidden layers of generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
 
@@ -113,7 +119,7 @@ def get_args():
   parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
 
   parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
-                      choices=['rff', 'kmeans', 'real_mmd'])
+                      choices=['rff', 'kmeans', 'real_mmd', 'eigen'])
   # parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   # parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
 
@@ -126,8 +132,17 @@ def get_args():
   parser.add_argument('--center-data', action='store_true', default=False, help='k-means requires centering')
 
   # synth_d2 data
-  parser.add_argument('--synth-spec-string', type=str, default='disc_k5_n10000_row5_col5_noise0.2', help='')
+  # parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n10000_row5_col5_noise0.2', help='')
+  parser.add_argument('--synth-spec-string', type=str, default='norm_k2_n2000_row1_col2_noise0.2', help='')
   parser.add_argument('--test-split', type=float, default=0.1, help='only relevant for synth_2d so far')
+
+  # eigen-approximation
+  parser.add_argument('--kernel-length', type=float, default=0.1, help='')
+  parser.add_argument('--px-sigma', type=float, default=0.1, help='')
+  parser.add_argument('--n-eigen-degrees', type=int, default=1000, help='')
+
+  parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
+
 
   ar = parser.parse_args()
 
@@ -145,14 +160,14 @@ def preprocess_args(ar):
 
   if ar.seed is None:
     ar.seed = np.random.randint(0, 1000)
-  assert ar.data in {'digits', 'fashion', '2d'}
+  assert ar.data in {'digits', 'fashion', '2d', '1d'}
   if ar.rff_sigma is None:
     ar.rff_sigma = '105' if ar.data == 'digits' else '127'
 
   if ar.loss_type == 'kmeans' and ar.tgt_epsilon > 0.0:
     assert ar.center_data, 'dp kmeans requires centering of data'
 
-  if ar.data == '2d':
+  if ar.data in {'2d', '1d'}:
     ar.conv_gen = False
   else:
     ar.conv_gen = True
@@ -178,14 +193,16 @@ def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data
   return pt.cat(data_list, dim=0).cpu().numpy(), pt.cat(labels_list, dim=0).cpu().numpy()
 
 
-def test_results(data_key, log_name, log_dir, data_tuple, eval_func):
+def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downstream_model):
   if data_key in {'digits', 'fashion'}:
-    final_score = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg')
-    log_final_score(log_dir, final_score)
+    if not skip_downstream_model:
+      final_score = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg')
+      log_final_score(log_dir, final_score)
   elif data_key == '2d':
-    final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
-                                       subsample=.1, custom_keys='mlp', compute_real_to_real=True)
-    log_final_score(log_dir, final_score)
+    if not skip_downstream_model:
+      final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
+                                         subsample=.1, custom_keys='mlp', compute_real_to_real=True)
+      log_final_score(log_dir, final_score)
     eval_score = eval_func(data_tuple.x_gen, data_tuple.y_gen.flatten())
     print(f'Score of evaluation function: {eval_score}')
     with open(os.path.join(log_dir, 'eval_score'), 'w') as f:
@@ -197,6 +214,8 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func):
     plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_sub0.2'), subsample=0.2)
     plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_centered'),
               center_frame=True)
+  elif data_key == '1d':
+    plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
 
 
 def main():
@@ -252,7 +271,7 @@ def main():
     data_tuple = datasets_colletion_def(syn_data, syn_labels,
                                         data_pkg.train_data.data, data_pkg.train_data.targets,
                                         data_pkg.test_data.data, data_pkg.test_data.targets)
-    test_results(ar.data, ar.log_name, ar.log_dir, data_tuple, data_pkg.eval_func)
+    test_results(ar.data, ar.log_name, ar.log_dir, data_tuple, data_pkg.eval_func, ar.skip_downstream_model)
     # final_score = test_gen_data(ar.log_name, ar.data, subsample=0.1, custom_keys='logistic_reg')
     # log_final_score(ar.log_dir, final_score)
 

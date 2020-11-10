@@ -6,8 +6,8 @@ import numpy as np
 from models_gen import FCGen, FCLabelGen, FCCondGen, FCGenBig
 from aux import plot_mnist_batch, meddistance, save_gen_labels, log_args, flat_data
 from data_loading import get_mnist_dataloaders
-from rff_mmd_approx import rff_sphere
-from real_mmd_loss import mmd_g, get_squared_dist
+from mmd_approx_rff import rff_sphere
+from mmd_real import mmd_g, get_squared_dist
 from autodp import rdp_acct, rdp_bank
 
 

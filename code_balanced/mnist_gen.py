@@ -6,9 +6,9 @@ import numpy as np
 from models_gen import FCCondGen, ConvCondGen
 from aux import plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
 from data_loading import get_mnist_dataloaders
-from rff_mmd_approx import rff_sphere, weights_sphere
+from mmd_approx_rff import rff_sphere, weights_sphere
 from synth_data_benchmark import test_gen_data
-from real_mmd_loss import get_real_mmd_loss
+from mmd_real import get_real_mmd_loss
 from kmeans import get_kmeans_mmd_loss
 
 

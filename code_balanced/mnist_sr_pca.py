@@ -6,7 +6,7 @@ import numpy as np
 from models_gen import ConvCondGen
 from aux import plot_mnist_batch, meddistance, log_args, flat_data, log_final_score
 from data_loading import get_mnist_dataloaders
-from rff_mmd_approx import get_rff_losses, apply_pca
+from mmd_approx_rff import get_rff_losses, apply_pca
 from synth_data_benchmark import test_gen_data
 
 

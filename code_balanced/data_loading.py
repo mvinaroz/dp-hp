@@ -6,7 +6,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import Dataset
 from aux import flip_mnist_data
 from synth_data_2d import make_data_from_specstring, string_to_specs
-
+from synth_data_1d import make_data_1d, plot_data_1d
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -28,6 +28,11 @@ def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normaliz
     test_loader = None
     n_labels, n_data, _, _, _, _ = string_to_specs(synth_spec_string)
     n_features = 2
+  elif dataset_key == '1d':
+    train_loader, trn_data, tst_data, eval_func = get_1d_synth_dataloaders(batch_size, use_cuda, test_split)
+    test_loader = None
+    n_labels, n_data = 2, 10000
+    n_features = 1
   else:
     raise ValueError
 
@@ -76,7 +81,7 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     return train_loader, test_loader
 
 
-class Synth2DDataset(Dataset):
+class SynthDataset(Dataset):
   def __init__(self, data, targets):
 
     self.data = data
@@ -118,11 +123,49 @@ def get_2d_synth_dataloaders(batch_size, use_cuda, spec_string, normalize=False,
 
     tst_data = np.concatenate(tst_data)
     tst_labels = np.concatenate(tst_labels)
-    tst_data = Synth2DDataset(tst_data, tst_labels)
+    tst_data = SynthDataset(tst_data, tst_labels)
   else:
-    tst_data = Synth2DDataset(None, None)
+    tst_data = SynthDataset(None, None)
 
-  trn_data = Synth2DDataset(data_samples, label_samples)
+  trn_data = SynthDataset(data_samples, label_samples)
 
   train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
   return train_loader, trn_data, tst_data, eval_func
+
+
+def get_1d_synth_dataloaders(batch_size, use_cuda, test_split=None):
+  kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+  # transforms_list = [transforms.ToTensor()]
+  # prep_transforms = transforms.Compose(transforms_list)
+
+  data_samples, label_samples = make_data_1d()
+
+  if test_split is not None:
+    trn_data = []
+    trn_labels = []
+    tst_data = []
+    tst_labels = []
+
+    for label in range(np.max(label_samples)+1):
+      sub_data = data_samples[label_samples == label]
+      n_sub = len(sub_data)
+      sub_data = sub_data[np.random.permutation(n_sub)]
+      n_sub_tst = int(np.floor(n_sub * test_split))
+      tst_data.append(sub_data[:n_sub_tst])
+      trn_data.append(sub_data[n_sub_tst:])
+      tst_labels.append(np.zeros(n_sub_tst, dtype=np.int) + label)
+      trn_labels.append(np.zeros(n_sub - n_sub_tst, dtype=np.int) + label)
+
+    data_samples = np.concatenate(trn_data)
+    label_samples = np.concatenate(trn_labels)
+
+    tst_data = np.concatenate(tst_data)
+    tst_labels = np.concatenate(tst_labels)
+    tst_data = SynthDataset(tst_data, tst_labels)
+  else:
+    tst_data = SynthDataset(None, None)
+
+  trn_data = SynthDataset(data_samples, label_samples)
+
+  train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+  return train_loader, trn_data, tst_data, lambda x, y: 0
