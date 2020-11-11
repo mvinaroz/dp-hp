@@ -20,7 +20,7 @@ def get_constants(px_sigma=None, kernel_l=None, a=None, b=None):
   big_a = a + b + c
   big_b = b / big_a
   print(f'c_tup: a={a}, b={b}, c={c}, A={big_a}, B={big_b}')
-  return constants_tuple_def(a, b, c, big_a, big_b)
+  return constants_tuple_def(a=a, b=b, c=c, big_a=big_a, big_b=big_b)
 
 
 def hermite_induction(h_n, h_n_minus_1, degree, x_in, probabilists=True):
@@ -66,10 +66,11 @@ def debug_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup,
     phi_i = term_one - term_two
     return phi_i
 
+
 def phi_i(h_i, x_in, c_tup, use_a=True):
   # zhu et al compute eigentfunction without a and basis function with a
   fac = c_tup.c - c_tup.a if use_a else c_tup.c
-  return pt.exp(-fac*x_in**2) * h_i
+  return pt.exp(-fac * x_in**2) * h_i
 
 
 def lambda_i(degree, c_tup, device, use_pi):
@@ -85,6 +86,18 @@ def non_i_terms(x_in, c_tup, device, use_pi):
   # phi_terms = pt.exp(-c_tup.c*x_in**2)  # eigenfunction u_k(x) according to Zhu et al.
   phi_terms = pt.exp(-(c_tup.c - c_tup.a) * x_in ** 2)  # basis function as in both Zhu and GP book
   return lambda_terms * phi_terms
+
+
+def hermite_function_recursion(psi_i_minus_one, psi_i_minus_two, degree, x_in, device, scaling=1.):
+  if degree == 0:
+    psi_i = pt.tensor(np.sqrt(scaling/np.sqrt(np.pi)), dtype=pt.float32, device=device) * pt.exp(-(scaling**2/2) * x_in**2)
+  elif degree == 1:
+    psi_i = psi_i_minus_one * pt.tensor(np.sqrt(2) * scaling, dtype=pt.float32, device=device) * x_in
+  else:
+    term_one = pt.tensor(np.sqrt(2/(degree+1)) * scaling, dtype=pt.float32, device=device) * x_in * psi_i_minus_one
+    term_two = pt.tensor(np.sqrt(degree/(degree+1)), dtype=pt.float32, device=device) * psi_i_minus_two
+    psi_i = term_one - term_two
+  return psi_i
 
 
 def eigen_mapping(degree, x_in, h_i_minus_1, h_i_minus_2, c_tup, device):
@@ -321,9 +334,10 @@ def check_hermite_recursion():
   probabilists = True  # else use physicists Hermite polynomial
   use_pi = True  # use pi in lambda as in zhu et al
   device = 'cpu'
-  n_degrees = 6
+  n_degrees = 10
   x_in = pt.arange(-2, 2, .04)
   c_tup = get_constants(a=1, b=3)  # matching zhu et al
+
   sqrt_2c = pt.sqrt(pt.tensor(2 * c_tup.c, device=device))
 
   h_true = first_ten_polynomials(sqrt_2c * x_in, probabilists)
@@ -380,7 +394,7 @@ def check_hermite_recursion():
   # print((pt.abs(lphi_recursive / lphi_true)) <= (1 + 1e-4))
   print(pt.max(pt.abs(lphi_recursive / lphi_true)[1:, :]))
   print(pt.max(pt.abs(lphi_true / lphi_recursive)[1:, :]))
-  print(pt.argmax(pt.abs(lphi_true / lphi_recursive)[1:, :]))
+  # print(pt.argmax(pt.abs(lphi_true / lphi_recursive)[1:, :]))
   # print(lphi_recursive)
   # print(lphi_true)
   # same for the stabilized lphi computation.
@@ -404,8 +418,38 @@ def check_hermite_recursion():
   plt.savefig('check_hermite_lphi_rec.png')
 
 
+def check_hermite_normalized(scaling=1.0, n_degrees=5):
+  # function computes
+  device = 'cpu'
+  xlim = 6 / scaling
+  x_in = pt.arange(-xlim, xlim, xlim/50)
+  # c_tup = get_constants(a=1, b=3)  # matching zhu et al
+
+  psi_recursive = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
+
+  psi_i_minus_1, psi_i_minus_2 = None, None
+  for degree in range(n_degrees):
+    psi_i = hermite_function_recursion(psi_i_minus_1, psi_i_minus_2, degree, x_in, device, scaling=scaling)
+    psi_i_minus_2 = psi_i_minus_1
+    psi_i_minus_1 = psi_i
+    psi_recursive[:, degree] = psi_i
+
+
+  ylim = np.sqrt(scaling / np.sqrt(np.pi)) * 1.05
+  plt.figure()
+  plt.ylim(-ylim, ylim)
+  plt.xlim(-xlim, xlim)
+  for degree in range(n_degrees):
+    plt.plot(x_in, psi_recursive[:, degree])
+  plt.savefig(f'check_hermite_psi_scale={scaling}.png')
+
+
 if __name__ == '__main__':
   # base_recursion_test()
   # plot_1d_mapping(px_sigma=0.2, kernel_length=0.8, selected_degrees=list(range(50)), probabilists=True)
-  check_hermite_recursion()
+  # check_hermite_recursion()
   # plot_1d_mapping(None, None, selected_degrees=list(range(16)), probabilists=True, plot_basis=True, a=1, b=3)
+  check_hermite_normalized(scaling=0.25)
+  check_hermite_normalized(scaling=0.5)
+  check_hermite_normalized(scaling=1.0)
+  check_hermite_normalized(scaling=2.0)
