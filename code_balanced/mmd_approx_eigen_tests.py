@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch as pt
 import matplotlib
@@ -452,6 +453,7 @@ if __name__ == '__main__':
   # check_hermite_normalized(scaling=0.5)
   # check_hermite_normalized(scaling=1.0)
   # check_hermite_normalized(scaling=2.0)
+  os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
 
   check_approx_against_true()  # comparison with true squared exponential kernel.
   check_hermite_mixed()  # plots using the normalized hermite to reproduce Zhu et al.

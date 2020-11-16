@@ -131,7 +131,7 @@ def mixed_function_induction_phi_debug(lphi_i_minus_one, lphi_i_minus_two, degre
     exp_fac = -c_tup.c if eigenfun else -(c_tup.c - c_tup.a)
     phi_term = pt.exp(exp_fac * x_in ** 2)  # / pt.tensor(np.pi ** 0.25)
     if eigenfun:
-      phi_term /= pt.tensor(2 * np.pi)
+      phi_term /= pt.tensor(2 * np.pi)  # for some reason scaling in Zhu et al is off by this factor
     return phi_term
   elif degree == 1:
     sqrt_c = pt.tensor(np.sqrt(c_tup.c))
