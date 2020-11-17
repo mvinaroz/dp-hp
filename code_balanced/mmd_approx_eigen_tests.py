@@ -6,7 +6,8 @@ matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
 from mmd_approx_eigen import get_constants, hermite_polynomial_induction, phi_i_fun, sqrt_lambda_i_fun, lambda_phi_induction, \
   debug_phi_induction, hermite_function_induction, batch_data_embedding, balanced_batch_data_embedding, \
-  normalized_hermite_polynomial_induction, mixed_batch_data_embedding, mixed_batch_data_embedding_phi_debug
+  normalized_hermite_polynomial_induction, normalized_batch_data_embedding_debug, \
+  normalized_batch_data_embedding_phi_debug
 
 
 def base_recursion_test():
@@ -204,20 +205,15 @@ def check_hermite_recursion():
   plt.savefig('eigen_approx_debug_plots/check_hermite_lphi_rec.png')
 
 
-def check_hermite_normalized(scaling=1.0, n_degrees=5):
+def check_hermite_function_variant(scaling=1.0, n_degrees=5):
   # function computes
   device = 'cpu'
   xlim = 6 / scaling
   x_in = pt.arange(-xlim, xlim, xlim/50)
   # c_tup = get_constants(a=1, b=3)  # matching zhu et al
-
   psi_recursive = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
-  h_recursive = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
-  lphi_recursive = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
 
   psi_i_minus_1, psi_i_minus_2 = None, None
-  h_i_minus_1, h_i_minus_2 = None, None
-  lphi_i_minus_1, lphi_i_minus_2 = None, None
   for degree in range(n_degrees):
     psi_i = hermite_function_induction(psi_i_minus_1, psi_i_minus_2, degree, x_in, device, scaling=scaling)
     psi_i_minus_2 = psi_i_minus_1
@@ -233,16 +229,16 @@ def check_hermite_normalized(scaling=1.0, n_degrees=5):
   plt.savefig(f'eigen_approx_debug_plots/check_hermite_psi_scale={scaling}.png')
 
 
-def check_hermite_mixed():
+def check_hermite_normalized():
   # function computes
   device = 'cpu'
   xlim = 2.
-  n_degrees = 6
+  n_degrees = 15
   use_pi = True
   plot_last_degree = False
   x_in = pt.arange(-xlim, xlim * 51 / 50, xlim / 50)[:, None]
-  # c_tup = get_constants(a=1, b=3)  # matching zhu et al
-  c_tup = get_constants(px_sigma=1, kernel_l=.2)  # matching zhu et al
+  c_tup = get_constants(a=1, b=3)  # matching zhu et al
+  # c_tup = get_constants(px_sigma=1, kernel_l=0.2)
   h_recursive = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   phi_reconstructed = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   lphi_reconstructed = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
@@ -261,41 +257,48 @@ def check_hermite_mixed():
     h_recursive[:, degree] = h_i.flatten()
     phi_reconstructed[:, degree] = h_i.flatten() * exp_term
     lphi_reconstructed[:, degree] = h_i.flatten() * exp_term * sqrt_lambda_i
-  phi_recursive = mixed_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun=False)
-  phi_eigenfun = mixed_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun=True)
-  lphi_recursive = mixed_batch_data_embedding(x_in, n_degrees, c_tup, device, use_pi=use_pi)
 
-
-  # lphi_reconstructed = phi_recursive * sqrt_lambda_i
+  phi_recursive = normalized_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun=False)
+  phi_eigenfun = normalized_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun=True)
+  lphi_recursive = normalized_batch_data_embedding_debug(x_in, n_degrees, c_tup, device, use_pi=use_pi)
 
   degrees_list = list(range(n_degrees - 1, n_degrees)) if plot_last_degree else list(range(n_degrees))
-  # lphi_recursive *= 1e4
-  # ylim = np.sqrt(scaling / np.sqrt(np.pi)) * 1.05
 
   plt.figure()
-  # plt.ylim(-ylim, ylim)
   plt.xlim(-xlim, xlim)
   for degree in degrees_list:
-    # for degree in range(n_degrees):
     plt.plot(x_in, h_recursive[:, degree])
   plt.savefig(f'eigen_approx_debug_plots/check_hermite_mixed_poly.png')
 
   plt.figure()
-  # plt.ylim(-ylim, ylim)
-  plt.xlim(-xlim, xlim)
-  plt.ylim(-3., 2.7)
-  # for degree in range(n_degrees - 1, n_degrees):
-  for degree in degrees_list:
-    plt.plot(x_in, phi_recursive[:, degree])
-  plt.savefig(f'eigen_approx_debug_plots/check_hermite_mixed_phi.png')
+  plt.xlim(0, 15)
+  plt.ylim(0., 0.8)
+  x_vals = np.arange(0., 15, 1.)
+  y_vals = np.asarray([sqrt_lambda_i_fun(k, c_tup, device, use_pi=True)**2 for k in x_vals])
+  plt.plot(x_vals, y_vals)
+  plt.savefig(f'eigen_approx_debug_plots/zhu_fig_1_a.png')
 
-  plt.figure()
-  plt.ylim(-0.2, 0.2)
-  plt.xlim(-xlim, xlim)
-  # for degree in range(n_degrees - 1, n_degrees):
-  for degree in degrees_list:
-    plt.plot(x_in, phi_eigenfun[:, degree])
-  plt.savefig(f'eigen_approx_debug_plots/check_hermite_mixed_phi_eigenfun.png')
+  if n_degrees >= 6:
+    plt.figure()
+    plt.xlim(-xlim, xlim)
+    plt.ylim(-3., 2.7)
+    for degree in range(6):
+      plt.plot(x_in, phi_recursive[:, degree])
+    plt.savefig(f'eigen_approx_debug_plots/zhu_fig_1_d.png')
+
+    plt.figure()
+    plt.ylim(-0.2, 0.2)
+    plt.xlim(-xlim, xlim)
+    for degree in range(6):
+      plt.plot(x_in, phi_eigenfun[:, degree])
+    plt.savefig(f'eigen_approx_debug_plots/zhu_fig_1_b.png')
+
+  if n_degrees >= 15:
+    plt.figure()
+    plt.plot(x_in, phi_recursive[:, 14])
+    plt.savefig(f'eigen_approx_debug_plots/zhu_fig_1_c.png')
+
+  # CHECKS OF RECURSIVE VS DIRECT COMPUTATION COMMENTED OUT
 
   # plt.figure()
   # plt.ylim(-ylim, ylim)
@@ -324,17 +327,12 @@ def check_hermite_mixed():
   # plt.savefig(f'check_hermite_mixed_lphi_reconstructed.png')  # matches recursive lphi to ensure computation is correct
 
   plt.figure()
-  # plt.ylim(-ylim, ylim)
   plt.xlim(-xlim, xlim)
   for degree in degrees_list:
-    # for degree in range(n_degrees):
     plt.plot(x_in, lphi_recursive[:, degree])
-  plt.savefig(f'eigen_approx_debug_plots/check_hermite_mixed_lphi.png')
+  plt.savefig(f'eigen_approx_debug_plots/check_hermite_normalized_lphi.png')
 
-  if n_degrees >= 15:
-    plt.figure()
-    plt.plot(x_in, phi_recursive[:, 14])
-    plt.savefig(f'eigen_approx_debug_plots/check_hermite_mixed_phi_degree15.png')
+
 
 
 def real_kxy(kernel_length, batch_size, x, y):
@@ -384,23 +382,24 @@ def check_approx_against_true():
   # correction_factor = pt.tensor(1.5 * (px_sigma / kernel_length) ** 0.33)
   correction_factor = pt.tensor(1.)
   # compute true kyy term
-  e_kxy_true = real_kxy(kernel_length, n_samples, x, y)
-  e_kxy_true_debug, kxy_true = real_kxy_debug(kernel_length, n_samples, x, y, return_kxy=True)
+  e_kxy_true = real_kxy(kernel_length, n_samples, x, y)  # copy of old code (I think from Wittawat)
+  e_kxy_true_debug, kxy_true = real_kxy_debug(kernel_length, n_samples, x, y, return_kxy=True)  # simple correct version
 
-  # compute approximate term using l_phi
+  # compute approximate term k(x,y) using un-normalized hermite ploynomials as suggested in the paper
   c_tup = get_constants(px_sigma=px_sigma, kernel_l=kernel_length)
   lphi_x = batch_data_embedding(x, n_degrees_lphi, c_tup, device, eigenfun=False, use_pi=use_pi)
   lphi_y = batch_data_embedding(y, n_degrees_lphi, c_tup, device, eigenfun=False, use_pi=use_pi)
   kxy_lphi = lphi_x @ lphi_y.transpose(1, 0)
   e_kxy_lphi = pt.sum(kxy_lphi) / n_samples ** 2
 
-  lphi_mix_x = mixed_batch_data_embedding(x, n_degrees_balanced, c_tup, device, use_pi=use_pi, eigenfun=False)
-  lphi_mix_y = mixed_batch_data_embedding(y, n_degrees_balanced, c_tup, device, use_pi=use_pi, eigenfun=False)
-  kxy_lphi_mix = lphi_mix_x @ lphi_mix_y.transpose(1, 0)
-  e_kxy_lphi_mix = pt.sum(kxy_lphi) / n_samples ** 2
+  # compute approximate term k(x,y) using un-normalized hermite ploynomials as suggested in the paper
+  lphi_normalized_x = normalized_batch_data_embedding_debug(x, n_degrees_balanced, c_tup, device, use_pi=use_pi, eigenfun=False)
+  lphi_normalized_y = normalized_batch_data_embedding_debug(y, n_degrees_balanced, c_tup, device, use_pi=use_pi, eigenfun=False)
+  kxy_lphi_normalized = lphi_normalized_x @ lphi_normalized_y.transpose(1, 0)
+  e_kxy_lphi_normalized = pt.sum(kxy_lphi) / n_samples ** 2
 
-  kxy_lphi_mix *= correction_factor
-  e_kxy_lphi_mix *= correction_factor
+  kxy_lphi_normalized *= correction_factor
+  e_kxy_lphi_normalized *= correction_factor
 
   # compute approximate term using normalized
   psi_x = balanced_batch_data_embedding(x, n_degrees_balanced, kernel_length, device)
@@ -409,7 +408,7 @@ def check_approx_against_true():
 
   print(f'e_kxy true: {e_kxy_true}, debug: {e_kxy_true_debug}')
   print(f'e_kxy lphi: {e_kxy_lphi}')
-  print(f'e_kxy mix : {e_kxy_lphi_mix}')
+  print(f'e_kxy norm : {e_kxy_lphi_normalized}')
   print(f'e_kxy psi : {e_kxy_psi}')
 
   print('below: max, min, (mean)')
@@ -421,11 +420,11 @@ def check_approx_against_true():
   plt.savefig('eigen_approx_debug_plots/kxy_diffs_basic.png')
 
   plt.figure()
-  mix_diff = kxy_true - kxy_lphi_mix
-  print('diff mix', pt.max(mix_diff).item(), pt.min(mix_diff).item())
-  plt.hist(mix_diff.flatten(), bins=50)
+  normalized_diff = kxy_true - kxy_lphi_normalized
+  print('diff normalized', pt.max(normalized_diff).item(), pt.min(normalized_diff).item())
+  plt.hist(normalized_diff.flatten(), bins=50)
   plt.yscale('log', nonposy='clip')
-  plt.savefig('eigen_approx_debug_plots/kxy_diffs_mix_normed.png')
+  plt.savefig('eigen_approx_debug_plots/kxy_diffs_normed.png')
 
   plt.figure()
   # lphi_ratio = kxy_lphi / kxy_true
@@ -437,11 +436,35 @@ def check_approx_against_true():
   plt.savefig('eigen_approx_debug_plots/kxy_ratios_basic.png')
 
   plt.figure()
-  mix_ratio = kxy_lphi_mix / kxy_true
-  print('ratio mix', pt.max(mix_ratio).item(), pt.min(mix_ratio).item(), pt.mean(mix_ratio).item())
-  plt.hist((kxy_lphi_mix / (kxy_true + 1e-6)).flatten(), bins=50)
+  normalized_ratio = kxy_lphi_normalized / kxy_true
+  print('ratio normalized', pt.max(normalized_ratio).item(), pt.min(normalized_ratio).item(),
+        pt.mean(normalized_ratio).item())
+  plt.hist((kxy_lphi_normalized / (kxy_true + 1e-6)).flatten(), bins=50)
   plt.yscale('log', nonposy='clip')
   plt.savefig('eigen_approx_debug_plots/kxy_ratios_mix_normed.png')
+
+
+def wittawats_kernel_code():
+  # first generate data
+  n_data = 2000
+  mean = 0
+  x = mean + np.random.randn(n_data, 1)
+  mean_prime = 0
+  x_prime = mean_prime + np.random.randn(n_data, 1)
+  # evaluate the kernel function
+  from aux import meddistance
+  med = meddistance(np.concatenate((x, x_prime), axis=0))
+  sigma2 = med ** 2
+
+  (n1, d1) = x.shape
+  (n2, d2) = x_prime.shape
+  print(x.dot(x_prime.T).shape)
+  assert d1 == d2, 'Dimensions of the two inputs must be the same'
+  d2 = np.sum(x ** 2, 1)[:, np.newaxis] - 2.0 * x.dot(x_prime.T) + np.sum(x_prime ** 2, 1)
+  k_xy = np.mean(np.exp(-d2 / (2.0 * sigma2)))
+  print(k_xy)
+  e_kxy = real_kxy_debug(med, n_data, pt.tensor(x), pt.tensor(x_prime), return_kxy=False)
+  print(e_kxy)
 
 
 if __name__ == '__main__':
@@ -449,11 +472,8 @@ if __name__ == '__main__':
   # plot_1d_mapping(px_sigma=0.2, kernel_length=0.8, selected_degrees=list(range(50)), probabilists=True)
   # check_hermite_recursion()
   # plot_1d_mapping(None, None, selected_degrees=list(range(16)), probabilists=True, plot_basis=True, a=1, b=3)
-  # check_hermite_normalized(scaling=0.25)
-  # check_hermite_normalized(scaling=0.5)
-  # check_hermite_normalized(scaling=1.0)
-  # check_hermite_normalized(scaling=2.0)
   os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
 
   check_approx_against_true()  # comparison with true squared exponential kernel.
-  check_hermite_mixed()  # plots using the normalized hermite to reproduce Zhu et al.
+  check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
+  # wittawats_kernel_code()

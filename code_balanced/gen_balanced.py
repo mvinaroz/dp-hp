@@ -133,7 +133,7 @@ def get_args():
 
   # synth_d2 data
   # parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n10000_row5_col5_noise0.2', help='')
-  parser.add_argument('--synth-spec-string', type=str, default='norm_k2_n2000_row1_col2_noise0.2', help='')
+  parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n50000_row5_col5_noise0.2', help='')
   parser.add_argument('--test-split', type=float, default=0.1, help='only relevant for synth_2d so far')
 
   # eigen-approximation
@@ -214,8 +214,11 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downst
     plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_sub0.2'), subsample=0.2)
     plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_centered'),
               center_frame=True)
+
+    plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_norms_hist'))
   elif data_key == '1d':
     plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
+    plot_data_1d(data_tuple.x_real_test, data_tuple.y_real_test.flatten(), os.path.join(log_dir, 'plot_data'))
 
 
 def main():

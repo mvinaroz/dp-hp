@@ -6,7 +6,7 @@ from torchvision import transforms, datasets
 from torch.utils.data import Dataset
 from aux import flip_mnist_data
 from synth_data_2d import make_data_from_specstring, string_to_specs
-from synth_data_1d import make_data_1d, plot_data_1d
+from synth_data_1d import make_data_1d
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',

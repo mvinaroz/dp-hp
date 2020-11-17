@@ -20,6 +20,96 @@ def get_constants(px_sigma=None, kernel_l=None, a=None, b=None):
   return constants_tuple_def(a=a, b=b, c=c, big_a=big_a, big_b=big_b)
 
 
+def normalized_lambda_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device):
+  if degree == 0:
+    lambda_term = pt.tensor((2 * c_tup.a / c_tup.big_a) ** 0.25, dtype=pt.float32, device=device)
+    phi_term = pt.exp(-(c_tup.c - c_tup.a) * x_in ** 2)
+    return lambda_term * phi_term
+  elif degree == 1:
+    sqrt_big_b_and_c = pt.tensor(np.sqrt(c_tup.big_b * c_tup.c))
+    return 2 * sqrt_big_b_and_c * x_in * lphi_i_minus_one
+  else:
+    factor_one = pt.tensor(2 * np.sqrt(c_tup.big_b * c_tup.c/degree), dtype=pt.float32, device=device) * x_in
+    factor_two = pt.tensor(c_tup.big_b * np.sqrt((degree-1)/degree), dtype=pt.float32, device=device)
+    return factor_one * lphi_i_minus_one - factor_two * lphi_i_minus_two
+
+
+def normalized_batch_feature_embedding(x_in, n_degrees, c_tup, device):
+  # since the embedding is a scalar operation prior to to taking the product, we compure for increasing degrees,
+  # one at a time. separation by label is done outside of this function
+  n_samples = x_in.shape[0]
+  n_features = x_in.shape[1]
+  batch_embedding = pt.empty(n_samples, n_degrees, n_features, dtype=pt.float32, device=device)
+  lphi_i_minus_one, lphi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    lphi_i = normalized_lambda_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device)
+    lphi_i_minus_two = lphi_i_minus_one
+    lphi_i_minus_one = lphi_i
+    # batch_embedding[:, degree] = pt.prod(lphi_i, dim=1)  # multiply features, sum over samples
+    batch_embedding[:, degree, :] = lphi_i
+  return batch_embedding
+
+
+def labeled_feature_embedding(data, labels, feature_embedding, labels_to_one_hot=False, n_labels=None, device=None):
+  if labels_to_one_hot:
+    batch_size = data.shape[0]
+    one_hots = pt.zeros(batch_size, n_labels, device=device)
+    one_hots.scatter_(1, labels[:, None], 1)
+    labels = one_hots
+
+  embedding = pt.einsum('kil,kj->kilj', [feature_embedding, labels])
+  return pt.sum(embedding, 0)
+
+
+def eigen_dataset_embedding(train_loader, device, n_labels, n_degrees, c_tup, sum_frequency=25):
+  emb_acc = []
+  n_data = 0
+
+  for data, labels in train_loader:
+    data, labels = data.to(device), labels.to(device)
+    data = flat_data(data, labels, device, n_labels=10, add_label=False)
+
+    feature_embedding = normalized_batch_feature_embedding(data, n_degrees, c_tup, device)
+    emb_acc.append(labeled_feature_embedding(data, labels, feature_embedding, labels_to_one_hot=True,
+                                             n_labels=n_labels, device=device))
+    n_data += data.shape[0]
+
+    if len(emb_acc) > sum_frequency:
+      emb_acc = [pt.sum(pt.stack(emb_acc), 0)]
+
+  print('done collecting batches, n_data', n_data)
+  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
+  print(pt.norm(emb_acc), emb_acc.shape)
+  # noise = pt.randn(d_rff, n_labels, device=device)
+  # noisy_emb = emb_acc + noise
+  return emb_acc
+
+
+def get_eigen_losses(train_loader, device, n_labels, n_degrees, kernel_length, px_sigma):
+  c_tup = get_constants(px_sigma, kernel_length)
+  data_emb = eigen_dataset_embedding(train_loader, device, n_labels, n_degrees, c_tup)
+  data_term = pt.sum(data_emb**2)
+
+  def single_release_loss(gen_features, gen_labels):
+    batch_size = gen_features.shape[0]
+    feature_embedding = normalized_batch_feature_embedding(gen_features, n_degrees, c_tup, device)
+    gen_emb = labeled_feature_embedding(gen_features, gen_labels, feature_embedding, device=device)
+
+    cross_term = pt.sum(data_emb * gen_emb) / batch_size  # data_emb is already normalized. -> normalize gen_emb
+    gen_term = pt.sum(gen_emb**2) / batch_size**2
+
+    approx_loss = data_term + gen_term - 2 * cross_term
+    # approx_loss = - 2 * cross_term
+    return approx_loss
+
+  return single_release_loss, data_emb
+
+
+#######################################################################################################################
+###########################   EVERYTHING BELOW IS ONLY USED FOR TESTING AND MOSTLY OUTDATED  ##########################
+#######################################################################################################################
+
+
 def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=True):
   fac = 1 if probabilists else 2
   if degree == 0:
@@ -110,12 +200,13 @@ def hermite_function_induction(psi_i_minus_one, psi_i_minus_two, degree, x_in, d
   return psi_i
 
 
-def mixed_function_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device, use_pi=False, eigenfun=False):
+def normalized_lambda_phi_induction_debug(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device,
+                                          use_pi=False, eigenfun=False):
   if degree == 0:
     pi_fac = np.pi if use_pi else (2 * c_tup.a)
     lambda_term = pt.tensor((pi_fac / c_tup.big_a) ** 0.25, dtype=pt.float32, device=device)
     exp_fac = -c_tup.c if eigenfun else -(c_tup.c - c_tup.a)
-    phi_term = pt.exp(exp_fac * x_in ** 2) #  / pt.tensor(np.pi ** 0.25)
+    phi_term = pt.exp(exp_fac * x_in ** 2)  # / pt.tensor(np.pi ** 0.25)  - not used by zhu et al
     return lambda_term * phi_term
   elif degree == 1:
     sqrt_big_b_and_c = pt.tensor(np.sqrt(c_tup.big_b * c_tup.c))
@@ -126,7 +217,7 @@ def mixed_function_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c
     return factor_one * lphi_i_minus_one - factor_two * lphi_i_minus_two
 
 
-def mixed_function_induction_phi_debug(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device, eigenfun=False):
+def normalized_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device, eigenfun=False):
   if degree == 0:
     exp_fac = -c_tup.c if eigenfun else -(c_tup.c - c_tup.a)
     phi_term = pt.exp(exp_fac * x_in ** 2)  # / pt.tensor(np.pi ** 0.25)
@@ -140,16 +231,6 @@ def mixed_function_induction_phi_debug(lphi_i_minus_one, lphi_i_minus_two, degre
     factor_one = pt.tensor(2 * np.sqrt(c_tup.c/degree), dtype=pt.float32, device=device) * x_in
     factor_two = pt.tensor(np.sqrt((degree - 1)/degree), dtype=pt.float32, device=device)
     return factor_one * lphi_i_minus_one - factor_two * lphi_i_minus_two
-
-# def eigen_mapping(degree, x_in, h_i_minus_1, h_i_minus_2, c_tup, device):
-#   sqrt_2c = pt.sqrt(pt.tensor(2 * c_tup.c, device=device))
-#   h_i = hermite_induction(h_i_minus_1, h_i_minus_2, degree, sqrt_2c * x_in)
-#   mapping = lambda_i(degree, c_tup, device, use_pi=False) * phi_i(h_i, x_in, c_tup)
-#   return mapping, h_i
-#
-#
-# def lambda_i_no_b(c_tup, device):
-#   return pt.tensor(np.sqrt(2*c_tup.a / c_tup.big_a), dtype=pt.float32, device=device)
 
 
 def batch_data_embedding(x_in, n_degrees, c_tup, device, eigenfun, use_pi):
@@ -183,69 +264,33 @@ def balanced_batch_data_embedding(x_in, n_degrees, kernel_length, device):
   return batch_embedding
 
 
-def mixed_batch_data_embedding(x_in, n_degrees, c_tup, device, use_pi, eigenfun=False):
+def normalized_batch_data_embedding_debug(x_in, n_degrees, c_tup, device, use_pi, eigenfun=False):
   # since the embedding is a scalar operation prior to to taking the product, we compure for increasing degrees,
   # one at a time. separation by label is done outside of this function
   n_samples = x_in.shape[0]
   batch_embedding = pt.empty(n_samples, n_degrees, dtype=pt.float32, device=device)
   lphi_i_minus_one, lphi_i_minus_two = None, None
   for degree in range(n_degrees):
-    lphi_i = mixed_function_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device,
-                                      use_pi=use_pi, eigenfun=eigenfun)
+    lphi_i = normalized_lambda_phi_induction_debug(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, c_tup, device,
+                                                   use_pi=use_pi, eigenfun=eigenfun)
     lphi_i_minus_two = lphi_i_minus_one
     lphi_i_minus_one = lphi_i
     batch_embedding[:, degree] = pt.prod(lphi_i, dim=1)  # multiply features, sum over samples
   return batch_embedding
 
 
-def mixed_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun):
+def normalized_batch_data_embedding_phi_debug(x_in, n_degrees, c_tup, device, eigenfun):
   # since the embedding is a scalar operation prior to to taking the product, we compure for increasing degrees,
   # one at a time. separation by label is done outside of this function
   n_samples = x_in.shape[0]
   batch_embedding = pt.empty(n_samples, n_degrees, dtype=pt.float32, device=device)
   phi_i_minus_one, phi_i_minus_two = None, None
   for degree in range(n_degrees):
-    phi_i = mixed_function_induction_phi_debug(phi_i_minus_one, phi_i_minus_two, degree, x_in, c_tup, device, eigenfun)
+    phi_i = normalized_phi_induction(phi_i_minus_one, phi_i_minus_two, degree, x_in, c_tup, device, eigenfun)
     phi_i_minus_two = phi_i_minus_one
     phi_i_minus_one = phi_i
     batch_embedding[:, degree] = pt.prod(phi_i, dim=1)  # multiply features, sum over samples
   return batch_embedding
-
-
-def data_label_embedding(data, labels, n_degrees, c_tup,
-                         labels_to_one_hot=False, n_labels=None, device=None):
-  if labels_to_one_hot:
-    batch_size = data.shape[0]
-    one_hots = pt.zeros(batch_size, n_labels, device=device)
-    one_hots.scatter_(1, labels[:, None], 1)
-    labels = one_hots
-
-  data_embedding = batch_data_embedding(data, n_degrees, c_tup, device)
-  embedding = pt.einsum('ki,kj->kij', [data_embedding, labels])
-  return pt.sum(embedding, 0)
-
-
-def eigen_dataset_embedding(train_loader, device, n_labels, n_degrees, c_tup, sum_frequency=25):
-  emb_acc = []
-  n_data = 0
-
-  for data, labels in train_loader:
-    data, labels = data.to(device), labels.to(device)
-    data = flat_data(data, labels, device, n_labels=10, add_label=False)
-
-    emb_acc.append(data_label_embedding(data, labels, n_degrees, c_tup, labels_to_one_hot=True,
-                                        n_labels=n_labels, device=device))
-    n_data += data.shape[0]
-
-    if len(emb_acc) > sum_frequency:
-      emb_acc = [pt.sum(pt.stack(emb_acc), 0)]
-
-  print('done collecting batches, n_data', n_data)
-  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
-  print(pt.norm(emb_acc), emb_acc.shape)
-  # noise = pt.randn(d_rff, n_labels, device=device)
-  # noisy_emb = emb_acc + noise
-  return emb_acc
 
 
 def get_real_kyy(kernel_length, n_labels):
@@ -283,22 +328,3 @@ def estimate_kyy(dist_yy, sigma):
   return diff
 
 
-def get_eigen_losses(train_loader, device, n_labels, n_degrees, kernel_length, px_sigma):
-  c_tup = get_constants(px_sigma, kernel_length)
-
-  data_emb = eigen_dataset_embedding(train_loader, device, n_labels, n_degrees, c_tup)
-  real_kyy_fun = get_real_kyy(kernel_length, n_labels)
-
-  def single_release_loss(gen_features, gen_labels):
-    batch_size = gen_features.shape[0]
-    gen_emb = data_label_embedding(gen_features, gen_labels, n_degrees, c_tup, device=device)
-    print('embedding norms:', pt.norm(data_emb).item(), pt.norm(gen_emb).item() / batch_size)
-    cross_term = pt.sum(data_emb * gen_emb) / batch_size  # data_emb is already normalized. -> normalize gen_emb
-    gen_term = real_kyy_fun(gen_features, gen_labels, batch_size)  # this term is normalized already
-    print(f'L_yy={gen_term}, L_xy={cross_term}')
-
-    approx_loss = gen_term - 2 * cross_term
-    # approx_loss = - 2 * cross_term
-    return approx_loss
-
-  return single_release_loss, data_emb
