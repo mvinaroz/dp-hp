@@ -4,7 +4,7 @@ import torch as pt
 import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
-from mmd_approx_eigen import get_constants, hermite_polynomial_induction, phi_i_fun, lambda_i_fun, lambda_phi_induction, \
+from mmd_approx_eigen import get_constants, hermite_polynomial_induction, phi_i_fun, sqrt_lambda_i_fun, lambda_phi_induction, \
   debug_phi_induction, hermite_function_induction, batch_data_embedding, balanced_batch_data_embedding, \
   normalized_hermite_polynomial_induction, mixed_batch_data_embedding, mixed_batch_data_embedding_phi_debug
 
@@ -132,7 +132,7 @@ def check_hermite_recursion():
   lphi_true = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   phi_true = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   for degree in range(n_degrees):
-    lambda_i_val = lambda_i_fun(degree, c_tup, device, use_pi)
+    lambda_i_val = sqrt_lambda_i_fun(degree, c_tup, device, use_pi)
     lphi_true[:, degree] = lambda_i_val * phi_i_fun(h_true[:, degree], x_in, c_tup, use_a=not eigenfun)
     phi_true[:, degree] = phi_i_fun(h_true[:, degree], x_in, c_tup, use_a=not eigenfun)
 

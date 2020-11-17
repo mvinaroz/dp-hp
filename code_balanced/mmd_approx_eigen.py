@@ -92,7 +92,7 @@ def phi_i_fun(h_i, x_in, c_tup, use_a=True):
   return pt.exp(-fac * x_in**2) * h_i
 
 
-def lambda_i_fun(degree, c_tup, device, use_pi=False):
+def sqrt_lambda_i_fun(degree, c_tup, device, use_pi=False):
   # zhu uses pi, while the GP book uses 2a
   fac = np.pi if use_pi else (2*c_tup.a)
   return pt.tensor((fac / c_tup.big_a)**(1/4) * c_tup.big_b**(degree/2), dtype=pt.float32, device=device)
