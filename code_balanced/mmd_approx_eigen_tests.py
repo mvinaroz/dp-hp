@@ -7,7 +7,7 @@ import matplotlib.pyplot as plt
 from mmd_approx_eigen import get_constants, hermite_polynomial_induction, phi_i_fun, sqrt_lambda_i_fun, lambda_phi_induction, \
   debug_phi_induction, hermite_function_induction, batch_data_embedding, balanced_batch_data_embedding, \
   normalized_hermite_polynomial_induction, normalized_batch_data_embedding_debug, \
-  normalized_batch_data_embedding_phi_debug
+  normalized_batch_data_embedding_phi_debug, bach_batch_feature_embedding
 
 
 def base_recursion_test():
@@ -465,6 +465,62 @@ def wittawats_kernel_code():
   print(k_xy)
   e_kxy = real_kxy_debug(med, n_data, pt.tensor(x), pt.tensor(x_prime), return_kxy=False)
   print(e_kxy)
+  
+
+def bach_param_conversion(rho=None, alpha=None):
+  assert not (alpha is None and rho is None)
+  if alpha is None:
+    alpha = rho / (1 - rho**2)
+  else:
+    rho = (alpha * np.sqrt(1/alpha**2 + 4) - 1) / (2 * alpha)
+
+  print(f'alpha={alpha}, rho={rho}')
+  return alpha, rho
+
+
+def check_bach_against_true():
+  # sample data from simple distribution
+  device = 'cpu'
+  n_samples = 100
+  kernel_length = 1.5  # increase kernel_length -> increase e_kxy
+  n_degrees_lphi = 10
+  _, rho = bach_param_conversion(alpha=1/ (2* kernel_length))
+  x_scale = 1.0
+  y_scale = 1.0
+  x = pt.randn(n_samples, 1, device=device) * x_scale
+  y = pt.randn(n_samples, 1, device=device) * y_scale
+  # compute true kyy term
+  # e_kxy_true = real_kxy(kernel_length, n_samples, x, y)  # copy of old code (I think from Wittawat)
+  e_kxy_true, kxy_true = real_kxy_debug(kernel_length**2, n_samples, x, y, return_kxy=True)  # simple correct version
+
+  # compute approximate term k(x,y) using un-normalized hermite ploynomials as suggested in the paper
+  lphi_x = bach_batch_feature_embedding(x, n_degrees_lphi, rho, device)
+  lphi_y = bach_batch_feature_embedding(y, n_degrees_lphi, rho, device)
+  print(lphi_x.shape, lphi_y.shape)
+  kxy_lphi = pt.squeeze(lphi_x) @ pt.squeeze(lphi_y).transpose(1, 0)
+  e_kxy_lphi = pt.sum(kxy_lphi) / n_samples ** 2
+
+  print(f'e_kxy true: {e_kxy_true}')
+  print(f'e_kxy lphi: {e_kxy_lphi}')
+
+
+  print('below: max, min, (mean)')
+  plt.figure()
+  lphi_diff = kxy_true - kxy_lphi
+  print('diff lphi', pt.max(lphi_diff).item(), pt.min(lphi_diff).item())
+  plt.hist(lphi_diff.flatten(), bins=50)
+  plt.yscale('log', nonposy='clip')
+  plt.savefig('eigen_approx_debug_plots/kxy_diffs_bach.png')
+
+  plt.figure()
+  # lphi_ratio = kxy_lphi / kxy_true
+  lphi_ratio_stable = kxy_lphi / (pt.abs(kxy_true) + 1e-4)
+  # print(pt.max(lphi_ratio), pt.min(lphi_ratio))
+  print('ratio lphi', pt.max(lphi_ratio_stable).item(), pt.min(lphi_ratio_stable).item())
+  plt.hist(lphi_ratio_stable.flatten(), bins=50)
+  plt.yscale('log', nonposy='clip')
+  plt.savefig('eigen_approx_debug_plots/kxy_ratios_bach.png')
+
 
 
 if __name__ == '__main__':
@@ -472,8 +528,11 @@ if __name__ == '__main__':
   # plot_1d_mapping(px_sigma=0.2, kernel_length=0.8, selected_degrees=list(range(50)), probabilists=True)
   # check_hermite_recursion()
   # plot_1d_mapping(None, None, selected_degrees=list(range(16)), probabilists=True, plot_basis=True, a=1, b=3)
-  os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
+  # os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
 
-  check_approx_against_true()  # comparison with true squared exponential kernel.
-  check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
+  # check_approx_against_true()  # comparison with true squared exponential kernel.
+  # check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
   # wittawats_kernel_code()
+  # francis_bach_blog_variant(rho=0.7)
+  # francis_bach_blog_variant(alpha=1.3725490196078434)
+  check_bach_against_true()

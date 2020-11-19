@@ -105,6 +105,60 @@ def get_eigen_losses(train_loader, device, n_labels, n_degrees, kernel_length, p
   return single_release_loss, data_emb
 
 
+########################################## BELOW IS THE FRANCIS BACH VERSION
+
+def bach_lambda_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, rho, device):
+  if degree == 0:
+    term_one = pt.tensor(((1-rho) *(1+rho)) ** 0.25, dtype=pt.float32, device=device)
+    term_two = pt.exp(-(rho / (rho + 1)) * x_in ** 2)
+    return term_one * term_two
+  elif degree == 1:
+    sqrt_rho = pt.tensor(np.sqrt(rho), dtype=pt.float32, device=device)
+    return sqrt_rho * x_in * lphi_i_minus_one
+  else:
+    factor_one = pt.tensor(np.sqrt(2 * rho/degree), dtype=pt.float32, device=device) * x_in
+    factor_two = pt.tensor(rho * np.sqrt((degree-1)/degree), dtype=pt.float32, device=device)
+    return factor_one * lphi_i_minus_one - factor_two * lphi_i_minus_two
+
+
+def bach_batch_feature_embedding(x_in, n_degrees, rho, device):
+  n_samples = x_in.shape[0]
+  n_features = x_in.shape[1]
+  batch_embedding = pt.empty(n_samples, n_degrees, n_features, dtype=pt.float32, device=device)
+  lphi_i_minus_one, lphi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    lphi_i = bach_lambda_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, rho, device)
+    lphi_i_minus_two = lphi_i_minus_one
+    lphi_i_minus_one = lphi_i
+    batch_embedding[:, degree, :] = lphi_i
+  return batch_embedding
+
+
+def bach_dataset_embedding(train_loader, device, n_labels, n_degrees, rho, sum_frequency=25):
+  emb_acc = []
+  n_data = 0
+
+  for data, labels in train_loader:
+    data, labels = data.to(device), labels.to(device)
+    data = flat_data(data, labels, device, n_labels=10, add_label=False)
+
+    feature_embedding = bach_batch_feature_embedding(data, n_degrees, rho, device)
+    emb_acc.append(labeled_feature_embedding(data, labels, feature_embedding, labels_to_one_hot=True,
+                                             n_labels=n_labels, device=device))
+    n_data += data.shape[0]
+
+    if len(emb_acc) > sum_frequency:
+      emb_acc = [pt.sum(pt.stack(emb_acc), 0)]
+
+  print('done collecting batches, n_data', n_data)
+  emb_acc = pt.sum(pt.stack(emb_acc), 0) / n_data
+  print(pt.norm(emb_acc), emb_acc.shape)
+  # noise = pt.randn(d_rff, n_labels, device=device)
+  # noisy_emb = emb_acc + noise
+  return emb_acc
+
+
+
 #######################################################################################################################
 ###########################   EVERYTHING BELOW IS ONLY USED FOR TESTING AND MOSTLY OUTDATED  ##########################
 #######################################################################################################################
