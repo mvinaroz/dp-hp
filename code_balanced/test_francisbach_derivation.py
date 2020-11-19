@@ -18,7 +18,7 @@ def approx(k, rho, x, x_prime):
     eigen_funcs_x = eigen_func(k, rho, x) # output dim: number of datapoints by number of degree
     eigen_funcs_x_prime = eigen_func(k, rho, x_prime)
     out = np.mean(np.sum(eigen_vals * eigen_funcs_x * eigen_funcs_x_prime, axis=1))
-    return out
+    return out, eigen_vals
 
 def eigen_func(k, rho, x):
     # k: degree of polynomial
@@ -56,8 +56,9 @@ sol = optimize.minimize_scalar(lambda r: (alpha - r / (1-r**2))**2, bounds=(0,1)
 rho = sol.x
 # print(rho)
 
-n_degree = 27
-appr_val = approx(n_degree, rho, x, x_prime)
+n_degree = 10
+appr_val, eigen_vals = approx(n_degree, rho, x, x_prime)
+print('eigen_vals', eigen_vals)
 print('approximate value:', appr_val)
 print('true value:', Kxy)
 
