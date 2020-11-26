@@ -2,6 +2,7 @@ import numpy as np
 import torch as pt
 from collections import namedtuple
 from aux import flat_data
+from scipy.special import factorial
 
 
 constants_tuple_def = namedtuple('constants', ['a', 'b', 'c', 'big_a', 'big_b'])
@@ -107,17 +108,19 @@ def get_eigen_losses(train_loader, device, n_labels, n_degrees, kernel_length, p
 
 ########################################## BELOW IS THE FRANCIS BACH VERSION
 
+
 def bach_lambda_phi_induction(lphi_i_minus_one, lphi_i_minus_two, degree, x_in, rho, device):
   if degree == 0:
-    term_one = pt.tensor(((1-rho) *(1+rho)) ** 0.25, dtype=pt.float32, device=device)
+    term_one = pt.tensor(((1-rho) * (1+rho)) ** 0.25, dtype=pt.float32, device=device)
     term_two = pt.exp(-(rho / (rho + 1)) * x_in ** 2)
     return term_one * term_two
   elif degree == 1:
-    sqrt_rho = pt.tensor(np.sqrt(rho), dtype=pt.float32, device=device)
+    sqrt_rho = pt.tensor(np.sqrt(2 * rho), dtype=pt.float32, device=device)
     return sqrt_rho * x_in * lphi_i_minus_one
   else:
     factor_one = pt.tensor(np.sqrt(2 * rho/degree), dtype=pt.float32, device=device) * x_in
     factor_two = pt.tensor(rho * np.sqrt((degree-1)/degree), dtype=pt.float32, device=device)
+    # print(factor_one, factor_two)
     return factor_one * lphi_i_minus_one - factor_two * lphi_i_minus_two
 
 
@@ -134,6 +137,26 @@ def bach_batch_feature_embedding(x_in, n_degrees, rho, device):
   return batch_embedding
 
 
+def bach_batch_feature_embedding_debug(x_in, n_degrees, rho, device):
+  n_samples = x_in.shape[0]
+  n_features = x_in.shape[1]
+  batch_embedding = pt.empty(n_samples, n_degrees, n_features, dtype=pt.float32, device=device)
+  h_i_minus_one, h_i_minus_two = None, None
+  for degree in range(n_degrees):
+    h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_in, probabilists=False)
+    norm_term = pt.tensor(1 / np.sqrt(2 ** degree * factorial(degree)), dtype=pt.float32, device=device)
+    h_i_normed = h_i * norm_term
+    # print(pt.max(pt.abs(h_i)), pt.max(pt.abs(h_i_normed)), 1 / norm_term, degree)
+    exp_term = pt.exp(-(rho / (rho + 1)) * x_in ** 2)
+    sqrt_frac = pt.tensor(((1+rho) / (1-rho)) ** 0.25, dtype=pt.float32, device=device)
+    sqrt_k = pt.tensor(np.sqrt((1 - rho) * rho**degree), dtype=pt.float32, device=device)
+    lphi_i = sqrt_k * sqrt_frac * exp_term * h_i_normed
+    h_i_minus_two = h_i_minus_one
+    h_i_minus_one = h_i
+    batch_embedding[:, degree, :] = lphi_i
+  return batch_embedding
+
+
 def bach_dataset_embedding(train_loader, device, n_labels, n_degrees, rho, sum_frequency=25):
   emb_acc = []
   n_data = 0
@@ -141,6 +164,7 @@ def bach_dataset_embedding(train_loader, device, n_labels, n_degrees, rho, sum_f
   for data, labels in train_loader:
     data, labels = data.to(device), labels.to(device)
     data = flat_data(data, labels, device, n_labels=10, add_label=False)
+
 
     feature_embedding = bach_batch_feature_embedding(data, n_degrees, rho, device)
     emb_acc.append(labeled_feature_embedding(data, labels, feature_embedding, labels_to_one_hot=True,
@@ -164,8 +188,8 @@ def bach_dataset_embedding(train_loader, device, n_labels, n_degrees, rho, sum_f
 #######################################################################################################################
 
 
-def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=True):
-  fac = 1 if probabilists else 2
+def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=False):
+  fac = 1. if probabilists else 2.
   if degree == 0:
     return pt.tensor(1., dtype=pt.float32, device=x_in.device)
   elif degree == 1:

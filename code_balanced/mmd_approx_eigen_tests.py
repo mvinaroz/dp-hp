@@ -7,8 +7,9 @@ import matplotlib.pyplot as plt
 from mmd_approx_eigen import get_constants, hermite_polynomial_induction, phi_i_fun, sqrt_lambda_i_fun, lambda_phi_induction, \
   debug_phi_induction, hermite_function_induction, batch_data_embedding, balanced_batch_data_embedding, \
   normalized_hermite_polynomial_induction, normalized_batch_data_embedding_debug, \
-  normalized_batch_data_embedding_phi_debug, bach_batch_feature_embedding
-
+  normalized_batch_data_embedding_phi_debug, bach_batch_feature_embedding, bach_batch_feature_embedding_debug
+from aux import meddistance
+import kernel
 
 def base_recursion_test():
   device = 'cpu'
@@ -481,46 +482,111 @@ def bach_param_conversion(rho=None, alpha=None):
 def check_bach_against_true():
   # sample data from simple distribution
   device = 'cpu'
-  n_samples = 100
-  kernel_length = 1.5  # increase kernel_length -> increase e_kxy
-  n_degrees_lphi = 10
-  _, rho = bach_param_conversion(alpha=1/ (2* kernel_length))
+  n_samples = 10
+  # kernel_length = 5.3  # increase kernel_length -> increase e_kxy
+  n_degrees_lphi = 5
   x_scale = 1.0
   y_scale = 1.0
   x = pt.randn(n_samples, 1, device=device) * x_scale
-  y = pt.randn(n_samples, 1, device=device) * y_scale
+  y = pt.randn(n_samples, 1, device=device) * y_scale + 5.
   # compute true kyy term
   # e_kxy_true = real_kxy(kernel_length, n_samples, x, y)  # copy of old code (I think from Wittawat)
-  e_kxy_true, kxy_true = real_kxy_debug(kernel_length**2, n_samples, x, y, return_kxy=True)  # simple correct version
+  all_samples = pt.cat([x, y]).numpy()
+  kernel_length = meddistance(all_samples)
+  print(kernel_length, all_samples.shape)
+  e_kxy_true, kxy_true = real_kxy_debug(kernel_length, n_samples, x, y, return_kxy=True)  # simple correct version
 
+  Gaussian_kernel = kernel.KGauss(sigma2=kernel_length**2)
+  e_kxy_other = np.mean(Gaussian_kernel(x.numpy(), y.numpy()))
+
+  alpha, rho = bach_param_conversion(alpha=1 / (2 * kernel_length**2))
   # compute approximate term k(x,y) using un-normalized hermite ploynomials as suggested in the paper
   lphi_x = bach_batch_feature_embedding(x, n_degrees_lphi, rho, device)
   lphi_y = bach_batch_feature_embedding(y, n_degrees_lphi, rho, device)
-  print(lphi_x.shape, lphi_y.shape)
   kxy_lphi = pt.squeeze(lphi_x) @ pt.squeeze(lphi_y).transpose(1, 0)
   e_kxy_lphi = pt.sum(kxy_lphi) / n_samples ** 2
 
-  print(f'e_kxy true: {e_kxy_true}')
-  print(f'e_kxy lphi: {e_kxy_lphi}')
+  lphi_x_debug = bach_batch_feature_embedding_debug(x, n_degrees_lphi, rho, device)
+  lphi_y_debug = bach_batch_feature_embedding_debug(y, n_degrees_lphi, rho, device)
+  kxy_lphi_debug = pt.squeeze(lphi_x_debug) @ pt.squeeze(lphi_y_debug).transpose(1, 0)
+  e_kxy_lphi_debug = pt.sum(kxy_lphi_debug) / n_samples ** 2
 
+
+  print(f'e_kxy true: {e_kxy_true}')
+  print(f'e_kxy other: {e_kxy_other}')
+  print(f'e_kxy lphi: {e_kxy_lphi}')
+  print(f'e_kxy debug prob: {e_kxy_lphi_debug}')
 
   print('below: max, min, (mean)')
   plt.figure()
   lphi_diff = kxy_true - kxy_lphi
-  print('diff lphi', pt.max(lphi_diff).item(), pt.min(lphi_diff).item())
+  print('diff lphi', pt.max(lphi_diff).item(), pt.min(lphi_diff).item(), pt.median(lphi_diff).item())
   plt.hist(lphi_diff.flatten(), bins=50)
   plt.yscale('log', nonposy='clip')
   plt.savefig('eigen_approx_debug_plots/kxy_diffs_bach.png')
 
   plt.figure()
   # lphi_ratio = kxy_lphi / kxy_true
-  lphi_ratio_stable = kxy_lphi / (pt.abs(kxy_true) + 1e-4)
+  lphi_ratio = kxy_lphi / (pt.abs(kxy_true))
   # print(pt.max(lphi_ratio), pt.min(lphi_ratio))
-  print('ratio lphi', pt.max(lphi_ratio_stable).item(), pt.min(lphi_ratio_stable).item())
-  plt.hist(lphi_ratio_stable.flatten(), bins=50)
+  print('ratio lphi', pt.max(lphi_ratio).item(), pt.min(lphi_ratio).item(), pt.median(lphi_ratio).item())
+  plt.hist(lphi_ratio.flatten(), bins=50)
   plt.yscale('log', nonposy='clip')
   plt.savefig('eigen_approx_debug_plots/kxy_ratios_bach.png')
 
+
+  plt.figure()
+  # lphi_ratio = kxy_lphi / kxy_true
+  lphi_ratio = kxy_lphi_debug / (pt.abs(kxy_true))
+  # print(pt.max(lphi_ratio), pt.min(lphi_ratio))
+  print('ratio lphi', pt.max(lphi_ratio).item(), pt.min(lphi_ratio).item(), pt.median(lphi_ratio).item())
+  plt.hist(lphi_ratio.flatten(), bins=50)
+  plt.yscale('log', nonposy='clip')
+  plt.savefig('eigen_approx_debug_plots/kxy_ratios_bach_debug.png')
+
+def hermite_induction_vs_numpy():
+  from scipy.special import eval_hermite
+  x = 1.
+  n_degrees = 10
+  orders = np.arange(n_degrees)
+  H_k = eval_hermite(orders, x)
+
+  batch_embedding = pt.empty(n_degrees, dtype=pt.float32, device='cpu')
+  x_tsr = pt.tensor(x)
+  h_i_minus_one, h_i_minus_two = None, None
+  for degree in range(n_degrees):
+    h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_tsr, probabilists=False)
+    h_i_minus_two = h_i_minus_one
+    h_i_minus_one = h_i
+    batch_embedding[degree] = h_i
+
+  print(H_k)
+  print(batch_embedding.numpy())
+
+
+def check_bach_recursion():
+  # function computes
+  device = 'cpu'
+  xlim = 2.
+  n_degrees = 10
+  rho = 0.6
+  x_in = pt.arange(-xlim, xlim * 51 / 50, xlim / 50)[:, None]
+  lphi_debug = bach_batch_feature_embedding_debug(x_in, n_degrees, rho, device)
+  lphi_recur = bach_batch_feature_embedding(x_in, n_degrees, rho, device)
+
+  degree_select = 1
+  plt.figure()
+  plt.ylim(-2, 2)
+  lphi_two_recur = lphi_recur[:, degree_select]
+  lphi_two_debug = lphi_debug[:, degree_select]
+  plt.plot(x_in, lphi_two_recur, label='induction')
+  plt.plot(x_in, lphi_two_debug, label='debug')
+  ratio = lphi_two_debug / lphi_two_recur
+  normed_ratio = ratio * 0.25 / pt.max(ratio)
+  plt.plot(x_in, normed_ratio, label='ratio')
+  plt.plot(x_in, lphi_two_debug - lphi_two_recur, label='difference')
+  plt.legend()
+  plt.savefig(f'eigen_approx_debug_plots/bach_lphi_comp.png')
 
 
 if __name__ == '__main__':
@@ -530,9 +596,11 @@ if __name__ == '__main__':
   # plot_1d_mapping(None, None, selected_degrees=list(range(16)), probabilists=True, plot_basis=True, a=1, b=3)
   # os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
 
-  # check_approx_against_true()  # comparison with true squared exponential kernel.
+  check_approx_against_true()  # comparison with true squared exponential kernel.
   # check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
   # wittawats_kernel_code()
   # francis_bach_blog_variant(rho=0.7)
   # francis_bach_blog_variant(alpha=1.3725490196078434)
-  check_bach_against_true()
+  # check_bach_against_true()
+  # hermite_induction_vs_numpy()
+  # check_bach_recursion()

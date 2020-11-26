@@ -37,7 +37,7 @@ n_data = 2000
 mean = 0
 x = mean + np.random.randn(n_data,1)
 
-mean_prime = 10
+mean_prime = 5
 x_prime = mean_prime + np.random.randn(n_data,1)
 
 # evaluate the kernel function
@@ -54,7 +54,7 @@ alpha = 1 / (2.0 * sigma2)
 # from this: alpha = rho / (1- rho**2), identify what rho is
 sol = optimize.minimize_scalar(lambda r: (alpha - r / (1-r**2))**2, bounds=(0,1), method='bounded')
 rho = sol.x
-# print(rho)
+print(med, alpha, rho)
 
 n_degree = 10
 appr_val, eigen_vals = approx(n_degree, rho, x, x_prime)
