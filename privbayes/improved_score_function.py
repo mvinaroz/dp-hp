@@ -56,6 +56,33 @@ def compute_f(parent_set_probs):
   return final_score
 
 
+def compute_r(parent_set_probs):
+  p_x = np.sum(parent_set_probs, axis=0, keepdims=True)
+  p_parent = np.sum(parent_set_probs, axis=1, keepdims=True)
+  p_bar = p_parent @ p_x
+  score = 0.5 * np.sum(np.abs(parent_set_probs - p_bar))
+  return score
+
+
+def compute_r_fast(x_data, parent_set_data):
+  # there is probably some room for optimization here
+  n_data, k_attr = parent_set_data.shape
+
+  parent_set_counts = np.zeros((2**k_attr, 2))
+  bin_idx_mat = np.asarray([[2**idx for idx in range(k_attr)]])
+
+  binary_ids = np.sum(parent_set_data * bin_idx_mat, axis=1)
+
+  for idx in range(n_data):
+    parent_set_counts[binary_ids[idx], x_data[idx]] += 1
+
+  parent_set_probs = parent_set_counts / n_data
+  p_x = np.sum(parent_set_probs, axis=0, keepdims=True)
+  p_parent = np.sum(parent_set_probs, axis=1, keepdims=True)
+  p_bar = p_parent @ p_x
+  score = 0.5 * np.sum(np.abs(parent_set_probs - p_bar))
+  return score
+
 def basic_test():
   x_data = np.asarray([1, 1, 1, 1,
                        0, 0, 0, 0, 0, 0])
@@ -64,8 +91,12 @@ def basic_test():
 
   p_probs = get_parent_set_probs(x_data, p_data)
   print(p_probs)
-  score = compute_f(p_probs)
-  print(score)
+  score_f = compute_f(p_probs)
+  print(score_f)
+  score_r = compute_r(p_probs)
+  print(score_r)
+  score_r = compute_r_fast(x_data, p_data)
+  print(score_r)
 
 
 if __name__ == '__main__':

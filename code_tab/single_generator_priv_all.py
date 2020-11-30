@@ -1284,8 +1284,8 @@ if __name__ == '__main__':
             # n_features_arg = [50000, 80000, 100000]
             mini_batch_arg = [0.5]
 
-            if dataset=='adult':
-                mini_batch_arg=[0.1]
+            if dataset == 'adult':
+                mini_batch_arg = [0.1]
                 n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
                 undersampling_rates = [.4]#[.8, .6, .4] #dummy
             elif dataset=='census':

@@ -57,4 +57,4 @@ def single_release_comp(sigma_1, sigma_2=None, delta=1e-5):
 if __name__ == '__main__':
     # main()
     # single sigma: sig=5 -> eps<1, sig=25 -> eps<0.2
-    single_release_comp(25., sigma_2=None, delta=1e-5)
+    single_release_comp(10., sigma_2=None, delta=1e-5)
