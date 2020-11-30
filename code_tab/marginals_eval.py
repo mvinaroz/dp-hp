@@ -1,4 +1,5 @@
 import numpy as np
+import os
 
 
 def discretize_mat(mat, domain):
@@ -73,12 +74,18 @@ def privbayes_scores(alpha, verbose):
 
 
 def main():
-  dpmerf_bounded = 'gen_data/adult_bounded_generated_privatized_1_eps_1.0_epochs_4000_features_2000_samples_22561_features_15.npy'
-  dpmerf_simple = 'gen_data/adult_simple_generated_privatized_1_eps_1.0_epochs_4000_features_2000_samples_22561_features_15.npy'
+  dtype = 'simple'
+  # kernel = 'linear'
+  kernel = 'gaussian'
+  n_iter = 4000
+  n_features = 2000
+  dpmerf_dir = '../data/generated/rebuttal_exp/'
+  dpmerf_file = f'adult_{dtype}_gen_eps_1.0_{kernel}_kernel_it_{n_iter}_features_{n_features}.npy'
+  real_data = f'../data/real/sdgym_{dtype}_adult.npy'
+
   alpha = 3
   # real_data = 'numpy_data/sdgym_bounded_adult.npy'
-  real_data = 'numpy_data/sdgym_simple_adult.npy'
-  gen_data_alpha_way_marginal_eval(gen_data_path=dpmerf_simple,
+  gen_data_alpha_way_marginal_eval(gen_data_path=os.path.join(dpmerf_dir, dpmerf_file),
                                    real_data_path=real_data,
                                    discretize=True,
                                    alpha=alpha,
@@ -89,10 +96,13 @@ def main():
   # privbayes: average 4-way marginal tv score: 2.193e-05
   # 3-way bounded adult:
   # dpmerf: average 3-way marginal tv score:    2.809e-05
+  # dpmerf: average 3-way marginal tv score:    2.518e-05. (data:eps_1.0_gaussian_kernel_it_20000_features_2000.npy)
   # privbayes: average 3-way marginal tv score: 1.744e-05
 
   # 3-way simple adult:
   # dpmerf: average 3-way marginal tv score:    1.710e-05
+  # dpmerf: average 3-way marginal tv score:    1.603e-05. (data:eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+  # dpmerf: average 3-way marginal tv score:    1.696e-05. (data:eps_1.0_gaussian_kernel_it_100000_features_2000.npy)
   # privbayes: average 3-way marginal tv score: 1.100e-05
 
 

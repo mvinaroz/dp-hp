@@ -1108,8 +1108,8 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             generated_input_features_final = output_combined.cpu().detach().numpy()
             generated_labels_final = label_input.cpu().detach().numpy()
 
-            roc, prc= test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
-            roc_return, prc_return=roc, prc
+            roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, "generated")
+            roc_return, prc_return = roc, prc
             #roc, prc=-1, -1
 
             # LR_model_ours = LogisticRegression(solver='lbfgs', max_iter=1000)
