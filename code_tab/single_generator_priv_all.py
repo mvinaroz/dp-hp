@@ -3,6 +3,15 @@
 ### weights = weights + N(0, sigma**2*(sqrt(2)/N)**2)
 ### columns of mean embedding = raw + N(0, sigma**2*(2/N)**2)
 
+#Notes:
+#-To be have unlabeled data:
+#last_feature is part of data, rather than a label
+#weighing of the samples is still kept based on the last feature
+#-to have the same number of samples:
+#all data is made to be Xtrain
+#num_data_pt_to_discard (discarded from Xtrain for training) is added at the generation phase
+#example of unlabeled dataset is adult_cat dataset, all other datasets are set to have labels.
+
 import numpy as np
 # import matplotlib.pyplot as plt
 import torch
@@ -78,6 +87,7 @@ args.add_argument("--batch", type=float, default=0.1)
 #args.add_argument("--num_features", default='500,1000,2000,5000,10000')
 args.add_argument("--num_features", default='2000')
 args.add_argument("--save_generated", default=True)
+args.add_argument("--labeled", default=True)
 
 args.add_argument("--private", type=int, default=1)
 args.add_argument("--epsilon", default=1.0)
@@ -518,10 +528,10 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
         print(socket.gethostname())
         if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
-            data = np.load("../data/real/sdgym_bounded_adult.npy")
+            data = np.load("../data/real/sdgym_simple_adult.npy")
         else:
             data = np.load(
-                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/sdgym_bounded_adult.npy")
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/sdgym_simple_adult.npy")
 
 
         n_classes = 2
@@ -532,11 +542,17 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         raw_labels = data[:, -1]
         print('raw input features', raw_input_features.shape)
 
-        inputs = data[:, :-1]
+        # we keep y_train for weighing, but X_train contains all the features including the label
+        # inputs = data[:, :-1]
         target = data[:, -1]
+        #
+        # X_train = inputs
+        y_train = target
 
-        X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
-                                                            random_state=seed_number)
+        X_train = data
+
+        #X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
+        #                                                    random_state=seed_number)
 
     elif dataset=='isolet':
 
@@ -795,9 +811,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         path_gen_data = f"../data/generated/{arguments.dataset}"
         os.makedirs(path_gen_data, exist_ok=True)
         if is_private:
-            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_eps_{epsilon}_epochs_{arguments.epochs}_features_{arguments.num_features}"), samples.detach().cpu().numpy())
+            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_eps_{epsilon}_epochs_{arguments.epochs}_features_{arguments.num_features}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
         else:
-            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_epochs_{arguments.epochs}_features_{arguments.num_features}"), samples.detach().cpu().numpy())
+            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_epochs_{arguments.epochs}_features_{arguments.num_features}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
         print(f"Generated data saved to {path_gen_data}")
 
 
@@ -958,12 +974,17 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         """ computing mean embedding of subsampled true data """
         if dataset in homogeneous_datasets:
 
+
             emb1_input_features = RFF_Gauss(n_features, torch.Tensor(X_train), W_freq)
-            emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
+            if arguments.labeled:
+                emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+                outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                mean_emb1 = torch.mean(outer_emb1, 0)
+            else:
+                mean_emb1 = torch.mean(emb1_input_features, 0)
 
         else:  # heterogeneous data
+
 
             numerical_input_data = X_train[:, 0:num_numerical_inputs]
             emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
@@ -974,9 +995,12 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
             emb1_input_features = torch.cat((emb1_numerical, emb1_categorical), 1)
 
-            emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
-            outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
-            mean_emb1 = torch.mean(outer_emb1, 0)
+            if args.labeled:
+                emb1_labels = Feature_labels(torch.Tensor(true_labels), weights)
+                outer_emb1 = torch.einsum('ki,kj->kij', [emb1_input_features, emb1_labels])
+                mean_emb1 = torch.mean(outer_emb1, 0)
+            else:
+                mean_emb1 = torch.mean(emb1_input_features, 0)
 
 
         """ privatizing each column of mean embedding """
@@ -1086,6 +1110,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         #######################################################################33
         if dataset in heterogeneous_datasets:
 
+            n = n + num_data_pt_to_discard #kamil added
             """ draw final data samples """
 
             label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
@@ -1096,7 +1121,6 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             feature_input = torch.randn((n, input_size - 1)).to(device)
             input_to_model = torch.cat((feature_input, label_input), 1)
             outputs = model(input_to_model)
-
 
             # (3) round the categorial features
             output_numerical = outputs[:, 0:num_numerical_inputs]
@@ -1125,6 +1149,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
             # weights[1] represents the fraction of the positive labels in the dataset,
             #and we would like to generate a similar fraction of the postive/negative datapoints
+            n =n +num_data_pt_to_discard #kamil added
             label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
             label_input = label_input.to(device)
 
@@ -1149,8 +1174,14 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             generated_labels_final = samp_labels.cpu().detach().numpy()
             generated_labels=np.argmax(generated_labels_final, axis=1)
 
-            f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
-            f1_return=f1
+
+
+            if 'y_test' in locals() and len(y_test)>0:
+                f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, "generated")
+                f1_return=f1 #(12,2 tuple
+            else:
+                print("No test data")
+                sys.exit()
             #f1=-1
 
             #return f1_real
