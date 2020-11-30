@@ -69,15 +69,18 @@ print(device)
 
 
 args=argparse.ArgumentParser()
-args.add_argument("--dataset", default="covtype")
-args.add_argument("--private", type=int, default=0)
+args.add_argument("--dataset", default="adult_cat")
 #args.add_argument("--epochs", nargs='+', type=int, default=[8000, 6000, 2000, 1000, 4000, 10000])
 #args.add_argument("--epochs", default='200,2000,8000,6000,1000,4000,10000')
-args.add_argument("--epochs", default='200')
+args.add_argument("--epochs", default='4000')
 args.add_argument("--batch", type=float, default=0.1)
 #args.add_argument("--num_features", nargs='+', type=int, default=[500, 1000, 2000, 5000, 10000, 50000, 80000, 100000])
 #args.add_argument("--num_features", default='500,1000,2000,5000,10000')
 args.add_argument("--num_features", default='2000')
+args.add_argument("--save_generated", default=True)
+
+args.add_argument("--private", type=int, default=1)
+args.add_argument("--epsilon", default=1.0)
 
 args.add_argument("--undersample", type=float, default=1)
 args.add_argument("--repeat", type=int, default=2)
@@ -510,6 +513,31 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
 
 
+    elif dataset=='adult_cat':
+        print("adult_cat dataset")  # this is heterogenous
+
+        print(socket.gethostname())
+        if 'g0' not in socket.gethostname() and 'p0' not in socket.gethostname():
+            data = np.load("../data/real/sdgym_bounded_adult.npy")
+        else:
+            data = np.load(
+                "/home/user/Dropbox_from/Current_research/privacy/DPDR/data/real/sdgym_bounded_adult.npy")
+
+
+        n_classes = 2
+
+        num_categorical_inputs = data.shape[1]
+
+        raw_input_features = data[:, :-1]
+        raw_labels = data[:, -1]
+        print('raw input features', raw_input_features.shape)
+
+        inputs = data[:, :-1]
+        target = data[:, -1]
+
+        X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
+                                                            random_state=seed_number)
+
     elif dataset=='isolet':
 
         print("isolet dataset")
@@ -696,7 +724,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
     # specify heterogeneous dataset or not
     heterogeneous_datasets = ['cervical', 'adult', 'census', 'intrusion', 'covtype']
-    homogeneous_datasets = ['epileptic','credit','isolet']
+    homogeneous_datasets = ['epileptic','credit','isolet', 'adult_cat']
 
     ########################################################################################
     ##########################################################################################3
@@ -762,6 +790,15 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
         return res1_arr, res2_arr
         #return res1, res2
+
+    def save_generated_samples(samples):
+        path_gen_data = f"../data/generated/{arguments.dataset}"
+        os.makedirs(path_gen_data, exist_ok=True)
+        if is_private:
+            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_eps_{epsilon}_epochs_{arguments.epochs}_features_{arguments.num_features}"), samples.detach().cpu().numpy())
+        else:
+            np.save(os.path.join(path_gen_data, f"{arguments.dataset}_generated_privatized_{is_private}_epochs_{arguments.epochs}_features_{arguments.num_features}"), samples.detach().cpu().numpy())
+        print(f"Generated data saved to {path_gen_data}")
 
 
     #######################################################
@@ -905,7 +942,7 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
         if is_private:
             print("private")
             # desired privacy level
-            epsilon = 1.0
+            epsilon = arguments.epsilon
             delta = 1e-5
             # k = n_classes + 1   # this dp analysis has been updated
             k = 2
@@ -964,6 +1001,8 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
         # End of Privatising quantities if necessary
         ####################################################
+
+
 
         ##################################################################################################################
         # TRAINING THE GENERATOR
@@ -1092,6 +1131,9 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
             feature_input = torch.randn((n, input_size - 1)).to(device)
             input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
             outputs = model(input_to_model)
+
+            if arguments.save_generated:
+                save_generated_samples(outputs)
 
             samp_input_features = outputs
 
@@ -1249,7 +1291,7 @@ if __name__ == '__main__':
 
 
 
-        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
+        if dataset in ["credit", "census", "cervical", "adult", "adult_cat", "isolet", "epileptic"]:
 
             max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc, max_elem=0, 0, 0, 0, [0,0], 0
 
