@@ -122,8 +122,12 @@ def main():
   # mini_batch_size = np.int(np.round(batch_size * n))
   print("minibatch: ", args.batch_size)
   input_size = 10
-  hidden_size_1 = 4 * input_dim
-  hidden_size_2 = 2 * input_dim
+  if args.d_hid is not None:
+    hidden_size_1 = args.d_hid
+    hidden_size_2 = args.d_hid
+  else:
+    hidden_size_1 = 4 * input_dim
+    hidden_size_2 = 2 * input_dim
   output_size = input_dim
   out_fun = 'relu' if args.kernel == 'gaussian' else 'sigmoid'
 
@@ -275,6 +279,8 @@ def parse_arguments():
 
   args.add_argument("--save_data", type=int, default=0, help='save data if 1')
   # args.add_argument("--data_type", default='generated')  # both, real, generated
+  args.add_argument("--d_hid", type=int, default=500)
+
   arguments = args.parse_args()
   print("arg", arguments)
   return arguments, device
