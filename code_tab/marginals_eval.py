@@ -1,6 +1,6 @@
 import numpy as np
 import os
-
+from binarize_adult import un_binarize_data
 
 def discretize_mat(mat, domain):
   _, n_features = mat.shape
@@ -14,13 +14,23 @@ def get_domain(mat):
   return np.stack([np.min(mat, axis=0), np.max(mat, axis=0)], axis=1)
 
 
-def gen_data_alpha_way_marginal_eval(gen_data_path, real_data_path, alpha, discretize, verbose=True):
+def gen_data_alpha_way_marginal_eval(gen_data_path, real_data_path, alpha, discretize, verbose=True,
+                                     unbinarize=False, unbin_mapping_info=None):
   gen_data = np.load(gen_data_path)
   real_data = np.load(real_data_path)
+
   domain = np.stack([np.min(real_data, axis=0), np.max(real_data, axis=0)], axis=1)
 
-  if discretize:
+
+  if unbinarize:
+    if discretize:
+      bin_domain = np.stack([np.zeros(gen_data.shape[1]), np.ones(gen_data.shape[1])], axis=1)
+      gen_data = discretize_mat(gen_data, bin_domain)
+    assert unbin_mapping_info is not None
+    gen_data = un_binarize_data(gen_data, unbin_mapping_info)
+  elif discretize:
     gen_data = discretize_mat(gen_data, domain)
+
   tv_scores = alpha_way_marginal_tv_distances(gen_data, real_data, domain, alpha, verbose)
   avg_tv = np.mean(tv_scores)
   print(f'average {alpha}-way marginal tv score: {avg_tv}. (data:{gen_data_path})')

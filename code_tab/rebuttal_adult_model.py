@@ -20,6 +20,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import os
 from marginals_eval import gen_data_alpha_way_marginal_eval
+from binarize_adult import binarize_data
 
 ############################### kernels to use ###############################
 """ we use the random fourier feature representation for Gaussian kernel """
@@ -54,13 +55,14 @@ def Feature_labels(labels, weights, device):
 
 # ############################## generative models to use ###############################
 class Generative_Model_homogeneous_data(nn.Module):
-  def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
+  def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, out_fun):
     super(Generative_Model_homogeneous_data, self).__init__()
 
     self.input_size = input_size
     self.hidden_size_1 = hidden_size_1
     self.hidden_size_2 = hidden_size_2
     self.output_size = output_size
+    assert out_fun in ('lin', 'sigmoid', 'relu')
 
     self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
     self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
@@ -68,6 +70,12 @@ class Generative_Model_homogeneous_data(nn.Module):
     self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
     self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
     self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
+    if out_fun == 'sigmoid':
+      self.out_fun = nn.Sigmoid()
+    elif out_fun == 'relu':
+      self.out_fun = nn.ReLU()
+    else:
+      self.out_fun = nn.Identity()
 
   def forward(self, x):
     hidden = self.fc1(x)
@@ -75,6 +83,7 @@ class Generative_Model_homogeneous_data(nn.Module):
     output = self.fc2(relu)
     output = self.relu(self.bn2(output))
     output = self.fc3(output)
+    output = self.out_fun(output)
     return output
 
 
@@ -93,6 +102,13 @@ def main():
   data = np.load(f"../data/real/sdgym_{args.dataset}_adult.npy")
   print('data shape', data.shape)
 
+  if args.kernel == 'linear':
+    data, unbin_mapping_info = binarize_data(data)
+    print('bin data shape', data.shape)
+  else:
+    unbin_mapping_info = None
+
+
   ###########################################################################
   # PREPARING GENERATOR
   n_samples, input_dim = data.shape
@@ -107,10 +123,12 @@ def main():
   hidden_size_1 = 4 * input_dim
   hidden_size_2 = 2 * input_dim
   output_size = input_dim
+  out_fun = 'relu' if args.kernel == 'gaussian' else 'sigmoid'
 
   model = Generative_Model_homogeneous_data(input_size=input_size, hidden_size_1=hidden_size_1,
                                             hidden_size_2=hidden_size_2,
-                                            output_size=output_size).to(device)
+                                            output_size=output_size,
+                                            out_fun=out_fun).to(device)
 
   # define details for training
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -213,7 +231,9 @@ def main():
                                    real_data_path=real_data,
                                    discretize=True,
                                    alpha=alpha,
-                                   verbose=True)
+                                   verbose=True,
+                                   unbinarize=args.kernel == 'linear',
+                                   unbin_mapping_info=unbin_mapping_info)
 
 ###################################################################################################
 
@@ -223,8 +243,8 @@ def parse_arguments():
 
   args = argparse.ArgumentParser()
   args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--iterations", type=int, default=20000)
-  args.add_argument("--batch_size", type=float, default=128)
+  args.add_argument("--iterations", type=int, default=8000)
+  args.add_argument("--batch_size", type=float, default=200)
   args.add_argument("--lr", type=float, default=1e-2)
 
   args.add_argument("--epsilon", default=1.0)
