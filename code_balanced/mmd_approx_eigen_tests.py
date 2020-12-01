@@ -603,6 +603,7 @@ if __name__ == '__main__':
 
   check_approx_against_true()  # comparison with true squared exponential kernel.
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
   # check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
   # wittawats_kernel_code()
   # francis_bach_blog_variant(rho=0.7)
@@ -612,10 +613,15 @@ if __name__ == '__main__':
   # check_bach_recursion()
 =======
 <<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
   check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
   # wittawats_kernel_code()
 =======
   # check_hermite_mixed()  # plots using the normalized hermite to reproduce Zhu et al.
   # check_hermite_recursion()
 >>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
