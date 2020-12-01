@@ -52,3 +52,6 @@ for ei, epsilon in enumerate(epsilons):
 ax.legend(loc='lower left')
 
 plt.show()
+
+# a good proxy for the
+# RKHS distance between the true KME µX and the RKHS element represented by the released dataset.

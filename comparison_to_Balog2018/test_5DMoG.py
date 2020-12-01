@@ -67,7 +67,7 @@ def main():
                                               output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
-    how_many_epochs = 5000
+    how_many_epochs = 1000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -78,7 +78,6 @@ def main():
 
     draws = n_features // 2
     W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    #mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq, device), axis=0)
 
     chunk_size = 250
     emb_sum = 0
@@ -90,7 +89,7 @@ def main():
     mean_emb1 = emb_sum / n
 
     """ privatizing weights """
-    delta = 1e-5
+    delta = 1e-6
     privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=1)
     print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
     sensitivity = 2 / n
@@ -127,24 +126,37 @@ def main():
         print('epoch # and running loss are ', [epoch, running_loss])
         training_loss_per_epoch[epoch] = running_loss
 
-    feature_input = torch.randn((n, input_size)).to(device)
-    synthetic_data = model(feature_input)
-    # mean_emb2 = torch.mean(RFF_Gauss(n_features, synthetic_data, W_freq, device), axis=0)
-    emb_sum = 0
-    for idx in range(n // chunk_size + 1):
-        data_chunk = synthetic_data[idx * chunk_size:(idx + 1) * chunk_size,:].detach().cpu().numpy().astype(np.float32)
-        chunk_emb = RFF_Gauss(n_features, torch.tensor(data_chunk), W_freq, device)
-        emb_sum += torch.sum(chunk_emb, 0)
 
-    mean_emb2 = emb_sum / n
-    MMD_rf = torch.norm(mean_emb1 - mean_emb2, p=2)
-    print('MMD_rf: ', MMD_rf)
+    """ now compute the MMD_rf at different n """
+    n_mat = [2, 3,5,10,17,31,56,100,177,316,562,1000,1778,3162,5623,10000]
+    len_mat = len(n_mat)
+    dist = np.zeros(len_mat)
+    for i in np.arange(len_mat):
+        n_smp = n_mat[i]
+        feature_input = torch.randn((n_smp, input_size)).to(device)
+        synthetic_data = model(feature_input)
+
+        if n_smp < 1000:
+            mean_emb2 = torch.mean(RFF_Gauss(n_features, synthetic_data, W_freq, device), axis=0)
+        else:
+            emb_sum = 0
+            for idx in range(n // chunk_size + 1):
+                data_chunk = synthetic_data[idx * chunk_size:(idx + 1) * chunk_size,:].detach().cpu().numpy().astype(np.float32)
+                chunk_emb = RFF_Gauss(n_features, torch.tensor(data_chunk), W_freq, device)
+                emb_sum += torch.sum(chunk_emb, 0)
+            mean_emb2 = emb_sum / n
+
+        MMD_rf = torch.norm(mean_emb1 - mean_emb2, p=2)
+        dist[i] = MMD_rf
+        print('MMD_rf: ', MMD_rf)
+        filename = 'epsilon='+np.str(args.epsilon)+'.npy'
+        np.save(filename, dist)
 
 def parse_arguments():
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   args = argparse.ArgumentParser()
-  args.add_argument("--epsilon", default=1.0)
+  args.add_argument("--epsilon", default=0.01)
   arguments = args.parse_args()
 
   print("arg", arguments)
