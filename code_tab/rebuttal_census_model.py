@@ -215,15 +215,19 @@ def main():
 
   feature_input = torch.randn((n_samples, input_size)).to(device)
   outputs = model(feature_input)
-
-  # save generated samples
-  path_gen_data = f"../data/generated/rebuttal_exp"
-  os.makedirs(path_gen_data, exist_ok=True)
+  gen_data = outputs.detach().cpu().numpy()
   save_file = f"census_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
               f"it_{args.iterations}_features_{args.n_features}.npy"
-  data_save_path = os.path.join(path_gen_data, save_file)
-  np.save(data_save_path, outputs.detach().cpu().numpy())
-  print(f"Generated data saved to {path_gen_data}")
+  if args.save_data:
+    # save generated samples
+    path_gen_data = f"../data/generated/rebuttal_exp"
+    os.makedirs(path_gen_data, exist_ok=True)
+    data_save_path = os.path.join(path_gen_data, save_file)
+
+    np.save(data_save_path, gen_data)
+    print(f"Generated data saved to {path_gen_data}")
+  else:
+    data_save_path = save_file
 
   # run marginals test
   real_data = f'../data/real/sdgym_{args.dataset}_census.npy'
@@ -236,7 +240,8 @@ def main():
                                    verbose=False,
                                    unbinarize=args.kernel == 'linear',
                                    unbin_mapping_info=unbin_mapping_info,
-                                   n_subsampled_datapoints=10_000)
+                                   n_subsampled_datapoints=10_000,
+                                   gen_data_direct=gen_data)
 
   alpha = 3
   # real_data = 'numpy_data/sdgym_bounded_adult.npy'
@@ -247,7 +252,8 @@ def main():
                                    verbose=False,
                                    unbinarize=args.kernel == 'linear',
                                    unbin_mapping_info=unbin_mapping_info,
-                                   n_subsampled_datapoints=1_000)
+                                   n_subsampled_datapoints=1_000,
+                                   gen_data_direct=gen_data)
 
 ###################################################################################################
 
@@ -257,15 +263,17 @@ def parse_arguments():
 
   args = argparse.ArgumentParser()
   # args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--n_features", type=int, default=10000)
-  args.add_argument("--iterations", type=int, default=200)
+  args.add_argument("--n_features", type=int, default=5000)
+  args.add_argument("--iterations", type=int, default=8000)
   # args.add_argument("--batch_size", type=float, default=128)
-  args.add_argument("--batch_size", type=float, default=1000)
+  args.add_argument("--batch_size", type=float, default=500)
   args.add_argument("--lr", type=float, default=1e-2)
 
   args.add_argument("--epsilon", type= float, default=1.0)
   args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
+
+  args.add_argument("--save_data", type=int, default=0, help='save data if 1')
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   arguments = args.parse_args()
   print("arg", arguments)

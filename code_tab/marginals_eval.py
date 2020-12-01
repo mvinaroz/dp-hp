@@ -16,8 +16,10 @@ def get_domain(mat):
 
 def gen_data_alpha_way_marginal_eval(gen_data_path, real_data_path, alpha, discretize, verbose=True,
                                      unbinarize=False, unbin_mapping_info=None,
-                                     n_subsampled_datapoints=None):
-  gen_data = np.load(gen_data_path)
+                                     n_subsampled_datapoints=None,
+                                     gen_data_direct=None):
+
+  gen_data = np.load(gen_data_path) if gen_data_direct is None else gen_data_direct
   real_data = np.load(real_data_path)
 
   domain = np.stack([np.min(real_data, axis=0), np.max(real_data, axis=0)], axis=1)
