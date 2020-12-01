@@ -67,7 +67,7 @@ def main():
                                               output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
-    how_many_epochs = 500
+    how_many_epochs = 5000
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
@@ -78,7 +78,16 @@ def main():
 
     draws = n_features // 2
     W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq, device), axis=0)
+    #mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq, device), axis=0)
+
+    chunk_size = 250
+    emb_sum = 0
+    for idx in range(n // chunk_size + 1):
+        data_chunk = data_samps[idx * chunk_size:(idx + 1) * chunk_size,:].astype(np.float32)
+        chunk_emb = RFF_Gauss(n_features, torch.tensor(data_chunk), W_freq, device)
+        emb_sum += torch.sum(chunk_emb, 0)
+
+    mean_emb1 = emb_sum / n
 
     """ privatizing weights """
     delta = 1e-5
@@ -101,7 +110,7 @@ def main():
 
             # zero the parameter gradients
             optimizer.zero_grad()
-            input_to_the_generator = torch.randn(mini_batch_size, input_size)
+            input_to_the_generator = torch.randn((mini_batch_size, input_size)).to(device)
             outputs = model(input_to_the_generator)
 
             mean_emb2 = torch.mean(RFF_Gauss(n_features, outputs, W_freq, device), axis=0)
@@ -120,7 +129,14 @@ def main():
 
     feature_input = torch.randn((n, input_size)).to(device)
     synthetic_data = model(feature_input)
-    mean_emb2 = torch.mean(RFF_Gauss(n_features, synthetic_data, W_freq, device), axis=0)
+    # mean_emb2 = torch.mean(RFF_Gauss(n_features, synthetic_data, W_freq, device), axis=0)
+    emb_sum = 0
+    for idx in range(n // chunk_size + 1):
+        data_chunk = synthetic_data[idx * chunk_size:(idx + 1) * chunk_size,:].detach().cpu().numpy().astype(np.float32)
+        chunk_emb = RFF_Gauss(n_features, torch.tensor(data_chunk), W_freq, device)
+        emb_sum += torch.sum(chunk_emb, 0)
+
+    mean_emb2 = emb_sum / n
     MMD_rf = torch.norm(mean_emb1 - mean_emb2, p=2)
     print('MMD_rf: ', MMD_rf)
 
