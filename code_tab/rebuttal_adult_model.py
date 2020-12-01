@@ -95,6 +95,8 @@ def main():
   seed = np.random.randint(0, 1000)
   print('seed: ', seed)
 
+  print('number of features: ', args.n_features)
+
   random.seed(seed)
   ############################### data loading ##################################
   print("adult_cat dataset")  # this is heterogenous
@@ -242,9 +244,11 @@ def parse_arguments():
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   args = argparse.ArgumentParser()
-  args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--iterations", type=int, default=8000)
-  args.add_argument("--batch_size", type=float, default=200)
+  # args.add_argument("--n_features", type=int, default=2000)
+  args.add_argument("--n_features", type=int, default=10000)
+  args.add_argument("--iterations", type=int, default=20000)
+  # args.add_argument("--batch_size", type=float, default=128)
+  args.add_argument("--batch_size", type=float, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
   args.add_argument("--epsilon", default=1.0)

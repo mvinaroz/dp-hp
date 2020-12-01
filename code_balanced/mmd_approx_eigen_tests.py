@@ -134,7 +134,12 @@ def check_hermite_recursion():
   lphi_true = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   phi_true = pt.empty(x_in.shape[0], n_degrees, dtype=pt.float32, device=device)
   for degree in range(n_degrees):
+<<<<<<< Updated upstream
     lambda_i_val = sqrt_lambda_i_fun(degree, c_tup, device, use_pi)
+=======
+    lambda_i_val = lambda_i_fun(degree, c_tup, device, use_pi)
+    print('lambda', lambda_i_val)
+>>>>>>> Stashed changes
     lphi_true[:, degree] = lambda_i_val * phi_i_fun(h_true[:, degree], x_in, c_tup, use_a=not eigenfun)
     phi_true[:, degree] = phi_i_fun(h_true[:, degree], x_in, c_tup, use_a=not eigenfun)
 
@@ -597,6 +602,8 @@ if __name__ == '__main__':
   # os.makedirs('eigen_approx_debug_plots/', exist_ok=True)
 
   check_approx_against_true()  # comparison with true squared exponential kernel.
+<<<<<<< Updated upstream
+<<<<<<< Updated upstream
   # check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
   # wittawats_kernel_code()
   # francis_bach_blog_variant(rho=0.7)
@@ -604,3 +611,17 @@ if __name__ == '__main__':
   # check_bach_against_true()
   # hermite_induction_vs_numpy()
   # check_bach_recursion()
+=======
+<<<<<<< Updated upstream
+=======
+>>>>>>> Stashed changes
+  check_hermite_normalized()  # plots using the normalized hermite to reproduce Zhu et al.
+  # wittawats_kernel_code()
+=======
+  # check_hermite_mixed()  # plots using the normalized hermite to reproduce Zhu et al.
+  # check_hermite_recursion()
+>>>>>>> Stashed changes
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
+>>>>>>> Stashed changes
