@@ -6,17 +6,9 @@ import torch.optim as optim
 import util
 import random
 import argparse
-import seaborn as sns
-sns.set()
-# %matplotlib inline
 from autodp import privacy_calibrator
 
-import warnings
-warnings.filterwarnings('ignore')
-import os
-
 def RFF_Gauss(n_features, X, W, device):
-  """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
 
   W = torch.Tensor(W).to(device)
   X = X.to(device)
@@ -53,6 +45,10 @@ class Generative_Model(nn.Module):
 
 def main():
 
+    args, device = parse_arguments()
+    seed = 100
+    print('seed: ', seed)
+
     # load data
     data = np.load('mixture_of_Gaussians_N100000_D5.npz')
     data_samps = data.f.X_private
@@ -68,7 +64,7 @@ def main():
 
     model = Generative_Model(input_size=input_size, hidden_size_1=hidden_size_1,
                                               hidden_size_2=hidden_size_2,
-                                              output_size=output_size)
+                                              output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
     how_many_epochs = 500
@@ -76,13 +72,24 @@ def main():
 
     training_loss_per_epoch = np.zeros(how_many_epochs)
 
-    med = util.meddistance(data_samps)
+    med = util.meddistance(data_samps[:400,:])
     sigma2 = med**2
     print('length scale from median heuristic is', sigma2)
 
     draws = n_features // 2
-    W_freq =  np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq), axis=0)
+    W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    mean_emb1 = torch.mean(RFF_Gauss(n_features, torch.Tensor(data_samps), W_freq, device), axis=0)
+
+    """ privatizing weights """
+    delta = 1e-5
+    privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=1)
+    print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+    sensitivity = 2 / n
+    noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+    noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
+    noise = noise.to(device)
+
+    mean_emb1 = mean_emb1 + noise
 
     print('Starting Training')
 
@@ -97,8 +104,7 @@ def main():
             input_to_the_generator = torch.randn(mini_batch_size, input_size)
             outputs = model(input_to_the_generator)
 
-            mean_emb2 = torch.mean(RFF_Gauss(n_features, outputs, W_freq), axis=0)
-
+            mean_emb2 = torch.mean(RFF_Gauss(n_features, outputs, W_freq, device), axis=0)
             loss = torch.norm(mean_emb1-mean_emb2, p=2)
 
             loss.backward()
@@ -112,7 +118,22 @@ def main():
         print('epoch # and running loss are ', [epoch, running_loss])
         training_loss_per_epoch[epoch] = running_loss
 
+    feature_input = torch.randn((n, input_size)).to(device)
+    synthetic_data = model(feature_input)
+    mean_emb2 = torch.mean(RFF_Gauss(n_features, synthetic_data, W_freq, device), axis=0)
+    MMD_rf = torch.norm(mean_emb1 - mean_emb2, p=2)
+    print('MMD_rf: ', MMD_rf)
 
+def parse_arguments():
+  device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+
+  args = argparse.ArgumentParser()
+  args.add_argument("--epsilon", default=1.0)
+  arguments = args.parse_args()
+
+  print("arg", arguments)
+
+  return arguments, device
 
 if __name__ == '__main__':
     main()
