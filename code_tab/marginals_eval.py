@@ -22,7 +22,7 @@ def gen_data_alpha_way_marginal_eval(gen_data_path, real_data_path, alpha, discr
   if discretize:
     gen_data = discretize_mat(gen_data, domain)
   tv_scores = alpha_way_marginal_tv_distances(gen_data, real_data, domain, alpha, verbose)
-  avg_tv = np.mean(tv_scores) / real_data.shape[0]  # normalize by number of marginals and number of datapoints
+  avg_tv = np.mean(tv_scores)
   print(f'average {alpha}-way marginal tv score: {avg_tv}. (data:{gen_data_path})')
 
 
