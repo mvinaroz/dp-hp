@@ -237,6 +237,16 @@ def main():
                                    unbinarize=args.kernel == 'linear',
                                    unbin_mapping_info=unbin_mapping_info)
 
+  alpha = 4
+  # real_data = 'numpy_data/sdgym_bounded_adult.npy'
+  gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                   real_data_path=real_data,
+                                   discretize=True,
+                                   alpha=alpha,
+                                   verbose=True,
+                                   unbinarize=args.kernel == 'linear',
+                                   unbin_mapping_info=unbin_mapping_info)
+
 ###################################################################################################
 
 
@@ -246,12 +256,12 @@ def parse_arguments():
   args = argparse.ArgumentParser()
   # args.add_argument("--n_features", type=int, default=2000)
   args.add_argument("--n_features", type=int, default=10000)
-  args.add_argument("--iterations", type=int, default=20000)
+  args.add_argument("--iterations", type=int, default=200)
   # args.add_argument("--batch_size", type=float, default=128)
   args.add_argument("--batch_size", type=float, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
-  args.add_argument("--epsilon", default=1.0)
+  args.add_argument("--epsilon", type= float, default=1.0)
   args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
