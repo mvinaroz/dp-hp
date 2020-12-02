@@ -294,7 +294,7 @@ def parse_arguments():
   args.add_argument("--n_features", type=int, default=10000)
   args.add_argument("--iterations", type=int, default=8000)
   # args.add_argument("--batch_size", type=float, default=128)
-  args.add_argument("--batch_size", type=float, default=1000)
+  args.add_argument("--batch_size", type=int, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
   args.add_argument("--epsilon", type=float, default=1.0)
