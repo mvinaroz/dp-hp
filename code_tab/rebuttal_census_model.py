@@ -145,6 +145,11 @@ def main():
   """ computing mean embedding of subsampled true data """
   if args.kernel == 'gaussian':
     med = util.meddistance(data[:300])
+    print(f'heuristic suggests kernel length {med}')
+
+    if args.kernel_length is not None:
+      med = args.kernel_length
+
     W_freq = np.random.randn(args.n_features // 2, input_dim) / med
 
     # aggregate embedding in chunks
@@ -278,6 +283,8 @@ def parse_arguments():
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
 
   args.add_argument("--save_data", type=int, default=0, help='save data if 1')
+
+  args.add_argument("--kernel_length", type=float, default=None)
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   args.add_argument("--d_hid", type=int, default=500)
 

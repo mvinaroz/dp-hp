@@ -88,6 +88,17 @@ class Generative_Model_homogeneous_data(nn.Module):
 
 
 # ####################################### beginning of main script #######################################
+def rescale_dims(data):
+  # assume min=0
+  max_vals = np.max(data, axis=0)
+  print('max vals:', max_vals)
+  data = data / max_vals
+  print('new max', np.max(data))
+  return data, max_vals
+
+
+def revert_scaling(data, base_scale):
+  return data * base_scale
 
 
 def main():
@@ -109,6 +120,11 @@ def main():
     print('bin data shape', data.shape)
   else:
     unbin_mapping_info = None
+
+  if args.norm_dims == 1:
+    data, base_scale = rescale_dims(data)
+  else:
+    base_scale = None
 
 
   ###########################################################################
@@ -146,6 +162,12 @@ def main():
   """ computing mean embedding of subsampled true data """
   if args.kernel == 'gaussian':
     med = util.meddistance(data[:300])
+    print(f'heuristic suggests kernel length {med}')
+
+    if args.kernel_length is not None:
+      med = args.kernel_length
+
+
     W_freq = np.random.randn(args.n_features // 2, input_dim) / med
 
     # aggregate embedding in chunks
@@ -221,6 +243,10 @@ def main():
   feature_input = torch.randn((n_samples, input_size)).to(device)
   outputs = model(feature_input)
   gen_data = outputs.detach().cpu().numpy()
+
+  if args.norm_dims == 1:
+    gen_data = revert_scaling(gen_data, base_scale)
+
   save_file = f"adult_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
               f"it_{args.iterations}_features_{args.n_features}.npy"
   if args.save_data:
@@ -271,13 +297,15 @@ def parse_arguments():
   args.add_argument("--batch_size", type=float, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
-  args.add_argument("--epsilon", type= float, default=1.0)
+  args.add_argument("--epsilon", type=float, default=1.0)
   args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   args.add_argument("--save_data", type=int, default=0, help='save data if 1')
 
-  args.add_argument("--d_hid", type=int, default=500)
+  args.add_argument("--kernel_length", type=float, default=None)
+  args.add_argument("--d_hid", type=int, default=200)
+  args.add_argument("--norm_dims", type=int, default=0, help='normalize dimensions to same range if 1')
 
   arguments = args.parse_args()
   print("arg", arguments)
@@ -286,3 +314,19 @@ def parse_arguments():
 
 if __name__ == '__main__':
   main()
+
+# kernel-length = 8 (heuristic)
+# average 3-way marginal tv score: 0.31100669199157743. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.3888291576337319. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# k.l. = 4 <-- better than before
+# average 3-way marginal tv score: 0.26282555409810404. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.331340084054946. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# k.l. = 2 is bad
+
+# k.l. = 16
+# average 3-way marginal tv score: 0.3752240283688358. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.4581394847340506. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# normed k.l.=0.5
