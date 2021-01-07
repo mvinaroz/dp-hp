@@ -143,7 +143,6 @@ def get_args():
 
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
 
-
   ar = parser.parse_args()
 
   preprocess_args(ar)

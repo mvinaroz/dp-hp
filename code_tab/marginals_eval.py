@@ -2,6 +2,7 @@ import numpy as np
 import os
 from binarize_adult import un_binarize_data
 
+
 def discretize_mat(mat, domain):
   _, n_features = mat.shape
   mat = np.round(mat)
@@ -122,8 +123,23 @@ def main():
   # privbayes: average 3-way marginal tv score: 1.100e-05
 
 
+def gen_then_disc_eval():
+
+  for dtype in ['simple', 'bounded']:
+    dpmerf_dir = '../data/generated/'
+    dpmerf_file = f'gen_then_disc_{dtype}_adult.npy'
+    real_data = f'../data/real/sdgym_{dtype}_adult.npy'
+
+    alpha = 3
+    gen_data_alpha_way_marginal_eval(gen_data_path=os.path.join(dpmerf_dir, dpmerf_file),
+                                     real_data_path=real_data,
+                                     discretize=True,
+                                     alpha=alpha,
+                                     verbose=True)
+
 if __name__ == '__main__':
-  main()
+  # main()
+  gen_then_disc_eval()
   # privbayes_scores(4, verbose=False)
 
 

@@ -446,8 +446,8 @@ def aggregate_oct14_gs_wgan_eval(verbose):
 
 
 if __name__ == '__main__':
-  # aggregate_sep18_realmmd()
+  aggregate_sep18_realmmd()
   # aggregate_oct13_mnist_redo(True)
   # aggregate_oct13_mnist_redo(False)
-  aggregate_oct14_gs_wgan_eval(True)
-  aggregate_oct14_gs_wgan_eval(False)
+  # aggregate_oct14_gs_wgan_eval(True)
+  # aggregate_oct14_gs_wgan_eval(False)

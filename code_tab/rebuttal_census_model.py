@@ -221,10 +221,21 @@ def main():
       training_loss_per_iteration[iteration] = running_loss
 
   """ now generate samples from the trained network """
+  chunk_size = 1000
+  n_samples_to_gen = n_samples
+  gen_data_list = []
+  while n_samples_to_gen > 0:
+    chunk_to_gen = np.minimum(n_samples_to_gen, chunk_size)
+    n_samples_to_gen -= chunk_to_gen
+    feature_input = torch.randn((chunk_to_gen, input_size)).to(device)
+    outputs = model(feature_input)
+    gen_data_list.append(outputs.detach().cpu().numpy())
 
-  feature_input = torch.randn((n_samples, input_size)).to(device)
-  outputs = model(feature_input)
-  gen_data = outputs.detach().cpu().numpy()
+  gen_data = np.concatenate(gen_data_list, axis=0)
+  print('gen data shape', gen_data.shape)
+  # feature_input = torch.randn((n_samples, input_size)).to(device)
+  # outputs = model(feature_input)
+  # gen_data = outputs.detach().cpu().numpy()
   save_file = f"census_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
               f"it_{args.iterations}_features_{args.n_features}.npy"
   if args.save_data:
@@ -272,19 +283,19 @@ def parse_arguments():
 
   args = argparse.ArgumentParser()
   # args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--n_features", type=int, default=5000)
-  args.add_argument("--iterations", type=int, default=8000)
+  args.add_argument("--n_features", type=int, default=3000)
+  args.add_argument("--iterations", type=int, default=10000)
   # args.add_argument("--batch_size", type=float, default=128)
-  args.add_argument("--batch_size", type=float, default=500)
+  args.add_argument("--batch_size", type=float, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
-  args.add_argument("--epsilon", type= float, default=1.0)
-  args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
+  args.add_argument("--epsilon", type=float, default=.3)
+  args.add_argument("--dataset", type=str, default='bounded', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
 
   args.add_argument("--save_data", type=int, default=0, help='save data if 1')
 
-  args.add_argument("--kernel_length", type=float, default=None)
+  args.add_argument("--kernel_length", type=float, default=5)  # 13.4 for simple, 19.8 for bounded
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   args.add_argument("--d_hid", type=int, default=500)
 
@@ -295,3 +306,21 @@ def parse_arguments():
 
 if __name__ == '__main__':
   main()
+
+# kl 7 lr 1e-3
+# average 2-way marginal tv score: 0.18798629455909943. (data:census_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+
+# python3 rebuttal_census_model.py --n_features 10000 --iterations 10000 --batch_size 1000 --lr 1e-3 --epsilon 1. --dataset bounded --kernel_length 5 --d_hid 500
+# average 2-way marginal tv score: 0.19689757973733585. (data:census_bounded_gen_eps_1.0_gaussian_kernel_it_10000_features_10000.npy)
+# average 3-way marginal tv score: 0.301131440703071. (data:census_bounded_gen_eps_1.0_gaussian_kernel_it_10000_features_10000.npy)
+
+# python3 rebuttal_census_model.py --n_features 10000 --iterations 10000 --batch_size 1000 --lr 1e-3 --epsilon 0.3 --dataset bounded --kernel_length 10 --d_hid 500
+# seed:  998
+# average 2-way marginal tv score: 0.2208484333958724. (data:census_bounded_gen_eps_0.3_gaussian_kernel_it_10000_features_10000.npy)
+# average 3-way marginal tv score: 0.33111471314308294. (data:census_bounded_gen_eps_0.3_gaussian_kernel_it_10000_features_10000.npy)
+
+
+# python3 rebuttal_census_model.py --n_features 10000 --iterations 10000 --batch_size 1000 --lr 1e-4 --epsilon 0.3 --dataset simple --kernel_length 7 --d_hid 500
+# seed:  721
+# average 2-way marginal tv score: 0.16763236397748593. (data:census_simple_gen_eps_0.3_gaussian_kernel_it_10000_features_10000.npy)
+# average 3-way marginal tv score: 0.25732301767552085. (data:census_simple_gen_eps_0.3_gaussian_kernel_it_10000_features_10000.npy)

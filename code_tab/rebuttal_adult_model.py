@@ -291,19 +291,19 @@ def parse_arguments():
 
   args = argparse.ArgumentParser()
   # args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--n_features", type=int, default=10000)
+  args.add_argument("--n_features", type=int, default=2000)
   args.add_argument("--iterations", type=int, default=8000)
   # args.add_argument("--batch_size", type=float, default=128)
   args.add_argument("--batch_size", type=int, default=1000)
-  args.add_argument("--lr", type=float, default=1e-2)
+  args.add_argument("--lr", type=float, default=1e-3)
 
-  args.add_argument("--epsilon", type=float, default=1.0)
-  args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
+  args.add_argument("--epsilon", type=float, default=0.1)
+  args.add_argument("--dataset", type=str, default='bounded', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   args.add_argument("--save_data", type=int, default=0, help='save data if 1')
 
-  args.add_argument("--kernel_length", type=float, default=None)
+  args.add_argument("--kernel_length", type=float, default=8)  # heuristic: 8 for simple, 17 for bounded
   args.add_argument("--d_hid", type=int, default=200)
   args.add_argument("--norm_dims", type=int, default=0, help='normalize dimensions to same range if 1')
 
@@ -315,6 +315,7 @@ def parse_arguments():
 if __name__ == '__main__':
   main()
 
+# SIMPLE
 # kernel-length = 8 (heuristic)
 # average 3-way marginal tv score: 0.31100669199157743. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
 # average 4-way marginal tv score: 0.3888291576337319. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
@@ -322,11 +323,35 @@ if __name__ == '__main__':
 # k.l. = 4 <-- better than before
 # average 3-way marginal tv score: 0.26282555409810404. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
 # average 4-way marginal tv score: 0.331340084054946. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# kl = 3 eps = 1, lr=1e-2, d_hid =200, nfeat=2000, niter=8000, bs=1000
+# average 3-way marginal tv score: 0.2350633277010654. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.3014459499987624. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
 
-# k.l. = 2 is bad
+# kl = 3 eps = 0.3
+# average 3-way marginal tv score: 0.2887196340146121. (data:adult_simple_gen_eps_0.3_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.3663908450930303. (data:adult_simple_gen_eps_0.3_gaussian_kernel_it_8000_features_2000.npy)
 
-# k.l. = 16
-# average 3-way marginal tv score: 0.3752240283688358. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
-# average 4-way marginal tv score: 0.4581394847340506. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# kl = 3 eps = 0.1
+# average 3-way marginal tv score: 0.40639406100156955. (data:adult_simple_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.49796872158469613. (data:adult_simple_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
 
-# normed k.l.=0.5
+# kl = 4 eps = 0.1
+# average 3-way marginal tv score: 0.3707063292631308. (data:adult_simple_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.46621304171944655. (data:adult_simple_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
+
+# BOUNDED
+# kl 10
+# average 3-way marginal tv score: 0.3985074571130154. (data:adult_bounded_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.4977921034390162. (data:adult_bounded_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+
+# kl 8
+# average 3-way marginal tv score: 0.3888513891439294. (data:adult_bounded_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.48833745336559925. (data:adult_bounded_gen_eps_1.0_gaussian_kernel_it_8000_features_2000.npy)
+
+# kl 9 eps =0.3
+# average 3-way marginal tv score: 0.43138272421548873. (data:adult_bounded_gen_eps_0.3_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.5348985780704233. (data:adult_bounded_gen_eps_0.3_gaussian_kernel_it_8000_features_2000.npy)
+
+# kl 8 eps =0.1 lr=1e-3
+# average 3-way marginal tv score: 0.5012085590340101. (data:adult_bounded_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
+# average 4-way marginal tv score: 0.6102353536421175. (data:adult_bounded_gen_eps_0.1_gaussian_kernel_it_8000_features_2000.npy)
