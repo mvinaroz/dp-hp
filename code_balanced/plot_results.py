@@ -586,6 +586,71 @@ def apr6_plot_better_conv(plot_var=False):
     plt.savefig(f'plots/jun2_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_dpcgan_notitle.png')
 
 
+def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
+  queried_setups = ['real_data', 'dpcgan', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                    '']
+  setup_names = ['real data',
+                 'DP-CGAN $\epsilon=9.6$', 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
+                 'DP-MERF $\epsilon=0.2$',
+                 'full MMD $\epsilon=\infty$']
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  # metric = 'accuracies'
+  metric = 'accuracies'
+  data_ids = ['d', 'f']
+  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  ar_dict = collect_results()
+  sr_conv_array = ar_dict['sr_conv_apr6']
+  sb_array = ar_dict['sb']
+  merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
+
+  # digit plot
+  for d_id in data_ids:
+    plt.figure()
+    # plt.title(f'DP-MERF single release + convolutional generator: {"MNIST" if d_id == "d" else "FashionMNIST"}')
+    plt.xscale('log')
+    # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
+    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    print('data', d_id)
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+
+      print(f'setup: {s}')
+      print(sub_mat.shape)
+      print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+      if plot_var:
+        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+      else:
+        sub_mat = np.median(sub_mat, axis=1)
+        plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+
+        print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+    if d_id == 'd':
+      pass
+      plt.yticks([0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7])
+      plt.hlines([0.45, 0.5, 0.55, 0.6, 0.65], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.40, 0.7))
+    else:
+      pass
+      plt.yticks([0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65])
+      plt.hlines([0.4, 0.45, 0.5, 0.55, 0.6], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.35, 0.65))
+    # plt.legend(loc='upper left')
+    plt.legend(loc='lower center')
+    plt.savefig(f'plots/jun2_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_dpcgan_notitle.png')
+
+
 
 if __name__ == '__main__':
   # collect_synth_benchmark_results()

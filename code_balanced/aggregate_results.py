@@ -355,27 +355,37 @@ def aggregate_sep18_realmmd():
   # sub_ratios = ['1.0']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
   runs = [1, 2, 3, 4, 5]
   eval_metrics = ['accuracies', 'f1_scores']
-  # save_str = 'sep18_real_mmd_baseline'
+  save_str = 'sep18_real_mmd'
 
-  for data in data_suffix:
-    for m in models:
-      scores = {'accuracies': [], 'f1_scores': []}
-      for run in runs:
-        load_file = f'logs/gen/sep18_real_mmd_baseline_s{run}{data_suffix[data]}/synth_eval/sub1.0_{m}_log.npz'
-        if os.path.isfile(load_file):
-          mat = np.load(load_file)
-        else:
-          print('failed to load', load_file)
-          continue
-        for e_idx, e in enumerate(eval_metrics):
-          score = mat[e][1]
-          scores[e].append(score)
-      accs = np.asarray(scores["accuracies"])
-      print(f'model: {m}')
-      print(f'acc avg: {np.mean(accs)}')
-      print(f'accs: {accs}')
+  all_the_results = np.zeros((len(data_suffix.keys()),
+                              len(sub_ratios),
+                              len(models),
+                              len(runs),
+                              len(eval_metrics)))
+  for d_idx, data in enumerate(data_suffix):
+    print(f'data: {data}')
+    for r_idx, r in enumerate(sub_ratios):
+      for m_idx, m in enumerate(models):
+        for run_idx, run in enumerate(runs):
+          load_file = f'logs/gen/sep18_real_mmd_baseline_s{run}{data_suffix[data]}/synth_eval/sub{r}_{m}_log.npz'
+
+          if os.path.isfile(load_file):
+            mat = np.load(load_file)
+          else:
+            print('failed to load', load_file)
+            continue
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]
+            all_the_results[d_idx, r_idx, m_idx, run_idx, e_idx] = score
+
+            accs = all_the_results[d_idx, r_idx, m_idx, :, 0]
+            print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
+
+  np.save(f'results_full_{save_str}', all_the_results)
+  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(2, 3)))
 
 
 def aggregate_oct13_mnist_redo(verbose):
