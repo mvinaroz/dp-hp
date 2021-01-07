@@ -107,7 +107,7 @@ def parse():
   parser.add_argument('--compute-real-to-gen', action='store_true', default=False, help='add train:real,test:gen')
 
   parser.add_argument('--subsample', type=float, default=1., help='fraction on data to use in training')
-  parser.add_argument('--sub-balanced-labels', action='store_true', default=False, help='add train:real,test:gen')
+  parser.add_argument('--sub-balanced-labels', action='store_true', default=True, help='add train:real,test:gen')
 
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
 

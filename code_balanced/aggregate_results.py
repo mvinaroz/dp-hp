@@ -381,8 +381,8 @@ def aggregate_sep18_realmmd():
             score = mat[e][1]
             all_the_results[d_idx, r_idx, m_idx, run_idx, e_idx] = score
 
-            accs = all_the_results[d_idx, r_idx, m_idx, :, 0]
-            print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
+          accs = all_the_results[d_idx, r_idx, m_idx, :, 0]
+          print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
 
   np.save(f'results_full_{save_str}', all_the_results)
   np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(2, 3)))
