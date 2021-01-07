@@ -20,6 +20,7 @@ import warnings
 warnings.filterwarnings('ignore')
 import os
 from marginals_eval import gen_data_alpha_way_marginal_eval
+from binarize_adult import binarize_data
 
 ############################### kernels to use ###############################
 """ we use the random fourier feature representation for Gaussian kernel """
@@ -54,13 +55,14 @@ def Feature_labels(labels, weights, device):
 
 # ############################## generative models to use ###############################
 class Generative_Model_homogeneous_data(nn.Module):
-  def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size):
+  def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, out_fun):
     super(Generative_Model_homogeneous_data, self).__init__()
 
     self.input_size = input_size
     self.hidden_size_1 = hidden_size_1
     self.hidden_size_2 = hidden_size_2
     self.output_size = output_size
+    assert out_fun in ('lin', 'sigmoid', 'relu')
 
     self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
     self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
@@ -68,6 +70,12 @@ class Generative_Model_homogeneous_data(nn.Module):
     self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
     self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
     self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
+    if out_fun == 'sigmoid':
+      self.out_fun = nn.Sigmoid()
+    elif out_fun == 'relu':
+      self.out_fun = nn.ReLU()
+    else:
+      self.out_fun = nn.Identity()
 
   def forward(self, x):
     hidden = self.fc1(x)
@@ -75,12 +83,22 @@ class Generative_Model_homogeneous_data(nn.Module):
     output = self.fc2(relu)
     output = self.relu(self.bn2(output))
     output = self.fc3(output)
-    output = self.relu(output)
-
+    output = self.out_fun(output)
     return output
 
 
 # ####################################### beginning of main script #######################################
+def rescale_dims(data):
+  # assume min=0
+  max_vals = np.max(data, axis=0)
+  print('max vals:', max_vals)
+  data = data / max_vals
+  print('new max', np.max(data))
+  return data, max_vals
+
+
+def revert_scaling(data, base_scale):
+  return data * base_scale
 
 
 def main():
@@ -97,6 +115,18 @@ def main():
   data = np.load(f"../data/real/sdgym_{args.dataset}_adult.npy")
   print('data shape', data.shape)
 
+  if args.kernel == 'linear':
+    data, unbin_mapping_info = binarize_data(data)
+    print('bin data shape', data.shape)
+  else:
+    unbin_mapping_info = None
+
+  if args.norm_dims == 1:
+    data, base_scale = rescale_dims(data)
+  else:
+    base_scale = None
+
+
   ###########################################################################
   # PREPARING GENERATOR
   n_samples, input_dim = data.shape
@@ -108,13 +138,20 @@ def main():
   # mini_batch_size = np.int(np.round(batch_size * n))
   print("minibatch: ", args.batch_size)
   input_size = 10
-  hidden_size_1 = 4 * input_dim
-  hidden_size_2 = 2 * input_dim
+  if args.d_hid is not None:
+    hidden_size_1 = args.d_hid
+    hidden_size_2 = args.d_hid
+  else:
+    hidden_size_1 = 4 * input_dim
+    hidden_size_2 = 2 * input_dim
+
   output_size = input_dim
+  out_fun = 'relu' if args.kernel == 'gaussian' else 'sigmoid'
 
   model = Generative_Model_homogeneous_data(input_size=input_size, hidden_size_1=hidden_size_1,
                                             hidden_size_2=hidden_size_2,
-                                            output_size=output_size).to(device)
+                                            output_size=output_size,
+                                            out_fun=out_fun).to(device)
 
   # define details for training
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -125,6 +162,12 @@ def main():
   """ computing mean embedding of subsampled true data """
   if args.kernel == 'gaussian':
     med = util.meddistance(data[:300])
+    print(f'heuristic suggests kernel length {med}')
+
+    if args.kernel_length is not None:
+      med = args.kernel_length
+
+
     W_freq = np.random.randn(args.n_features // 2, input_dim) / med
 
     # aggregate embedding in chunks
@@ -199,15 +242,22 @@ def main():
 
   feature_input = torch.randn((n_samples, input_size)).to(device)
   outputs = model(feature_input)
+  gen_data = outputs.detach().cpu().numpy()
 
-  # save generated samples
-  path_gen_data = f"../data/generated/rebuttal_exp"
-  os.makedirs(path_gen_data, exist_ok=True)
+  if args.norm_dims == 1:
+    gen_data = revert_scaling(gen_data, base_scale)
+
   save_file = f"adult_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
               f"it_{args.iterations}_features_{args.n_features}.npy"
-  data_save_path = os.path.join(path_gen_data, save_file)
-  np.save(data_save_path, outputs.detach().cpu().numpy())
-  print(f"Generated data saved to {path_gen_data}")
+  if args.save_data:
+    # save generated samples
+    path_gen_data = f"../data/generated/rebuttal_exp"
+    os.makedirs(path_gen_data, exist_ok=True)
+    data_save_path = os.path.join(path_gen_data, save_file)
+    np.save(data_save_path, gen_data)
+    print(f"Generated data saved to {path_gen_data}")
+  else:
+    data_save_path = save_file
 
   # run marginals test
   real_data = f'../data/real/sdgym_{args.dataset}_adult.npy'
@@ -217,7 +267,21 @@ def main():
                                    real_data_path=real_data,
                                    discretize=True,
                                    alpha=alpha,
-                                   verbose=True)
+                                   verbose=True,
+                                   unbinarize=args.kernel == 'linear',
+                                   unbin_mapping_info=unbin_mapping_info,
+                                   gen_data_direct=gen_data)
+
+  alpha = 4
+  # real_data = 'numpy_data/sdgym_bounded_adult.npy'
+  gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                   real_data_path=real_data,
+                                   discretize=True,
+                                   alpha=alpha,
+                                   verbose=True,
+                                   unbinarize=args.kernel == 'linear',
+                                   unbin_mapping_info=unbin_mapping_info,
+                                   gen_data_direct=gen_data)
 
 ###################################################################################################
 
@@ -228,15 +292,21 @@ def parse_arguments():
   args = argparse.ArgumentParser()
   # args.add_argument("--n_features", type=int, default=2000)
   args.add_argument("--n_features", type=int, default=10000)
-  args.add_argument("--iterations", type=int, default=20000)
+  args.add_argument("--iterations", type=int, default=8000)
   # args.add_argument("--batch_size", type=float, default=128)
-  args.add_argument("--batch_size", type=float, default=1000)
+  args.add_argument("--batch_size", type=int, default=1000)
   args.add_argument("--lr", type=float, default=1e-2)
 
-  args.add_argument("--epsilon", default=1.0)
+  args.add_argument("--epsilon", type=float, default=1.0)
   args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
+  args.add_argument("--save_data", type=int, default=0, help='save data if 1')
+
+  args.add_argument("--kernel_length", type=float, default=None)
+  args.add_argument("--d_hid", type=int, default=200)
+  args.add_argument("--norm_dims", type=int, default=0, help='normalize dimensions to same range if 1')
+
   arguments = args.parse_args()
   print("arg", arguments)
   return arguments, device
@@ -244,3 +314,19 @@ def parse_arguments():
 
 if __name__ == '__main__':
   main()
+
+# kernel-length = 8 (heuristic)
+# average 3-way marginal tv score: 0.31100669199157743. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.3888291576337319. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# k.l. = 4 <-- better than before
+# average 3-way marginal tv score: 0.26282555409810404. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.331340084054946. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# k.l. = 2 is bad
+
+# k.l. = 16
+# average 3-way marginal tv score: 0.3752240283688358. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+# average 4-way marginal tv score: 0.4581394847340506. (data:adult_simple_gen_eps_1.0_gaussian_kernel_it_8000_features_10000.npy)
+
+# normed k.l.=0.5
