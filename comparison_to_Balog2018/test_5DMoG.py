@@ -89,7 +89,7 @@ def main():
     mean_emb1 = emb_sum / n
 
     """ privatizing weights """
-    delta = 1e-6
+    delta = 0.000001
     privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=1)
     print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
     sensitivity = 2 / n
@@ -144,7 +144,7 @@ def main():
                 data_chunk = synthetic_data[idx * chunk_size:(idx + 1) * chunk_size,:].detach().cpu().numpy().astype(np.float32)
                 chunk_emb = RFF_Gauss(n_features, torch.tensor(data_chunk), W_freq, device)
                 emb_sum += torch.sum(chunk_emb, 0)
-            mean_emb2 = emb_sum / n
+            mean_emb2 = emb_sum / n_smp
 
         MMD_rf = torch.norm(mean_emb1 - mean_emb2, p=2)
         dist[i] = MMD_rf
