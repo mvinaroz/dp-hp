@@ -1,6 +1,7 @@
 """ this script is extracted from https://github.com/matejbalog/RKHS-private-database/blob/master/src/plot.py """
 import json
 import matplotlib.pylab as plt
+import numpy as np
 
 def json_load(path, report_content=None):
     with open(path, 'r') as f:
@@ -28,28 +29,39 @@ epsilons, Ms_alg2, D = j2['epsilons'], j2['Ms_report'], j2['D']
 
 
 fig, ax = plt.subplots(1, 1, figsize=(5, 4))
-ax.text(0.5, 0.95, '$D = %d$' % (D), transform=ax.transAxes)
+# ax.title('$D = %d$' % (D))
+# ax.text(0.5, 0.95, '$D = %d$' % (D), transform=ax.transAxes)
 # x-axis
 M_max = 0
 M_max = max(M_max, Ms_alg2[-1])
-ax.set_xlim((0.6, M_max))
+ax.set_xlim((2, M_max))
 ax.set_xscale('log')
 ax.set_xlabel('$M$ (number of synthetic data points)')
 
 # y-axis
-ax.set_ylim((5 * 1e-5, 4.0))
+ax.set_ylim((5 * 1e-3, 4.0))
 ax.set_yscale('log')
 ax.set_ylabel('RKHS distance $\|\| \hat{\mu}_X - \cdot \|\|_{\mathcal{H}}$')
 
+epsilons = epsilons[1:]
+Ms_alg2 = Ms_alg2[1:]
+
 colors = [tableau20(2*ei) for ei, _ in enumerate(epsilons)]
+input_size = 10
 
 for ei, epsilon in enumerate(epsilons):
     dists = j2['dists_alg2'][ei]
-    label = 'Algorithm 2, $\\varepsilon = %s$' % (epsilon)
-    ax.plot(Ms_alg2, dists, color=colors[ei], ls='dashed', label=label)
+    label = 'Balog18, $\\varepsilon = %s$' % (epsilon)
+    ax.plot(Ms_alg2, dists[1:], color=colors[ei], ls='dashed', label=label)
+
+    filename = 'epsilon='+np.str(epsilon)+'input_size='+np.str(input_size)+'.npy'
+    dist_ours = np.load(filename)
+    label = 'Ours, $\\varepsilon = %s$' % (epsilon)
+    ax.plot(Ms_alg2, dist_ours[1:], color=colors[ei], ls='solid', label=label)
+
 
 # Plot legend
-ax.legend(loc='lower left')
+ax.legend(loc='upper left')
 
 plt.show()
 
