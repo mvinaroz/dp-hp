@@ -205,7 +205,7 @@ class NamedArray:
     self.dim_names = dim_names  # list of dimension names in order
     self.idx_names = idx_names  # dict for the form dimension_name: [list of index names]
 
-  def get(self, name_index_dict):
+  def get(self, name_index_dict, keep_singleton_dims=False):
     """
     basically indexing by name for each dimension present in name_index_dict, it selects the given indices
     """
@@ -218,7 +218,10 @@ class NamedArray:
         # ids_to_get = [k for (k, name) in enumerate(self.idx_names[dim]) if name in names_to_get]
         ids_to_get = [self.idx_names[dim].index(name) for name in names_to_get]
         ar = np.take(ar, ids_to_get, axis=d_idx)
-    return np.squeeze(ar)
+
+    if not keep_singleton_dims:
+      ar = np.squeeze(ar)
+    return ar
 
   def merge(self, other, merge_dim):
     """
@@ -251,9 +254,9 @@ class NamedArray:
         merged_idx_names[dim] = intersection
 
     # then .get both sub-arrays and concatenate them
-    self_sub_array = self.get(self_dict)
-    other_sub_array = other.get(other_dict)
-
+    self_sub_array = self.get(self_dict, keep_singleton_dims=True)
+    other_sub_array = other.get(other_dict, keep_singleton_dims=True)
+    print(self_sub_array.shape, other_sub_array.shape)
     merged_array = np.concatenate([self_sub_array, other_sub_array], axis=self.dim_names.index(merge_dim))
 
     # create new NamedArray instance and return it

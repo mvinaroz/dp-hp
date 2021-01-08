@@ -234,10 +234,8 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
   if data_log_name is not None:
     print(f'processing {data_log_name}')
 
-
   if log_results:
     os.makedirs(log_save_dir, exist_ok=True)
-
 
   models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
 

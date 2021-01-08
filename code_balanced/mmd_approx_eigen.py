@@ -157,6 +157,25 @@ def bach_batch_feature_embedding_debug(x_in, n_degrees, rho, device):
   return batch_embedding
 
 
+def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
+  n_samples = x_in.shape[0]
+  n_features = x_in.shape[1]
+  batch_embedding = pt.empty(n_samples, n_degrees, n_features, dtype=pt.float32, device=device)
+  h_i_minus_one, h_i_minus_two = None, None
+  for degree in range(n_degrees):
+    h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_in, probabilists=False)
+
+    h_i_minus_two = h_i_minus_one
+    h_i_minus_one = h_i
+    batch_embedding[:, degree, :] = h_i
+
+  if return_only_last_term:
+    return batch_embedding[:, -1, :]
+  else:
+    return batch_embedding
+
+
+
 def bach_dataset_embedding(train_loader, device, n_labels, n_degrees, rho, sum_frequency=25):
   emb_acc = []
   n_data = 0

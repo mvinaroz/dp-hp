@@ -587,26 +587,31 @@ def apr6_plot_better_conv(plot_var=False):
 
 
 def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
-  queried_setups = ['real_data', 'dpcgan', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
-                    '']
+  queried_setups = ['real_data',
+                    # 'dpcgan',
+                    'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                    'full_mmd']
   setup_names = ['real data',
-                 'DP-CGAN $\epsilon=9.6$', 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
-                 'DP-MERF $\epsilon=0.2$',
+                 # 'DP-CGAN $\epsilon=9.6$',
+                 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
                  'full MMD $\epsilon=\infty$']
   colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
-  # metric = 'accuracies'
   metric = 'accuracies'
   data_ids = ['d', 'f']
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
 
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
   sb_array = ar_dict['sb']
+  full_mmd_array = ar_dict['full_mmd_jan7']
+  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape)
   merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
 
   # digit plot
   for d_id in data_ids:
@@ -638,17 +643,17 @@ def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
     plt.ylabel('accuracy')
     if d_id == 'd':
       pass
-      plt.yticks([0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7])
-      plt.hlines([0.45, 0.5, 0.55, 0.6, 0.65], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
-      plt.ylim((0.40, 0.7))
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.9))
     else:
       pass
-      plt.yticks([0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65])
-      plt.hlines([0.4, 0.45, 0.5, 0.55, 0.6], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
-      plt.ylim((0.35, 0.65))
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.8))
     # plt.legend(loc='upper left')
-    plt.legend(loc='lower center')
-    plt.savefig(f'plots/jun2_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_dpcgan_notitle.png')
+    plt.legend(loc='upper left')
+    plt.savefig(f'plots/jan7_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_full_mmd.png')
 
 
 
@@ -679,4 +684,5 @@ if __name__ == '__main__':
 
   # apr6_plot_overfit_conv(plot_var=False)
   # apr6_plot_overfit_conv(plot_var=True)
-  apr6_plot_better_conv(plot_var=True)
+  # apr6_plot_better_conv(plot_var=True)
+  jan7_plot_better_conv_plus_full_mmd(plot_var=True)

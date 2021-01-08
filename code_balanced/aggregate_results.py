@@ -259,6 +259,7 @@ def collect_results():
   eval_metrics = ['accuracies', 'f1_scores']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+
   runs = [0, 1, 2, 3, 4]
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']  # order matters!
   base_idx_names = {'data_ids': data_ids, 'models': models, 'runs': runs, 'eval_metrics': eval_metrics}
@@ -335,6 +336,14 @@ def collect_results():
   sb_np_array = sb_array.merge(np_array, merge_dim='setups')
   all_array = sb_np_array.merge(sr_array, merge_dim='setups')
 
+  full_mmd_jan7_setups = ['full_mmd']
+  full_mmd_jan7_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  full_mmd_jan7_idx_names = {'setups': full_mmd_jan7_setups, 'sub_ratios': full_mmd_jan7_sub_ratios}
+  full_mmd_jan7_idx_names.update(base_idx_names)
+  full_mmd_jan7_mat = np.load('results/results_full_sep18_real_mmd.npy')
+  full_mmd_jan7_mat = np.expand_dims(full_mmd_jan7_mat, 1)
+  full_mmd_jan7_array = NamedArray(full_mmd_jan7_mat, dim_names, full_mmd_jan7_idx_names)
+
   array_dict = {'sb': sb_array,
                 'np': np_array,
                 'sr': sr_array,
@@ -343,7 +352,8 @@ def collect_results():
                 'sr_d': sr_d_array,
                 'sr_f': sr_f_array,
                 'sr_conv_apr4': sr_conv_apr4_array,
-                'sr_conv_apr6': sr_conv_apr6_array}
+                'sr_conv_apr6': sr_conv_apr6_array,
+                'full_mmd_jan7': full_mmd_jan7_array}
 
   return array_dict
 
@@ -351,7 +361,7 @@ def collect_results():
 def aggregate_sep18_realmmd():
   data_suffix = {'digits': '', 'fashion': '_fashion'}
 
-  # setups = ['sep18_real_mmd_baseline_s']
+  setups = ['real_mmd']
   # sub_ratios = ['1.0']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
@@ -361,6 +371,7 @@ def aggregate_sep18_realmmd():
   save_str = 'sep18_real_mmd'
 
   all_the_results = np.zeros((len(data_suffix.keys()),
+                              len(setups),
                               len(sub_ratios),
                               len(models),
                               len(runs),
@@ -379,13 +390,13 @@ def aggregate_sep18_realmmd():
             continue
           for e_idx, e in enumerate(eval_metrics):
             score = mat[e][1]
-            all_the_results[d_idx, r_idx, m_idx, run_idx, e_idx] = score
+            all_the_results[d_idx, 0, r_idx, m_idx, run_idx, e_idx] = score
 
-          accs = all_the_results[d_idx, r_idx, m_idx, :, 0]
-          print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
+        accs = all_the_results[d_idx, 0, r_idx, m_idx, :, 0]
+        print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
 
   np.save(f'results_full_{save_str}', all_the_results)
-  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(2, 3)))
+  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
 
 
 def aggregate_oct13_mnist_redo(verbose):
