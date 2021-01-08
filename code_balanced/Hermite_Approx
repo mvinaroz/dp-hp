@@ -21,18 +21,22 @@ import matplotlib.pyplot as plt
 import scipy.special as sm
 from mpl_toolkits.mplot3d import Axes3D
 import thewalrus
+import kernel as u
 #%% Parameters
-k   =   1   #Dimension of Gaussians
-xi  =   0.5
+k   =   4   #Dimension of Gaussians
+xi  =   0.7
 mu1     =   np.random.rand(k)
 cov1    =   0.1*np.eye(k)
-mu2     =   np.random.rand(k)
+mu2     =   np.random.rand(k) 
 cov2    =   0.1*np.eye(k)
-N       =   1
-T       =   300      #Stopping Time for Hermite Parameters
+N       =   10
+T       =   2     #Stopping Time for Hermite Parameters
 h1      =   np.zeros(np.hstack([N, T*np.ones([ k,], dtype=np.int)]))
 h2      =   np.zeros(np.hstack([N, T*np.ones([ k,], dtype=np.int)]))
 nus     =   np.mgrid[tuple(slice(0, T-1, complex(0, T)) for i in range(k))]
+
+#%%Gaussian Kernel
+Gaussian_Kernel     =   u.KGauss(sigma2=(1-xi**2)/2/xi)
 
 #%% Generate two Gaussian noises
 g1  =   np.random.multivariate_normal(mu1, cov1, N)
@@ -49,10 +53,10 @@ g2  =   np.random.multivariate_normal(mu2, cov2, N)
 
 # I used TheWalrus library and I am not sure if it's the same Hermite that we need
 for i in range(N):
-    h1[i]   =   thewalrus.hermite_multidimensional(np.eye(k), T, y=g1[i,:])
+    h1[i]   =   thewalrus.hermite_multidimensional(2*np.eye(k), T, y=g1[i,:])
     
 for i in range(N):
-    h2[i]   =   thewalrus.hermite_multidimensional(np.eye(k), T, y=g2[i,:])
+    h2[i]   =   thewalrus.hermite_multidimensional(2*np.eye(k), T, y=g2[i,:])
     
 #%% Eigenvalues and Eigenfunctions
 l1_nus      =   np.sum(nus, axis=0, keepdims=True)   #The first dimension still has 1 dims. However, it could be integrated into other nus expressions.
@@ -63,8 +67,11 @@ eigf2       =   (1-xi**2)**(k/4)*np.expand_dims(np.exp(- xi/(1+xi)*(np.linalg.no
 
 
 #%% Check the approximation
-cross_term_appr  =   np.sum(eigv*eigf1*eigf2, axis=tuple(np.arange(1,k+1, dtype=int)))
-cross_term       =   np.exp(-((np.linalg.norm(g1-g2, axis=1))**2)*xi/(1-xi**2))
+# First, reshape the eigenfunctions to prepare them for crpss production. We can repeat one array several times.
+eigf2_mod   =   np.kron(np.ones(np.hstack(([N], np.ones([k+1,], dtype=int)))), eigf2) 
+
+cross_term_appr  =   np.sum(eigv*eigf1*eigf2_mod, axis=tuple(np.arange(2,k+2, dtype=int)))
+cross_term       =   Gaussian_Kernel(g1, g2)
 
 one_dim_appr_1    =   np.sum(eigv*h1, axis=tuple(np.arange(1,k+1, dtype=int)))
 one_dim_1         =   np.exp(xi/2*(np.sum(g1, axis=1))-1/2*xi**2/4*k)
@@ -74,5 +81,8 @@ two_dim         =  np.exp((2*np.sum(g1*g2, axis=1)*xi-(np.linalg.norm(g1, axis=1
 # They are not similar to each other. Might be the case that I have not chosen a correct coefficient, etc. However, cross_term_appr does not have the right exponential form as well
 
 #%% Mappings
+
+mean_embedding_cross    =   np.average(cross_term)
+mean_embesdding_appr    =   np.average(cross_term_appr)
 m1  =   np.sqrt(eigv)*eigf1
 m2  =   np.sqrt(eigv)*eigf1
