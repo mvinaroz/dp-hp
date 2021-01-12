@@ -76,8 +76,9 @@ Kxy = np.mean(Gaussian_kernel(x, x_prime))
 # if we use the same length scale per dimenson
 alpha = 1 / (2.0 * sigma2)
 # from this: alpha = rho / (1- rho**2), identify what rho is
-sol = optimize.minimize_scalar(lambda r: (alpha - r / (1-r**2))**2, bounds=(0,1), method='bounded')
-rho = sol.x
+# sol = optimize.minimize_scalar(lambda r: (alpha - r / (1-r**2))**2, bounds=(0,1), method='bounded')
+# rho = sol.x
+rho=-1/2/alpha+np.sqrt(1/alpha**2+4)/2
 print(med, alpha, rho)
 
 n_degree = 10
@@ -99,7 +100,8 @@ for axis in np.arange(input_dim):
 
 appr_val = np.mean(np.prod(appr_val_mat, axis=2))
 # print('eigen_vals', eigen_val_mat)
+
+np.abs(appr_val-Kxy)
 print('approximate value:', appr_val)
 print('true value:', Kxy)
 print('product of inner products', np.prod(dot_prod_mat))
-
