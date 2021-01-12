@@ -157,7 +157,7 @@ def main():
     med = meddistance(data_samps)
     sigma2 = med**2
 
-    method = 'mmd_hp' # 'rf', 'mmd', or 'mmd_hp'
+    method = 'mmd' # 'rf', 'mmd', or 'mmd_hp'
 
     if method == 'rf':
         """ computing mean embedding of true data """
