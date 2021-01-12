@@ -21,7 +21,17 @@ def approx(k, rho, x, x_prime):
     all_entries = np.einsum('ij, kj -> ikj', eigen_funcs_x, eigen_funcs_x_prime)
     out = np.einsum('ikj,j -> ik', all_entries, eigen_vals)
 
-    # out = np.mean(np.sum(eigen_vals * eigen_funcs_x * eigen_funcs_x_prime, axis=1))
+    # # check the correctness of eq(7) in our writeup
+    # # 2/(m*n) sum_i sum_j phi(x_i)*phi(x'_j) ??==?? 2/(m*n) (sum_i phi(x_i)) * (sum_j phi(x'_j))
+    # LHS = np.mean(out)
+    # # RHS = ...
+    # phi_x = np.einsum('ij,j-> ij', eigen_funcs_x, np.sqrt(eigen_vals))
+    # phi_x_prime = np.einsum('ij,j-> ij', eigen_funcs_x_prime, np.sqrt(eigen_vals))
+    # n_data = eigen_funcs_x.shape[0]
+    # RHS = np.dot(np.sum(phi_x,0),np.sum(phi_x_prime,0))*(1/(n_data**2))
+    # print('RHS', RHS)
+    # print('LHS', LHS)
+
     return out, eigen_vals
 
 def eigen_func(k, rho, x):
@@ -60,7 +70,7 @@ sol = optimize.minimize_scalar(lambda r: (alpha - r / (1-r**2))**2, bounds=(0,1)
 rho = sol.x
 print(med, alpha, rho)
 
-n_degree = 15
+n_degree = 10
 appr_val, eigen_vals = approx(n_degree, rho, x, x_prime)
 print('eigen_vals', eigen_vals)
 print('approximate value:', np.mean(appr_val))

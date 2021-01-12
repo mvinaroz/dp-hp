@@ -387,3 +387,4 @@ class ConvGenSVHN(nn.Module):
 #       return code, gen_one_hots
 #     else:
 #       return code
+

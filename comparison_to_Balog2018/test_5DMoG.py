@@ -67,7 +67,11 @@ def main():
                                               output_size=output_size).to(device)
 
     optimizer = optim.Adam(model.parameters(), lr=1e-2)
+<<<<<<< Updated upstream
     how_many_epochs = 1000
+=======
+    how_many_epochs = 5
+>>>>>>> Stashed changes
     how_many_iter = np.int(n/mini_batch_size)
 
     training_loss_per_epoch = np.zeros(how_many_epochs)

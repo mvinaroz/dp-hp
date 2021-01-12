@@ -10,6 +10,7 @@ from aux import meddistance
 from scipy.special import eval_hermite
 from scipy.special import factorial
 from scipy import optimize
+import random
 
 def approx(k, rho, x, x_prime):
     # k: degree of polynomial
@@ -22,9 +23,18 @@ def approx(k, rho, x, x_prime):
     all_entries = np.einsum('ij, kj -> ikj', eigen_funcs_x, eigen_funcs_x_prime)
     out = np.einsum('ikj,j -> ik', all_entries, eigen_vals)
 
+    phi_x = np.einsum('ij,j-> ij', eigen_funcs_x, np.sqrt(eigen_vals))
+    phi_x_prime = np.einsum('ij,j-> ij', eigen_funcs_x_prime, np.sqrt(eigen_vals))
+    n_data = eigen_funcs_x.shape[0]
+
+    mean_phi_x = np.sum(phi_x,0)/n_data
+    mean_phi_x_prime = np.sum(phi_x_prime,0)/n_data
+    dot_prod_axis = np.dot(mean_phi_x, mean_phi_x_prime)
+    # RHS = np.dot(np.sum(phi_x,0),np.sum(phi_x_prime,0))*(1/(n_data**2))
+
     # out = np.sum(eigen_vals * eigen_funcs_x * eigen_funcs_x_prime, axis=1)
 
-    return out, eigen_vals
+    return out, eigen_vals, dot_prod_axis
 
 def eigen_func(k, rho, x):
     # k: degree of polynomial
@@ -38,9 +48,12 @@ def eigen_func(k, rho, x):
     eigen_funcs = 1/np.sqrt(N_k)*(H_k*exp_trm) # output dim: number of datapoints by number of degree
     return eigen_funcs
 
+
+random.seed(0)
+
 # first generate data
 n_data = 2000
-input_dim = 20 # data dimension
+input_dim = 10 # data dimension
 
 # generate data from two Gaussians
 mean = np.zeros(input_dim)
@@ -50,7 +63,7 @@ cov = 0.5*np.eye(input_dim)
 # cov[1,0] = 0.02
 x = np.random.multivariate_normal(mean, cov, n_data)
 
-mean_prime = 5 + np.zeros((input_dim, 1))
+mean_prime = 10 + np.zeros((input_dim, 1))
 x_prime = np.random.multivariate_normal(mean, cov, n_data)
 
 # evaluate the kernel function
@@ -70,6 +83,7 @@ print(med, alpha, rho)
 n_degree = 10
 appr_val_mat = np.zeros((n_data, n_data, input_dim))
 eigen_val_mat = np.zeros((n_degree+1,input_dim))
+dot_prod_mat = np.zeros(input_dim)
 for axis in np.arange(input_dim):
     print(axis)
     x_axis = x[:,axis]
@@ -78,12 +92,14 @@ for axis in np.arange(input_dim):
     x_prime_axis = x_prime[:,axis]
     x_prime_axis = x_prime_axis[:,np.newaxis]
 
-    appr_val_axis, eigen_vals_axis = approx(n_degree, rho, x_axis, x_prime_axis)
+    appr_val_axis, eigen_vals_axis, dot_prod_axis = approx(n_degree, rho, x_axis, x_prime_axis)
     appr_val_mat[:,:,axis] = appr_val_axis
     eigen_val_mat[:,axis] = eigen_vals_axis
+    dot_prod_mat[axis] = dot_prod_axis
 
 appr_val = np.mean(np.prod(appr_val_mat, axis=2))
 # print('eigen_vals', eigen_val_mat)
 print('approximate value:', appr_val)
 print('true value:', Kxy)
+print('product of inner products', np.prod(dot_prod_mat))
 
