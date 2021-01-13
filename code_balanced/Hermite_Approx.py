@@ -30,11 +30,12 @@ def err_cross_iters( k, iters):
     errs    =   np.zeros([iters])
     for i in range(iters):
         print('iteration '+str(i))
-        errs[i]    =   err_cross(k)
+        errs[i]    =   err_cross(k, i)
     return np.average(errs)
 
-def err_cross( k):
+def err_cross( k, seed):
     #%% Parameters
+    np.random.seed(seed)
     #k   =   1   #Dimension of Gaussians
     mu1     =   np.random.rand(k)
     cov1    =   0.1*np.eye(k)
@@ -85,6 +86,7 @@ def err_cross( k):
     for i in range(N):
         h2[i]   =   thewalrus.hermite_multidimensional(2*np.eye(k), T, y=g2[i,:])
     print('Found Hermite Polynomials for set1 and set2 of data with T='+str(T)+' and N='+str(N)+' and k='+str(k))
+    # print(h1)
     #%% Eigenvalues and Eigenfunctions
     l1_nus      =   np.sum(nus, axis=0, keepdims=True)   #The first dimension still has 1 dims. However, it could be integrated into other nus expressions.
     facts       =   sm.factorial(nus) 
@@ -97,8 +99,8 @@ def err_cross( k):
     #%% Check the approximation
     # First, reshape the eigenfunctions to prepare them for crpss production. We can repeat one array several times.
     eigf2_mod   =   np.kron(np.ones(np.hstack(([N], np.ones([k+1,], dtype=int)))), eigf2) 
-    
-    cross_term_appr  =   np.sum(eigv*eigf1*eigf2_mod, axis=tuple(np.arange(2,k+2, dtype=int)))
+    eigf1_mod   =   np.reshape(eigf1, np.hstack(([N, 1], T*np.ones(k, dtype=int))))
+    cross_term_appr  =   np.sum(eigv*eigf1_mod*eigf2_mod, axis=tuple(np.arange(2,k+2, dtype=int)))
     cross_term       =   Gaussian_Kernel(g1, g2)
     print('Found approximate and real cross-terms for such T, N, and K')
     # one_dim_appr_1    =   np.sum(eigv*h1, axis=tuple(np.arange(1,k+1, dtype=int)))
@@ -112,12 +114,14 @@ def err_cross( k):
     
     mean_embedding_cross    =   np.average(cross_term)
     mean_embesdding_appr    =   np.average(cross_term_appr)
+    print("Appr_val is", mean_embesdding_appr)
+    print("real val is", mean_embedding_cross )
     return np.abs(mean_embedding_cross-mean_embesdding_appr)
 
 #%% Parameters
 #Ts      =       [5, 5, 5, 5, 5]   #Last power in each dimension of Hermite Polynomial
-Ds      =       [2, 3, 4, 5, 6]   #Dimensions of points
-Tiis      =       np.zeros([len(Ds)], dtype=int)
+Ds      =       [1, 2, 3, 4, 5, 6]   #Dimensions of points
+Tiis      =     np.zeros([len(Ds)], dtype=int)
 It      =       20       #Number of iterations to find the average error
 Err     =       np.zeros([len(Ds)])
 Err_tens     =       np.zeros([len(Ds)])

@@ -21,7 +21,7 @@ def approx(k, rho, x, x_prime):
     eigen_vals = (1-rho)*(rho**np.arange(0, k+1))
     eigen_funcs_x = eigen_func(k, rho, x) # output dim: number of datapoints by number of degree
     eigen_funcs_x_prime = eigen_func(k, rho, x_prime)
-
+    
     all_entries = np.einsum('ij, kj -> ikj', eigen_funcs_x, eigen_funcs_x_prime)
     out = np.einsum('ikj,j -> ik', all_entries, eigen_vals)
 
@@ -50,9 +50,9 @@ def eigen_func(k, rho, x):
     eigen_funcs = 1/np.sqrt(N_k)*(H_k*exp_trm) # output dim: number of datapoints by number of degree
     return eigen_funcs
 
-def appr(input_dim):
+def appr(input_dim, seed):
     
-    # random.seed(0)
+    np.random.seed(seed)
     
     # first generate data
     n_data = 10
@@ -60,14 +60,15 @@ def appr(input_dim):
     
     # generate data from two Gaussians
     mean = np.random.rand(input_dim)
+    mean_prime = np.random.rand(input_dim)
     cov = 0.1*np.eye(input_dim)
     # cov[0,0] = 0.1 # so that each dimension has different variance
     # cov[0,1] = 0.02 # so that the two dimensions are correlated
     # cov[1,0] = 0.02
     x = np.random.multivariate_normal(mean, cov, n_data)
     
-    mean_prime = np.random.rand(input_dim)
-    x_prime = np.random.multivariate_normal(mean, cov, n_data)
+   
+    x_prime = np.random.multivariate_normal(mean_prime, cov, n_data)
     
     # evaluate the kernel function
     med = meddistance(np.concatenate((x,x_prime),axis=0))
@@ -85,8 +86,9 @@ def appr(input_dim):
     Thr     =   1e-7
     Ts  =   np.arange(0, 15)
     Tis     =   (rho/2)**(Ts)/(sm.factorial(np.floor(Ts)))
-    n_degree   =   np.argmax(Tis<=Thr)-1
+    n_degree   =   np.argmax(Tis<=Thr)-2
     # n_degree = 10
+    print("n_degree is "+str(n_degree))
     appr_val_mat = np.zeros((n_data, n_data, input_dim))
     eigen_val_mat = np.zeros((n_degree+1,input_dim))
     dot_prod_mat = np.zeros(input_dim)
@@ -104,8 +106,8 @@ def appr(input_dim):
         dot_prod_mat[axis] = dot_prod_axis
     
     appr_val = np.mean(np.prod(appr_val_mat, axis=2))
-    # print('eigen_vals', eigen_val_mat)
-
+    print("Appr_val is", appr_val)
+    print("real val is", Kxy)
     return np.abs(appr_val-Kxy)
 # print('approximate value:', appr_val)
 # print('true value:', Kxy)
@@ -115,6 +117,6 @@ def appr(input_dim):
 def appr_iter(input_dim, iterations):
     Errs    =   np.zeros([iterations])
     for i in range(iterations):
-        Errs[i]     =   appr(input_dim)
+        Errs[i]     =   appr(input_dim, i)
         
     return np.average(Errs)
