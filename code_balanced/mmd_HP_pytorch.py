@@ -4,6 +4,7 @@ from mmd_approx_eigen import eval_hermite_pytorch
 import torch
 import kernel as k
 
+#s
 
 def get_hp_losses(train_loader, device, n_labels, order, rho):
     data_acc    =   []
