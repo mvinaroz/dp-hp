@@ -11,6 +11,7 @@ from mmd_approx_eigen import get_eigen_losses
 from synth_data_benchmark import test_gen_data, test_passed_gen_data, datasets_colletion_def
 from mmd_real import get_real_mmd_loss
 from kmeans import get_kmeans_mmd_loss
+from mmd_HP_pytorch import get_hp_losses
 from synth_data_2d import plot_data
 from synth_data_1d import plot_data_1d
 
@@ -76,6 +77,12 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
     single_release_loss, _ = get_eigen_losses(train_loader, device, n_labels,
                                               ar.n_eigen_degrees, ar.kernel_length, ar.px_sigma)
     minibatch_loss = None
+    
+  elif ar.loss_type     ==  'hermite':
+      minibatch_loss    =   None
+      alpha = 1 / (2.0 * ar.px_sigma)
+      xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+      single_release_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi)
   else:
     raise ValueError
 
@@ -119,7 +126,7 @@ def get_args():
   parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
 
   parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
-                      choices=['rff', 'kmeans', 'real_mmd', 'eigen'])
+                      choices=['rff', 'kmeans', 'real_mmd', 'eigen', 'hermite'])
   # parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   # parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
 
@@ -138,10 +145,11 @@ def get_args():
 
   # eigen-approximation
   parser.add_argument('--kernel-length', type=float, default=0.1, help='')
-  parser.add_argument('--px-sigma', type=float, default=0.1, help='')
+  parser.add_argument('--px-sigma', type=float, default=0.3, help='')
   parser.add_argument('--n-eigen-degrees', type=int, default=1000, help='')
 
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
+  parser.add_argument('--order-hermite', type=int, default=20, help='')
 
   ar = parser.parse_args()
 
