@@ -6,30 +6,66 @@ import kernel as k
 
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho):
-    data_acc    =   []
-    label_acc   =   []
-    i   =   0
-    for data, labels in train_loader:
-        data, labels = data.to(device), labels.to(device)
-        data_acc.append(data)
-        label_acc.append(labels)
-        i   +=1
-    # print('Size of train_loader: ', i, "and size of labels", labels.size())
-        
-    s1              =   np.hstack([len(data_acc)*data.shape[0], data.shape[1:]]).astype(int)
-    s2              =   np.hstack([len(label_acc)*labels.shape[0], labels.shape[1:]]).astype(int)
-    data_tensor     =   torch.zeros(list(s1), device=device)
-    label_tensor    =   torch.zeros(list(s2), device=device)
-    torch.cat(data_acc, out=data_tensor)
-    torch.cat(label_acc, out=label_tensor)
-    data_tensor     =   torch.flatten(data_tensor, start_dim=1)
+def get_hp_losses(train_loader, device, n_labels, order, rho, single_release=True, sample_dims=False, sampling_rate = 1):
+    
+    if (single_release):
+        data_acc    =   []
+        label_acc   =   []
+        i   =   0
+        for data, labels in train_loader:
+            data, labels = data.to(device), labels.to(device)
+            data_acc.append(data)
+            label_acc.append(labels)
+            i   +=1
+        # print('Size of train_loader: ', i, "and size of labels", labels.size())
+            
+        s1              =   np.hstack([len(data_acc)*data.shape[0], data.shape[1:]]).astype(int)
+        s2              =   np.hstack([len(label_acc)*labels.shape[0], labels.shape[1:]]).astype(int)
+        data_tensor     =   torch.zeros(list(s1), device=device)
+        label_tensor    =   torch.zeros(list(s2), device=device)
+        torch.cat(data_acc, out=data_tensor)
+        torch.cat(label_acc, out=label_tensor)
+        data_tensor     =   torch.flatten(data_tensor, start_dim=1)
     # print(label_tensor.size)
-    def hp_loss(gen_enc, gen_labels):
-        return mmd_loss_hp_approx(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, rho, device)
-    return hp_loss
+        def hp_loss(gen_enc, gen_labels):
+            return mmd_loss_hp_approx(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, rho, device)
+        hp_loss_minibatch   =   None
+    else:
+        def hp_loss_minibatch(data_enc, labels, gen_enc, gen_labels):
+            return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, rho, device)
+        hp_loss     =   None
+    return hp_loss, hp_loss_minibatch
           
+
+def mean_embedding_proxy(data, label, order, rho, device, n_labels, labels_to_one_hot=False):
+    
+    if (labels_to_one_hot==True):
+        # set gen labels to scalars from one-hot
+        _, label = torch.max(label, dim=1)
+    
+    num_data, dim_data    =   data.shape
+    # for each label, take the associated encodings
+    # print('Number of labels:', n_labels)
+    mean_size   =   torch.hstack([torch.tensor(n_labels, dtype=int), order*torch.ones(size=[dim_data,], dtype=int)])
+    print(mean_size)
+    mean_proxy  =   torch.zeros(tuple((mean_size.numpy()).tolist()), device=device)
+    # mmd_real    =   0
+    for idx in range(n_labels):
+      idx_data_enc          =   data[label == idx][:]
+      for idx_data in range(num_data):
+          mean_proxy[idx, :]    +=  tensor_fmap_hp(idx_data_enc[idx_data, :], order, rho, device)
           
+    return mean_proxy/num_data
+
+def tensor_fmap_hp(data, order, rho, device):
+    data_dim    =    data.size()
+    fmap    =   feature_map_HP(order, data[0].unsqueeze(0).unsqueeze(0), rho, device)
+    for dim in range(data_dim-1):
+        fmap_dim    =   feature_map_HP(order, data[dim+1].unsqueeze(0).unsqueeze(0), rho, device)
+        fmap    =   torch.matmul(fmap.unsqueeze(dim+1), fmap_dim.unsqueeze(0))
+    return fmap
+        
+      
 def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, order, rho, device, labels_to_one_hot=False):
     if (labels_to_one_hot==True):
         # set gen labels to scalars from one-hot
@@ -40,7 +76,7 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
     # for each label, take the associated encodings
     # print('Number of labels:', n_labels)
     mmd_sum = 0
-    mmd_real    =   0
+    # mmd_real    =   0
     for idx in range(n_labels):
       idx_data_enc = data_enc[data_labels == idx]
       idx_gen_enc = gen_enc[gen_labels == idx]
@@ -101,7 +137,7 @@ def mmd_prod_kernel_across_dimension_wHP(x, x_prime, order, rho, device):
         x_prime_axis = x_prime[:, axis]
         x_prime_axis = x_prime_axis[:, np.newaxis]
         phi_x_prime_axis, eigen_vals_prime_axis = feature_map_HP(order, x_prime_axis,rho,device)
-        print(phi_x_prime_axis.size())
+        # print(phi_x_prime_axis.size())
         # phi_x_prime_mat[:, :, axis] = phi_x_prime_axis # number of datapoints by order
         # print('Size of Phi_x_axis:', phi_x_axis.size(), "and size of Phi_x_prime_axis: ", phi_x_prime_axis.size(), "and Size of matmat: ", matmat.size())
         matmat = matmat * torch.einsum('ab, cb -> ac', phi_x_axis, phi_x_prime_axis) # size:  # datapoints in x by # datapoints in x_prime
@@ -134,3 +170,8 @@ def eigen_func(k, rho, x, device):
     N_k = (2 ** orders) * ((orders+1).to(torch.float).lgamma().exp()) * torch.sqrt(((1 - rho) / (1 + rho)))
     eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
     return eigen_funcs
+
+
+mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cuda')), torch.zeros([100], device=torch.device('cuda')), 4
+                     , torch.tensor(0.5, device=torch.device('cuda'))
+                     , torch.device('cuda'), 1)

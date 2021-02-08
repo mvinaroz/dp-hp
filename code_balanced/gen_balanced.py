@@ -82,7 +82,7 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
       minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
-      single_release_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi)
+      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.single_release)
   else:
     raise ValueError
 
@@ -123,7 +123,7 @@ def get_args():
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
+  parser.add_argument('--single-release', action='store_false', default=False, help='get 1 data mean embedding only') #Here usually we have action and default be True
 
   parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
                       choices=['rff', 'kmeans', 'real_mmd', 'eigen', 'hermite'])
