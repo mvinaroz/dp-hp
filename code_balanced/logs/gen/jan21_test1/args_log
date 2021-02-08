@@ -1,4 +1,4 @@
- • seed                     - 366
+ • seed                     - 732
  • log_interval             - 100
  • base_log_dir             - logs/gen/
  • log_name                 - jan21_test1
@@ -19,7 +19,7 @@
  • d_rff                    - 400
  • rff_sigma                - 0.3
  • noise_factor             - 0.0
- • single_release           - False
+ • single_release           - True
  • loss_type                - hermite
  • n_means                  - 10
  • dp_kmeans_encoding_dim   - 10
@@ -33,4 +33,4 @@
  • px_sigma                 - 0.3
  • n_eigen_degrees          - 1000
  • skip_downstream_model    - False
- • order_hermite            - 20
+ • order_hermite            - 5

@@ -123,7 +123,7 @@ def get_args():
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_false', default=False, help='get 1 data mean embedding only') #Here usually we have action and default be True
+  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only') #Here usually we have action and default be True
 
   parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
                       choices=['rff', 'kmeans', 'real_mmd', 'eigen', 'hermite'])
@@ -149,7 +149,7 @@ def get_args():
   parser.add_argument('--n-eigen-degrees', type=int, default=1000, help='')
 
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
-  parser.add_argument('--order-hermite', type=int, default=20, help='')
+  parser.add_argument('--order-hermite', type=int, default=5, help='')
 
   ar = parser.parse_args()
 
