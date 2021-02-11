@@ -1,4 +1,6 @@
 code_balanced/__pycache__/*.pyc
+code_balanced/data/
+code_balanced/logs/
 
 
 
