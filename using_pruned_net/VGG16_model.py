@@ -1,13 +1,17 @@
 import torch.nn as nn
+import torch.nn.functional as f
+import torch
+
+cfg = {
+    'VGG15': [64, 64, 128, 128, 256, 256, 256, 512, 512, 512, 512, 512, 512, 512],
+}
+
 
 class VGG(nn.Module):
-    def __init__(self):
+    def __init__(self, vgg_name):
         super(VGG, self).__init__()
 
-        cfg = {
-            'VGG16': [64, 64, 'M', 128, 128, 'M', 256, 256, 256, 'M', 512, 512, 512, 'M', 512, 512, 512, 'M'],
-        }
-        cfg_arch=cfg['VGG16']
+        cfg_arch=cfg['VGG15']
 
         self.c1 = nn.Conv2d(3, cfg_arch[0], 3, padding=1)
         self.bn1 = nn.BatchNorm2d(cfg_arch[0], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
@@ -50,9 +54,22 @@ class VGG(nn.Module):
         self.d1 = nn.Dropout()
         self.d2 = nn.Dropout()
 
-    def forward(self, x):
+
+
+
+
+    # def forward(self, x, i):  # VISU
+    def forward(self, x, i=-1):
+        phi = f.softplus(self.parameter)
+        S = phi / torch.sum(phi)
+        # Smax = torch.max(S)
+        # Sprime = S/Smax
+        Sprime = S
+
 
         output = f.relu(self.bn1(self.c1(x)))
+
+
         output = f.relu(self.bn2(self.c2(output)))
         output = self.mp1(output)
 
@@ -75,7 +92,7 @@ class VGG(nn.Module):
         output = f.relu(self.bn13(self.c13(output)))
         output = self.mp5(output)
 
-        output = output.view(-1, cfg_arch[13])
+        output = output.view(-1, cfg['VGG15'][13])
         output = self.l1(output)
         output = self.l3(output)
 
@@ -94,3 +111,4 @@ class VGG(nn.Module):
                 in_channels = x
         layers += [nn.AvgPool2d(kernel_size=1, stride=1)]
         return nn.Sequential(*layers)
+
