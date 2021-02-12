@@ -16,13 +16,13 @@ import numpy as np
 import torch.nn.functional as f
 import torch
 import torch.nn as nn
-from VGG16_model import VGG
+from VGG_model import VGG
 
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model2load = 'ckpt_vgg16_prunedto_39,39,63,455,98,97,52,62,22,42,47,47,42,62_90.69.t7'
 print('==> Building model..')
-net = VGG('VGG16') #watch
+net = VGG('VGG15') #watch
 checkpoint = torch.load(model2load)
 net.load_state_dict(checkpoint['net'], strict=False)
 # print(net.module.c1.weight)
