@@ -11,7 +11,7 @@ class VGG(nn.Module):
     def __init__(self, vgg_name):
         super(VGG, self).__init__()
 
-        cfg_arch=cfg['VGG15']
+        cfg_arch=cfg[vgg_name]
 
         self.c1 = nn.Conv2d(3, cfg_arch[0], 3, padding=1)
         self.bn1 = nn.BatchNorm2d(cfg_arch[0], eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
