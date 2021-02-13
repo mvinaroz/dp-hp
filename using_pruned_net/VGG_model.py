@@ -55,21 +55,9 @@ class VGG(nn.Module):
         self.d2 = nn.Dropout()
 
 
-
-
-
-    # def forward(self, x, i):  # VISU
-    def forward(self, x, i=-1):
-        phi = f.softplus(self.parameter)
-        S = phi / torch.sum(phi)
-        # Smax = torch.max(S)
-        # Sprime = S/Smax
-        Sprime = S
-
+    def forward(self,x):
 
         output = f.relu(self.bn1(self.c1(x)))
-
-
         output = f.relu(self.bn2(self.c2(output)))
         output = self.mp1(output)
 
