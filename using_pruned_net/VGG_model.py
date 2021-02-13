@@ -59,10 +59,12 @@ class VGG(nn.Module):
 
         output = f.relu(self.bn1(self.c1(x)))
         output = f.relu(self.bn2(self.c2(output)))
+        # print('first conv size', output.size())
         output = self.mp1(output)
 
         output = f.relu(self.bn3(self.c3(output)))
         output = f.relu(self.bn4(self.c4(output)))
+        # print('second conv size', output.size())
         output = self.mp2(output)
 
         output = f.relu(self.bn5(self.c5(output)))
@@ -73,16 +75,23 @@ class VGG(nn.Module):
         output = f.relu(self.bn8(self.c8(output)))
         output = f.relu(self.bn9(self.c9(output)))
         output = f.relu(self.bn10(self.c10(output)))
+        # print('conv size at second from last', output.size())
         output = self.mp4(output)
 
         output = f.relu(self.bn11(self.c11(output)))
         output = f.relu(self.bn12(self.c12(output)))
         output = f.relu(self.bn13(self.c13(output)))
+        # print('conv size from last', output.size())
         output = self.mp5(output)
 
         output = output.view(-1, cfg['VGG15'][13])
+
+        # now we take the outputs that are above a threshold (s.t. about 47 dimensions to be chosen)
+        sorted, idx_chosen = torch.sort(output, 1, descending=True)
+        chosen_features = sorted[:,0:47]
+
         output = self.l1(output)
         output = self.l3(output)
 
-        return output
+        return output, chosen_features
 

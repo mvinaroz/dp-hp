@@ -52,7 +52,7 @@ criterion = nn.CrossEntropyLoss()
 with torch.no_grad():
     for batch_idx, (inputs, targets) in enumerate(testloader):
         inputs, targets = inputs.to(device), targets.to(device)
-        outputs = net(inputs)
+        outputs, selected_features = net(inputs) # size(selected_features) = minibatch by 47 
         loss = criterion(outputs, targets)
 
         test_loss += loss.item()
