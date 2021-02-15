@@ -2,9 +2,7 @@
 # A stand-alone script
 # (1) we define a model that matches the pruned network
 # (2) we load a pruned network to which we set the model parameters
-# (3) we evaluate the test accuracy on the pruned model
-# (4) we then make a forward pass of each data in MNIST to create a smaller dimensional dataset.
-
+# (3) we evaluate the test accuracy on the pruned model to make sure we loaded the right model with right accuracy
 
 from __future__ import print_function
 import torchvision
@@ -22,7 +20,7 @@ from VGG_model import VGG
 """ (1) load the model and pruned network """
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 model2load = 'ckpt_vgg16_prunedto_39,39,63,455,98,97,52,62,22,42,47,47,42,62_90.69.t7'
-# model2load = 'ckpt_vgg16_94.34.t7'
+# model2load = 'ckpt_vgg16_94.34.t7' # this is pre-trained VGG with CIFAR10 data
 print('==> Building model..')
 net = VGG('VGG15')
 net = net.to(device)
@@ -52,7 +50,7 @@ criterion = nn.CrossEntropyLoss()
 with torch.no_grad():
     for batch_idx, (inputs, targets) in enumerate(testloader):
         inputs, targets = inputs.to(device), targets.to(device)
-        outputs, selected_features = net(inputs) # size(selected_features) = minibatch by 47 
+        outputs, selected_features = net(inputs) # size(selected_features) = minibatch by 47
         loss = criterion(outputs, targets)
 
         test_loss += loss.item()

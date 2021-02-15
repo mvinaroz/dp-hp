@@ -2,6 +2,9 @@ import torch.nn as nn
 import torch.nn.functional as f
 import torch
 
+############################ VGG-15 model for CIFAR10 dataset #################################
+
+
 cfg = {
     'VGG15': [64, 64, 128, 128, 256, 256, 256, 512, 512, 512, 512, 512, 512, 512],
 }
@@ -87,11 +90,51 @@ class VGG(nn.Module):
         output = output.view(-1, cfg['VGG15'][13])
 
         # now we take the outputs that are above a threshold (s.t. about 47 dimensions to be chosen)
-        sorted, idx_chosen = torch.sort(output, 1, descending=True)
-        chosen_features = sorted[:,0:47]
+        output_before_sorting = output
+
+        # chosen = torch.zeros((x.shape[0], 47))
+        # idx= 1*(output_before_sorting > 0.001)
+        # idx = idx.detach().to(torch.device('cpu'))
+        # chosen_idx =
+        #
+        # sorted, idx_chosen = torch.sort(output_before_sorting, 1, descending=True)
+        # chosen_features = sorted[:,0:47]
 
         output = self.l1(output)
         output = self.l3(output)
 
-        return output, chosen_features
+        return output, output_before_sorting
+        # return output, chosen_features
+
+
+
+############################ classifier using VGG features #################################
+
+class Classifier(nn.Module):
+
+    def __init__(self, VGG_features):
+        super(Classifier, self).__init__()
+
+        self.VGG_features = VGG_features
+        # cfg_arch = cfg['VGG15']
+        self.l1 = nn.Linear(512, 128)
+        # self.l1 = nn.Linear(cfg_arch[12], 128)
+        self.bn = nn.BatchNorm1d(128)
+        # self.l2 = nn.Linear(cfg_arch[13], cfg_arch[13])
+        self.l3 = nn.Linear(128, 10)
+
+        # self.l1 = nn.Linear(47, 20)
+        # self.l3 = nn.Linear(20, 10)
+        self.ReLU = nn.ReLU()
+
+    def forward(self, x):  # x is mini_batch_size by input_dim
+
+        _, x = self.VGG_features(x)
+        output = self.l1(x)
+        # output = self.ReLU(self.bn(self.l2(output)))
+        # output = self.l3(self.ReLU(output))
+        output = self.l3(self.ReLU(self.bn(output)))
+        output = f.log_softmax(output, dim=1)
+
+        return output
 
