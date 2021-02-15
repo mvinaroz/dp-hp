@@ -119,8 +119,9 @@ class Classifier(nn.Module):
         # cfg_arch = cfg['VGG15']
         self.l1 = nn.Linear(512, 128)
         # self.l1 = nn.Linear(cfg_arch[12], 128)
-        self.bn = nn.BatchNorm1d(128)
+        self.bn1 = nn.BatchNorm1d(128)
         # self.l2 = nn.Linear(cfg_arch[13], cfg_arch[13])
+        self.bn2 = nn.BatchNorm1d(10)
         self.l3 = nn.Linear(128, 10)
 
         # self.l1 = nn.Linear(47, 20)
@@ -133,8 +134,8 @@ class Classifier(nn.Module):
         output = self.l1(x)
         # output = self.ReLU(self.bn(self.l2(output)))
         # output = self.l3(self.ReLU(output))
-        output = self.l3(self.ReLU(self.bn(output)))
-        output = f.log_softmax(output, dim=1)
+        output = self.l3(self.ReLU(self.bn1(output)))
+        output = f.log_softmax(self.bn2(output), dim=1)
 
         return output
 
