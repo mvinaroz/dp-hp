@@ -27,13 +27,8 @@ def load_pruned_model(model2load, device):
 
     return net
 
-def mnist_data_loader(batch_size):
-    # custom_transform = transforms.Compose([
-    #     transforms.Resize((224, 224)),
-    #     transforms.ToTensor(),
-    #     transforms.Normalize(mean=[0.485, 0.456, 0.406],
-    #                          std=[0.229, 0.224, 0.225])
-    # ])
+def data_loader(batch_size, data):
+
     transform_train = transforms.Compose([
         transforms.Resize((32, 32)),
         transforms.RandomCrop(32, padding=4),
@@ -49,8 +44,15 @@ def mnist_data_loader(batch_size):
         transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
     ])
 
-    train_dataset = datasets.MNIST(root='data', train=True, transform=transform_train, download=True)
-    test_dataset = datasets.MNIST(root='data', train=False, transform=transform_test, download=True)
+    if data == 'mnist':
+
+        train_dataset = datasets.MNIST(root='data', train=True, transform=transform_train, download=True)
+        test_dataset = datasets.MNIST(root='data', train=False, transform=transform_test, download=True)
+
+    elif data == 'fmnist':
+
+        train_dataset = datasets.FashionMNIST(root='data', train=True, transform=transform_train, download=True)
+        test_dataset = datasets.FashionMNIST(root='data', train=False, transform=transform_test, download=True)
 
     train_loader = DataLoader(dataset=train_dataset,
                               batch_size=batch_size,
@@ -110,6 +112,7 @@ def main():
 
     training = True
     visualize = False
+    data = 'mnist' # or 'fmnist'
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -123,10 +126,11 @@ def main():
 
     """ 3. Load data to test """
     batch_size = 300
-    train_loader, test_loader = mnist_data_loader(batch_size)
+    train_loader, test_loader = data_loader(batch_size, data)
 
     """ 4. Train the classifier and check the test accuracy """
     if training:
+        criterion = torch.nn.CrossEntropyLoss()
         optimizer = torch.optim.Adam(classifier.parameters(), lr=0.01)
         num_epochs = 200
 
@@ -142,7 +146,7 @@ def main():
 
                 ### FORWARD AND BACK PROP
                 logits = classifier(features)
-                loss = f.nll_loss(logits, targets)
+                loss = criterion(logits, targets)
                 loss.backward()
 
                 ### UPDATE MODEL PARAMETERS
