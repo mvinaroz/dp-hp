@@ -8,18 +8,29 @@ from torch.utils.data import DataLoader
 import torch.nn.functional as f
 import torch
 from VGG_model import VGG, Classifier
+from ResNet_model import ResNet, Classifier_ResNet
 import matplotlib.pyplot as plt
+from training_svhn_classifier import to_device, evaluate, svhn_loader, DeviceDataLoader
+import torchvision
+import torch.nn as nn
 
-def load_pruned_model(model2load, device):
+def load_trained_model(model2load, model, device):
 
     print('==> Building model..')
-    net = VGG('VGG15')
-    net = net.to(device)
-    if device == 'cuda':
-        net = torch.nn.DataParallel(net)
 
-    checkpoint = torch.load(model2load)
-    net.load_state_dict(checkpoint['net'], strict=False)
+    if model=='VGG':
+        net = VGG('VGG15')
+        net = net.to(device)
+        if device == 'cuda':
+            net = torch.nn.DataParallel(net)
+        checkpoint = torch.load(model2load)
+        net.load_state_dict(checkpoint['net'], strict=False)
+
+    elif model=='ResNet':
+        net = ResNet(3, 10).to(device)
+        checkpoint = torch.load(model2load)
+        net.load_state_dict(checkpoint['model_state_dict'], strict=False)
+
 
     """ Freeze the model parameters of the pruned_network """
     for param in net.parameters():
@@ -27,22 +38,37 @@ def load_pruned_model(model2load, device):
 
     return net
 
-def data_loader(batch_size, data):
+def data_loader(batch_size, model, data):
 
-    transform_train = transforms.Compose([
-        transforms.Resize((32, 32)),
-        transforms.RandomCrop(32, padding=4),
-        transforms.RandomHorizontalFlip(),
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
-    transform_test = transforms.Compose([
-        transforms.Resize((32, 32)),
-        transforms.ToTensor(),
-        transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
-        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-    ])
+    if model=='VGG':
+        transform_train = transforms.Compose([
+            transforms.Resize((32, 32)),
+            transforms.RandomCrop(32, padding=4),
+            transforms.RandomHorizontalFlip(),
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+        transform_test = transforms.Compose([
+            transforms.Resize((32, 32)),
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+        ])
+
+    elif model=='ResNet':
+        transform_train = transforms.Compose([
+            transforms.CenterCrop((28, 28)),
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        ])
+        transform_test = transforms.Compose([
+            transforms.CenterCrop((28, 28)),
+            transforms.ToTensor(),
+            transforms.Lambda(lambda x: x.repeat(3, 1, 1)),
+            transforms.Normalize([0.5, 0.5, 0.5], [0.5, 0.5, 0.5])
+        ])
 
     if data == 'mnist':
 
@@ -111,28 +137,40 @@ def unnormalize(tensor, mean, std):
 def main():
 
     training = True
-    visualize = False
-    data = 'mnist' # or 'fmnist'
+    visualize = True
+    data = 'mnist' # 'mnist' or 'fmnist'
+    model = 'ResNet' # 'VGG' or 'ResNet'
+    print('we used a pre-trained %s for %s'%(model, data))
 
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    """ 1. Load the prune_network and the architecture """
-    model2load = 'ckpt_vgg16_prunedto_39,39,63,455,98,97,52,62,22,42,47,47,42,62_90.69.t7'
-    # model2load = 'ckpt_vgg16_94.34.t7' # this is pre-trained VGG with CIFAR10 data
-    vgg_features = load_pruned_model(model2load, device)
+    """ 1. Load the trained model and its architecture """
+    if model=='VGG':
+        model2load = 'ckpt_vgg16_prunedto_39,39,63,455,98,97,52,62,22,42,47,47,42,62_90.69.t7'
+        # model2load = 'ckpt_vgg16_94.34.t7' # this is pre-trained VGG with CIFAR10 data
+    elif model=='ResNet':
+        model2load = 'Trained_ResNet'
+    features = load_trained_model(model2load, model, device)
+
 
     """ 2. Define a classifier """
-    classifier = Classifier(vgg_features).to(device)
+    if model=='VGG':
+        classifier = Classifier(features).to(device)
+    elif model=='ResNet':
+        classifier = Classifier_ResNet(features).to(device)
 
     """ 3. Load data to test """
-    batch_size = 300
-    train_loader, test_loader = data_loader(batch_size, data)
+    batch_size = 128
+    train_loader, test_loader = data_loader(batch_size, model, data)
+
 
     """ 4. Train the classifier and check the test accuracy """
     if training:
         criterion = torch.nn.CrossEntropyLoss()
-        optimizer = torch.optim.Adam(classifier.parameters(), lr=0.01)
-        num_epochs = 200
+        # optimizer = torch.optim.Adam(classifier.parameters(), lr=0.001)
+        optimizer = torch.optim.Adam(classifier.parameters(recurse=False), lr=0.001)
+
+        num_epochs = 10
 
         for epoch in range(num_epochs):
 
@@ -158,7 +196,7 @@ def main():
                           % (epoch + 1, num_epochs, batch_idx,
                              len(train_loader), loss))
 
-            if epoch % 10 == 0:
+            if (epoch+1 % 10 == 0) or (epoch+1==num_epochs):
                 classifier.eval()
                 with torch.set_grad_enabled(False):  # save memory during inference
                     print('Epoch: %03d/%03d | Train: %.3f%% | Loss: %.3f' % (
@@ -180,9 +218,10 @@ def main():
 
         for i in range(n_images):
             curr_img = orig_images[i].detach().to(torch.device('cpu'))
-            curr_img = unnormalize(curr_img,
-                                   torch.tensor([0.485, 0.456, 0.406]),
-                                   torch.tensor([0.229, 0.224, 0.225]))
+            if model=='VGG':
+                curr_img = unnormalize(curr_img,torch.tensor([0.485, 0.456, 0.406]),torch.tensor([0.229, 0.224, 0.225]))
+            elif model=='ResNet':
+                curr_img = unnormalize(curr_img, torch.tensor([0.5, 0.5, 0.5]), torch.tensor([0.5, 0.5, 0.5]))
             curr_img = curr_img.permute((1, 2, 0))
             axes[i].imshow(curr_img)
             # axes[i].set_title(classes[predicted_labels[i]])

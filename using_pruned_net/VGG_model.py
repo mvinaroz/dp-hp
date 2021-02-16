@@ -1,6 +1,7 @@
 import torch.nn as nn
 import torch.nn.functional as f
 import torch
+from torch.nn.parameter import Parameter
 
 ############################ VGG-15 model for CIFAR10 dataset #################################
 
@@ -116,27 +117,12 @@ class Classifier(nn.Module):
         super(Classifier, self).__init__()
 
         self.VGG_features = VGG_features
-        # cfg_arch = cfg['VGG15']
-        self.l1 = nn.Linear(512, 10)
-        # self.l1 = nn.Linear(cfg_arch[12], 128)
-        # self.bn1 = nn.BatchNorm1d(128)
-        # # self.l2 = nn.Linear(cfg_arch[13], cfg_arch[13])
-        # self.bn2 = nn.BatchNorm1d(10)
-        # self.l3 = nn.Linear(128, 10)
-        #
-        # # self.l1 = nn.Linear(47, 20)
-        # # self.l3 = nn.Linear(20, 10)
-        # self.ReLU = nn.ReLU()
+        self.parameter = Parameter(torch.zeros(512, 10), requires_grad=True)
 
     def forward(self, x):  # x is mini_batch_size by input_dim
 
         _, x = self.VGG_features(x)
-        output = self.l1(x)
-        # output = f.log_softmax(output, dim=1)
-        # # output = self.ReLU(self.bn(self.l2(output)))
-        # # output = self.l3(self.ReLU(output))
-        # output = self.l3(self.ReLU(self.bn1(output)))
-        # output = f.log_softmax(self.bn2(output), dim=1)
+        output = torch.matmul(x, self.parameter)
 
         return output
 
