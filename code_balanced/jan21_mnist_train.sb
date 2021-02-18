@@ -1,0 +1,12 @@
+executable = jan21_mnist_train.sh
+arguments = $(Process)
+error = joblogs/jan21_mnist_train_$(Process).err.txt
+output = joblogs/jan21_mnist_train_$(Process).out.txt
+log = joblogs/jan21_mnist_train_$(Process).log.txt
+getenv = True
+request_cpus = 2
+request_gpus = 1
+request_memory = 8GB
++MaxRunningPrice = 500
++RunningPriceExceededAction = "restart"
+queue 30
