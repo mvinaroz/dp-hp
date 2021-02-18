@@ -39,6 +39,7 @@ def compute_rff_loss(gen, data, labels, rff_mmd_loss, device):
 def train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval):
 
   for batch_idx, (data, labels) in enumerate(train_loader):
+    print(len(data))
     data, labels = data.to(device), labels.to(device)
     data = flatten_features(data)
 
@@ -79,10 +80,11 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
     minibatch_loss = None
     
   elif ar.loss_type     ==  'hermite':
-      minibatch_loss    =   None
+      # minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
-      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.single_release)
+      print('Real Sampling Rate is ', ar.sampling_rate)
+      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
 
@@ -96,7 +98,7 @@ def get_args():
   parser.add_argument('--seed', type=int, default=None, help='sets random seed')
   parser.add_argument('--log-interval', type=int, default=100, help='print updates after n steps')
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
-  parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
+  parser.add_argument('--log-name', type=str, default='Feb15', help='subdirectory for this run')
   parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
   parser.add_argument('--data', type=str, default='digits', help='options are digits, fashion and 2d')
   parser.add_argument('--create-dataset', action='store_true', default=True, help='if true, make 60k synthetic code_balanced')
@@ -123,9 +125,9 @@ def get_args():
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only') #Here usually we have action and default be True
+  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only') #Here usually we have action and default be True
 
-  parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
+  parser.add_argument('--loss-type', type=str, default='hermite', help='how to approx mmd',
                       choices=['rff', 'kmeans', 'real_mmd', 'eigen', 'hermite'])
   # parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   # parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
@@ -147,7 +149,10 @@ def get_args():
   parser.add_argument('--kernel-length', type=float, default=0.1, help='')
   parser.add_argument('--px-sigma', type=float, default=0.3, help='')
   parser.add_argument('--n-eigen-degrees', type=int, default=1000, help='')
-
+  parser.add_argument('--sampling-rate', type=float, default=0.03, help='')
+  parser.add_argument('--sample-dims', action='store_true', default=True, help='')
+  parser.add_argument('--heuristic-sigma', action='store_true', default=True)
+  
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=5, help='')
 

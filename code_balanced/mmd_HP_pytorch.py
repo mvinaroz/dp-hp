@@ -3,11 +3,12 @@ from scipy.special import factorial
 from mmd_approx_eigen import eval_hermite_pytorch
 import torch
 import kernel as k
-
+from aux import meddistance
+import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, single_release=True, sample_dims=False, sampling_rate = 1):
-    
+def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  single_release=True, sample_dims=False, heuristic_sigma=True):
+    # print('Sampling Rate is ', sampling_rate)    
     if (single_release):
         data_acc    =   []
         label_acc   =   []
@@ -26,14 +27,35 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, single_release=Tru
         torch.cat(data_acc, out=data_tensor)
         torch.cat(label_acc, out=label_tensor)
         data_tensor     =   torch.flatten(data_tensor, start_dim=1)
+        
+        if (heuristic_sigma):
+            med             =   meddistance(data_tensor.detach().cpu().numpy())
+            alpha = 1 / (2.0 * (med**2))
+            xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+        else:
+            xi  =   rho
+        
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
             print('loss')
-            return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, rho, device)
+            return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss_minibatch   =   None
     else:
         def hp_loss_minibatch(data_enc, labels, gen_enc, gen_labels):
-            return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, rho, device)
+            if (heuristic_sigma):
+                med             =   meddistance(data_enc.detach().cpu().numpy())
+                alpha = 1 / (2.0 * (med**2))
+                xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+            else:
+                xi  =   rho
+            if (sample_dims):
+                n_data, dim_data    =   data_enc.shape
+                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+                data_enc    =   data_enc[:, rchoice]
+                gen_enc     =   gen_enc[:, rchoice]
+            # print('Size is ', int(np.floor(dim_data*sampling_rate)))
+            # print('Total Size is ', dim_data)
+            return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss     =   None
     return hp_loss, hp_loss_minibatch
           
@@ -59,6 +81,7 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, labels_to_on
     mean_proxy  =   torch.zeros(tuple((mean_size.numpy()).tolist()), device=device)
     # mmd_real    =   0
     for idx in range(n_labels):
+      print(data.shape)
       idx_data_enc          =   data[label == idx][:]
       num_data_idx  , _     =   idx_data_enc.shape
       for idx_data in range(num_data_idx):
@@ -98,9 +121,12 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
       idx_gen_enc = gen_enc[gen_labels == idx]
       # print('Data_enc Shape:', idx_data_enc.shape)
       a         = mmd_hp(idx_data_enc, idx_gen_enc, order, rho, device)
+      # if (math.isnan(a)):
+      #     print(data_enc)
       mmd_sum   +=a
       #mmd_real  +=b
-      
+
+          
     #print('Real MMD is ', mmd_real)
     return mmd_sum
 
@@ -113,9 +139,14 @@ def mmd_hp(x, x_prime, order, rho, device):
     m = x.shape[0]
     n = x_prime.shape[0]
 
-    e_kxx = (torch.sum(mat_xx) - torch.sum(mat_xx.diag()))/(m*(m-1))
-    e_kyy = (torch.sum(mat_yy) - torch.sum(mat_yy.diag())) / (n*(n-1))
+    # e_kxx = (torch.sum(mat_xx) - torch.sum(mat_xx.diag()))/(m*(m-1)) #Unbiased kernel estimator
+    e_kxx = (torch.sum(mat_xx) )/(m*(m))
+    # e_kyy = (torch.sum(mat_yy) - torch.sum(mat_yy.diag())) / (n*(n-1))
+    e_kyy = (torch.sum(mat_yy)) / (n*(n))
     e_kxy = torch.sum(mat_xy)/(m*n)
+
+    # if (len(x)==1):
+    #     print(x)
     
     mmd_approx = e_kxx + e_kyy - 2.0*e_kxy
 
@@ -157,7 +188,7 @@ def mmd_prod_kernel_across_dimension_wHP(x, x_prime, order, rho, device):
         # phi_x_prime_mat[:, :, axis] = phi_x_prime_axis # number of datapoints by order
         # print('Size of Phi_x_axis:', phi_x_axis.size(), "and size of Phi_x_prime_axis: ", phi_x_prime_axis.size(), "and Size of matmat: ", matmat.size())
         matmat = matmat * torch.einsum('ab, cb -> ac', phi_x_axis, phi_x_prime_axis) # size:  # datapoints in x by # datapoints in x_prime
-
+        
     return matmat
 
 def feature_map_HP(k, x, rho, device):
