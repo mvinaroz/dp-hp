@@ -1,0 +1,33 @@
+To run the tabular experiments it is enough to run the script single_generator_priv_all.py with some of the arguments.
+
+The arguments are following:
+
+dataset - type of dataset, choices: epileptic, credit, census, cervical, adult, isolet, default =credit
+private - if running the generator with privacy guarantees, choices: 0, (non-private), 1 (private), by default non-private training is run
+epochs - number of training epochs for generator
+batch - batch size
+num_features - number of features
+undersample - the undersampling to the most prelevant class label
+repeat - number of repetitions of the entire experiment
+classifiers - a list of methods to test, by default all methods are run.
+
+0 - LogisticRegression
+1 - GaussianNB
+2 - BernoulliNB
+3 - LinearSVC
+4 - DecisionTreeClassifier
+5 - LinearDiscriminantAnalysis
+6 - AdaBoostClassifier
+7 - BaggingClassifier
+8 - RandomForestClassifier
+9 - GradientBoostingClassifier
+10 - MLP
+11 - XGBoost
+
+
+
+Example:
+python single_generator_priv_all.py --dataset credit --private 0 --epochs 2000 --batch 0.3 --num_features 1000 --undersample 0.5 --repeat 2 --classifiers 1 2 5
+
+
+First we test a dataset on a number of classifiers on a real dataset (in a private or non-private setting). Subsequently, we train a generator with the DP-MERF method and then we test the classifiers on the generated data (again in a private or non-private setting).
