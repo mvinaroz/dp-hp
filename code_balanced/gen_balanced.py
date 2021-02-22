@@ -83,7 +83,11 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
       # minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+<<<<<<< HEAD
+      # print('Real Sampling Rate is ', ar.sampling_rate)
+=======
       print('Real Sampling Rate is ', ar.sampling_rate)
+>>>>>>> d8b62a786b3a97a84413c87f1181c112dc44689c
       single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
