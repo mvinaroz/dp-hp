@@ -139,7 +139,7 @@ def main():
     med = meddistance(data_samps, subsample=4000)
     sigma2 = med**2
 
-    method = 'rf' # 'rf', 'mmd', or 'mmd_hp'
+    method = 'mmd_hp' # 'rf', 'mmd', or 'mmd_hp'
 
     if method == 'rf':
         """ computing mean embedding of true data """
@@ -183,7 +183,7 @@ def main():
                 loss = mmd_loss(torch.Tensor(data_samps), torch.Tensor(true_labels), samp_input_features, samp_labels, n_classes, sigma2)
                 # mmd_loss(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2)
             elif method == 'mmd_hp':
-                loss = mmd_loss_hp_approx(torch.Tensor(data_samps), torch.Tensor(true_labels), samp_input_features, samp_labels, n_classes, order, rho, device)
+                loss = mmd_loss_hp_approx(torch.tensor(data_samps), torch.tensor(true_labels), samp_input_features, samp_labels, n_classes, order, rho, device, True)
 
 
             loss.backward()

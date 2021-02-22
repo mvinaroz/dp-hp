@@ -12,7 +12,8 @@ def load_mnist_data(data_key, data_from_torch, base_dir='data/'):
   if not data_from_torch:
     if data_key == 'digits':
       d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
-      return d['x_train'], d['y_train'], d['x_test'], d['y_test']
+      
+      return d['x_train'].reshape(60000, 784), d['y_train'], d['x_test'].reshape(10000, 784), d['y_test']
     elif data_key == 'fashion':
       d = np.load(os.path.join(base_dir, 'FashionMNIST/numpy_fmnist.npz'))
       return d['x_train'], d['y_train'], d['x_test'], d['y_test']
@@ -200,6 +201,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
 def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   x_tr, x_ts = normalize_data(x_tr, x_ts) if norm_data else (x_tr, x_ts)
   model.fit(x_tr, y_tr)
+  
   y_pred = model.predict(x_ts)
   acc = accuracy_score(y_pred, y_ts)
   f1 = f1_score(y_true=y_ts, y_pred=y_pred, average='macro')
