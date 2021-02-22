@@ -116,7 +116,19 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
     # print('Number of labels:', n_labels)
     mmd_sum = 0
     # mmd_real    =   0
+    print(rho)
     for idx in range(n_labels):
+<<<<<<< HEAD
+        if (torch.sum(data_labels==idx)>0 and torch.sum(data_labels==idx)>0):
+            # print('The SUM is ', torch.sum(data_labels==idx))
+            idx_data_enc = data_enc[data_labels == idx]
+            idx_gen_enc = gen_enc[gen_labels == idx]
+            # print('Data_enc Shape:', idx_data_enc.shape)
+            a         = mmd_hp(idx_data_enc, idx_gen_enc, order, rho, device)
+            # if (math.isnan(a)):
+            #     print(data_enc)
+            mmd_sum   +=a
+=======
       idx_data_enc = data_enc[data_labels == idx]
       idx_gen_enc = gen_enc[gen_labels == idx]
       # print('Data_enc Shape:', idx_data_enc.shape)
@@ -124,6 +136,7 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
       # if (math.isnan(a)):
       #     print(data_enc)
       mmd_sum   +=a
+>>>>>>> d8b62a786b3a97a84413c87f1181c112dc44689c
       #mmd_real  +=b
 
           
@@ -187,6 +200,7 @@ def mmd_prod_kernel_across_dimension_wHP(x, x_prime, order, rho, device):
         # print(phi_x_prime_axis.size())
         # phi_x_prime_mat[:, :, axis] = phi_x_prime_axis # number of datapoints by order
         # print('Size of Phi_x_axis:', phi_x_axis.size(), "and size of Phi_x_prime_axis: ", phi_x_prime_axis.size(), "and Size of matmat: ", matmat.size())
+        # print('Firs size is ', phi_x_axis.shape, ' and second size is ', phi_x_prime_axis.size)
         matmat = matmat * torch.einsum('ab, cb -> ac', phi_x_axis, phi_x_prime_axis) # size:  # datapoints in x by # datapoints in x_prime
         
     return matmat
