@@ -118,7 +118,7 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
     # mmd_real    =   0
     print(rho)
     for idx in range(n_labels):
-<<<<<<< HEAD
+# <<<<<<< HEAD
         if (torch.sum(data_labels==idx)>0 and torch.sum(data_labels==idx)>0):
             # print('The SUM is ', torch.sum(data_labels==idx))
             idx_data_enc = data_enc[data_labels == idx]
@@ -128,16 +128,16 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
             # if (math.isnan(a)):
             #     print(data_enc)
             mmd_sum   +=a
-=======
-      idx_data_enc = data_enc[data_labels == idx]
-      idx_gen_enc = gen_enc[gen_labels == idx]
-      # print('Data_enc Shape:', idx_data_enc.shape)
-      a         = mmd_hp(idx_data_enc, idx_gen_enc, order, rho, device)
-      # if (math.isnan(a)):
-      #     print(data_enc)
-      mmd_sum   +=a
->>>>>>> d8b62a786b3a97a84413c87f1181c112dc44689c
-      #mmd_real  +=b
+# =======
+#       idx_data_enc = data_enc[data_labels == idx]
+#       idx_gen_enc = gen_enc[gen_labels == idx]
+#       # print('Data_enc Shape:', idx_data_enc.shape)
+#       a         = mmd_hp(idx_data_enc, idx_gen_enc, order, rho, device)
+#       # if (math.isnan(a)):
+#       #     print(data_enc)
+#       mmd_sum   +=a
+# >>>>>>> d8b62a786b3a97a84413c87f1181c112dc44689c
+#       #mmd_real  +=b
 
           
     #print('Real MMD is ', mmd_real)
