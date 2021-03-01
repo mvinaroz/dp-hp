@@ -5,7 +5,7 @@ import torch
 from test_transfer_learning import load_trained_model, data_loader
 from torch.optim.lr_scheduler import StepLR
 import sys
-sys.path.append('/is/ei/mpark/DPDR/code_balanced')
+sys.path.append('/home/mpark/DPDR/code_balanced')
 from models_gen import FCCondGen, ConvCondGen
 from aux import meddistance
 # from full_mmd import mmd_loss
@@ -23,7 +23,7 @@ def main():
 
     data_name = 'digits' # 'digits' or 'fashion'
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
-    model_name = 'FC' # CNN or FC
+    model_name = 'CNN' # CNN or FC
     report_intermidiate_result = False
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
@@ -49,15 +49,16 @@ def main():
     # set the scale length
     num_iter = data_pkg.n_data/batch_size
     if method=='sum_kernel':
-        sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
-        for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
-            data, labels = data.to(device), labels.to(device)
-            data = flatten_features(data) # minibatch by feature_dim
-            data_numpy = data.detach().cpu().numpy()
-            for dim in np.arange(0,feature_dim):
-                med = meddistance(np.expand_dims(data_numpy[:,dim],axis=1))
-                sigma2 = med ** 2
-                sigma2_arr[batch_idx, dim] = sigma2
+        sigma2_arr = 0.05
+        # sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
+        # for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
+        #     data, labels = data.to(device), labels.to(device)
+        #     data = flatten_features(data) # minibatch by feature_dim
+        #     data_numpy = data.detach().cpu().numpy()
+        #     for dim in np.arange(0,feature_dim):
+        #         med = meddistance(np.expand_dims(data_numpy[:,dim],axis=1))
+        #         sigma2 = med ** 2
+        #         sigma2_arr[batch_idx, dim] = sigma2
 
         # avg_sigma2 = np.mean(sigma2_arr, axis=0)
         # print('avg sigma2 is', avg_sigma2)

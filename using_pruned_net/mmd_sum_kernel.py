@@ -19,9 +19,10 @@ def mmd_loss(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2, metho
   # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
   # then for that label compute mmd:
   if method=='sum_kernel':
-      for dim in np.arange(0, feature_dim):
-        dxx, dxy, dyy = get_squared_dist(idx_data_enc[:,dim].unsqueeze(1), idx_gen_enc[:,dim].unsqueeze(1))
-        mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(sigma2))
+     mmd_sum += mmd_per_class(idx_data_enc, idx_gen_enc, pt.sqrt(sigma2))
+      # for dim in np.arange(0, feature_dim):
+      #   dxx, dxy, dyy = get_squared_dist(idx_data_enc[:,dim].unsqueeze(1), idx_gen_enc[:,dim].unsqueeze(1))
+      #   mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(sigma2))
   else:
      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(sigma2))
@@ -50,6 +51,60 @@ def get_squared_dist(x, y=None):
  dist_yy = pt.nn.functional.relu(dy[:, None] - 2.0 * yyt + dy[None, :])
 
  return dist_xx, dist_xy, dist_yy
+
+
+def mmd_per_class(x, y, sigma2):
+ """
+ size(x) = mini_batch by feature_dimension
+ size(y) = mini_batch by feature_dimension
+ dist_xx = mini_batch by feature_dimension
+ dist_yy = mini_batch by feature_dimension
+ dist_xy = mini_batch by mini_batch by feature_dimension
+ """
+
+ m = x.shape[0]
+ n = y.shape[0]
+ if m<1:
+  m_div = 1e-3
+ else:
+  m_div = m
+ if n<1:
+  n_div = 1e-3
+ else:
+  n_div = n
+
+ xx = pt.einsum('id,jd -> ijd', x, x) # m by m by feature_dimension
+ yy = pt.einsum('id,jd -> ijd', y, y) # n by n by feature_dimension
+ xy = pt.einsum('id,jd -> ijd', x, y) #  m by n by feature_dimension
+
+ # print('shape of xx', xx.shape)
+ # print('shape of yy', yy.shape)
+ # print('shape of xy', xy.shape)
+
+ x2 = x**2
+ x2_extra_dim = x2[:,None,:]
+ y2 = y**2
+ y2_extra_dim = y2[:,None,:]
+
+ # print('shape of x2', x2.shape)
+ # print('shape of y2', y2.shape)
+
+ # first term: sum_d sum_i sum_j k(x_i, x_j)
+ dist_xx = pt.abs(2*x2_extra_dim.repeat(1,m,1) - 2.0*xx)
+ kxx = pt.sum(1/(m_div**2) * pt.exp(-dist_xx/(2.0*sigma2**2)))
+
+ # second term: sum_d sum_i sum_j k(y_i, y_j)
+ dist_yy = pt.abs(2*y2_extra_dim.repeat(1,n,1) - 2.0*yy)
+ kyy = pt.sum(1/(n_div**2) * pt.exp(-dist_yy/(2.0*sigma2**2)))
+
+ # third term: sum_d sum_i sum_j k(x_i, y_j)
+ y2_extra_dim_tr = y2[None,:,:]
+ dist_xy = pt.abs(x2_extra_dim.repeat(1,n,1) - 2.0*xy + y2_extra_dim_tr.repeat(m,1,1))
+ kxy = pt.sum(1/(m_div*n_div) * pt.exp(-dist_xy/(2.0*sigma2**2)))
+
+ mmd = kxx + kyy - 2.0*kxy
+
+ return mmd
 
 
 def mmd_g(dist_xx, dist_xy, dist_yy, batch_size, sigma, upper_bound=None, lower_bound=None):
