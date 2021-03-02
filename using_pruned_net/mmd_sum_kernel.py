@@ -1,32 +1,20 @@
 import torch as pt
 import numpy as np
-# implementation of non-appriximate mmd loss mostly for debugging purposes
-
-# mmd_loss(data, labels, gen_samples, gen_labels, n_classes, sigma2)
 
 def mmd_loss(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2, method):
+
  # set gen labels to scalars from one-hot
  _, gen_labels = pt.max(gen_labels, dim=1)
  batch_size = data_enc.shape[0]
- feature_dim = data_enc.shape[1]
-
- # for each label, take the associated encodings
- # print('label shapes:', data_labels.shape, gen_labels.shape)
  mmd_sum = 0
  for idx in range(n_labels):
   idx_data_enc = data_enc[data_labels == idx]
   idx_gen_enc = gen_enc[gen_labels == idx]
-  # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
-  # then for that label compute mmd:
   if method=='sum_kernel':
      mmd_sum += mmd_per_class(idx_data_enc, idx_gen_enc, pt.sqrt(sigma2))
-      # for dim in np.arange(0, feature_dim):
-      #   dxx, dxy, dyy = get_squared_dist(idx_data_enc[:,dim].unsqueeze(1), idx_gen_enc[:,dim].unsqueeze(1))
-      #   mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(sigma2))
   else:
      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(sigma2))
-
  return mmd_sum
 
 
@@ -62,7 +50,7 @@ def mmd_per_class(x, y, sigma2):
  dist_xy = mini_batch by mini_batch by feature_dimension
  """
 
- m = x.shape[0]
+ m,feat_dim = x.shape
  n = y.shape[0]
  if m<1:
   m_div = 1e-3
@@ -73,34 +61,35 @@ def mmd_per_class(x, y, sigma2):
  else:
   n_div = n
 
- xx = pt.einsum('id,jd -> ijd', x, x) # m by m by feature_dimension
- yy = pt.einsum('id,jd -> ijd', y, y) # n by n by feature_dimension
- xy = pt.einsum('id,jd -> ijd', x, y) #  m by n by feature_dimension
+ xx = pt.einsum('id,dj -> ijd', x, x.t()) # m by m by feature_dimension
+ yy = pt.einsum('id,dj -> ijd', y, y.t()) # n by n by feature_dimension
+ xy = pt.einsum('id,dj -> ijd', x, y.t()) #  m by n by feature_dimension
 
  # print('shape of xx', xx.shape)
  # print('shape of yy', yy.shape)
  # print('shape of xy', xy.shape)
 
- x2 = x**2
- x2_extra_dim = x2[:,None,:]
+ x2 = x**2 # m by feat_dim
+ x2_extra_dim1 = x2[:,None,:]
+ x2_extra_dim2 = x2[None,:,:]
  y2 = y**2
- y2_extra_dim = y2[:,None,:]
+ y2_extra_dim1 = y2[:,None,:]
+ y2_extra_dim2 = y2[None,:,:]
 
  # print('shape of x2', x2.shape)
  # print('shape of y2', y2.shape)
 
  # first term: sum_d sum_i sum_j k(x_i, x_j)
- dist_xx = pt.abs(2*x2_extra_dim.repeat(1,m,1) - 2.0*xx)
- kxx = pt.sum(1/(m_div**2) * pt.exp(-dist_xx/(2.0*sigma2**2)))
+ dist_xx = pt.abs(x2_extra_dim1.repeat(1,m,1) - 2.0*xx + x2_extra_dim2.repeat(m,1,1))
+ kxx = pt.sum(pt.exp(-dist_xx/(2.0*sigma2**2)))/(m_div**2)/feat_dim
 
  # second term: sum_d sum_i sum_j k(y_i, y_j)
- dist_yy = pt.abs(2*y2_extra_dim.repeat(1,n,1) - 2.0*yy)
- kyy = pt.sum(1/(n_div**2) * pt.exp(-dist_yy/(2.0*sigma2**2)))
+ dist_yy = pt.abs(y2_extra_dim1.repeat(1,n,1) - 2.0*yy + y2_extra_dim2.repeat(n,1,1))
+ kyy = pt.sum(pt.exp(-dist_yy/(2.0*sigma2**2)))/(n_div**2)/feat_dim
 
  # third term: sum_d sum_i sum_j k(x_i, y_j)
- y2_extra_dim_tr = y2[None,:,:]
- dist_xy = pt.abs(x2_extra_dim.repeat(1,n,1) - 2.0*xy + y2_extra_dim_tr.repeat(m,1,1))
- kxy = pt.sum(1/(m_div*n_div) * pt.exp(-dist_xy/(2.0*sigma2**2)))
+ dist_xy = pt.abs(x2_extra_dim1.repeat(1,n,1) - 2.0*xy + y2_extra_dim2.repeat(m,1,1))
+ kxy = pt.sum(pt.exp(-dist_xy/(2.0*sigma2**2)))/(m_div*n_div)/feat_dim
 
  mmd = kxx + kyy - 2.0*kxy
 
