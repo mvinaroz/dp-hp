@@ -1,12 +1,32 @@
 import torch
 import numpy as np
 import os
+from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from all_aux_files import FCCondGen, ConvCondGen, flatten_features, meddistance
-from all_aux_files import eval_hermite_pytorch
+from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
+from collections import namedtuple
+
+train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
+                                                       'train_data', 'test_data',
+                                                       'n_features', 'n_data', 'n_labels', 'eval_func'])
+
+def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
+  if dataset_key in {'digits', 'fashion'}:
+    train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
+                                                                          dataset=dataset_key, normalize=normalize,
+                                                                          return_datasets=True)
+    n_features = 784
+    n_data = 60_000
+    n_labels = 10
+    eval_func = None
+  else:
+    raise ValueError
+
+  return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
 
 def load_data(data_name, batch_size):
     transform_digits = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.1307], [0.3081])])
@@ -87,6 +107,9 @@ def eigen_func(k, rho, x, device):
     orders = torch.arange(0, k + 1, device=device)
     H_k = eval_hermite_pytorch(x, k + 1, device, return_only_last_term=False)
     H_k = H_k[:, :, 0]
+
+    if torch.isnan(H_k).any():
+        print('H_k has nan')
     # H_k = eval_hermite(orders, x)  # input arguments: degree, where to evaluate at.
     # output dim: number of datapoints by number of degree
     # rho = torch.tensor(rho, dtype=float, device=device)
@@ -94,21 +117,30 @@ def eigen_func(k, rho, x, device):
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
     N_k = (2 ** orders) * ((orders + 1).to(torch.float).lgamma().exp()) * torch.sqrt(((1 - rho) / (1 + rho)))
     eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
+
+    if torch.isnan(eigen_funcs).any():
+        print('eigen_funcs has nan')
+
     return eigen_funcs
 
 
 def main():
 
+    torch.manual_seed(0)
     data_name = 'digits' # 'digits' or 'fashion'
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
-    single_release = True
-    model_name = 'CNN' # CNN or FC
+    loss_type = 'MEHP'
+    single_release = False
+    model_name = 'FC' # CNN or FC
     report_intermidiate_result = True
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     """ Load data to test """
     batch_size = 100
     train_loader = load_data(data_name, batch_size)
+    # test_batch_size = 200
+    # data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    # train_loader = data_pkg.train_loader
     n_train_data = 60000
 
     """ Define a generator """
@@ -124,27 +156,29 @@ def main():
     """ Training """
     # set the scale length
     num_iter = np.int(n_train_data/batch_size)
-    sigma2_arr = 0.05
-    # sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
-    # for batch_idx, (data, labels) in enumerate(train_loader):
-    #     # print('batch idx', batch_idx)
-    #     data, labels = data.to(device), labels.to(device)
-    #     data = flatten_features(data) # minibatch by feature_dim
-    #     data_numpy = data.detach().cpu().numpy()
-    #     for dim in np.arange(0,feature_dim):
-    #         med = meddistance(np.expand_dims(data_numpy[:,dim],axis=1))
-    #         sigma2 = med ** 2
-    #         sigma2_arr[batch_idx, dim] = sigma2
+    if data_name == 'digits':
+        sigma2_arr = 0.05
+    else:
+        sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
+        for batch_idx, (data, labels) in enumerate(train_loader):
+            # print('batch idx', batch_idx)
+            data, labels = data.to(device), labels.to(device)
+            data = flatten_features(data)  # minibatch by feature_dim
+            data_numpy = data.detach().cpu().numpy()
+            for dim in np.arange(0, feature_dim):
+                med = meddistance(np.expand_dims(data_numpy[:, dim], axis=1))
+                sigma2 = med ** 2
+                sigma2_arr[batch_idx, dim] = sigma2
 
 
     base_dir = 'logs/gen/'
-    log_dir = base_dir + data_name + method + model_name + '/'
-    log_dir2 = data_name + method + model_name + '/'
+    log_dir = base_dir + data_name + method + loss_type + model_name + 'single_release'+str(single_release) + '/'
+    log_dir2 = data_name + method + loss_type + model_name + 'single_release' + str(single_release) + '/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
-    # scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
 
     sigma2 = np.mean(sigma2_arr)
     rho = find_rho(sigma2)
@@ -154,6 +188,8 @@ def main():
     if order>or_thr:
         order = or_thr
     if single_release:
+        print('single release is', single_release)
+        print('computing mean embedding of data')
         data_embedding = torch.zeros(feature_dim*(order+1), n_classes, num_iter)
         for batch_idx, (data, labels) in enumerate(train_loader):
             # print(batch_idx)
@@ -164,8 +200,9 @@ def main():
                 phi_data = ME_with_HP(idx_data, order, rho, device)
                 data_embedding[:,idx, batch_idx] = phi_data
         data_embedding = torch.mean(data_embedding,axis=2)
+        print('done with computing mean embedding of data')
 
-
+    print('start training the generator')
     for epoch in range(1, n_epochs + 1):
         model.train()
         for batch_idx, (data, labels) in enumerate(train_loader):
@@ -193,6 +230,8 @@ def main():
                     synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
 
             loss = torch.mean((data_embedding - synth_data_embedding) ** 2)
+            # print('syn_data_me', torch.mean(synth_data_embedding))
+            # print('batch_idx:%s, loss:%f' %(batch_idx, loss))
 
             loss.backward()
             optimizer.step()
@@ -201,7 +240,7 @@ def main():
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), n_train_data, loss.item()))
 
         log_gen_data(model, device, epoch, n_classes, log_dir)
-        # scheduler.step()
+        scheduler.step()
 
         if report_intermidiate_result:
             """ now we save synthetic data and test them on logistic regression """

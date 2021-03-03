@@ -9,7 +9,6 @@ from all_aux_files import FCCondGen, ConvCondGen, meddistance, flatten_features,
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data
 # test_passed_gen_data, datasets_colletion_def, test_results
 from mmd_sum_kernel import mmd_loss
-from all_aux_files import eval_hermite_pytorch
 from collections import namedtuple
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
@@ -47,7 +46,7 @@ def load_data(data_name, batch_size):
 
 def main():
 
-    data_name = 'digits' # 'digits' or 'fashion'
+    data_name = 'fashion' # 'digits' or 'fashion'
     # method = 'a_Gaussian_kernel' # sum_kernel or a_Gaussian_kernel
     method = 'sum_kernel'
     """ this code only works for MMDest, for ME with HP, use ME_sum_kernel.py"""
@@ -74,12 +73,14 @@ def main():
         model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True).to(device)
         # for MNIST, with FC, logistic accuracy 81 percent (20 epochs) for full MMD
         # for Fashion-MNIST, with FC, logistic accuracy 0.687 (20 epochs) for full MMD
-        # for MNIST, with FC, 0.7564 (sum kernel)
+        # for MNIST, with FC, 0.778 (sum kernel)
+        # for Fashion-MNIST, with FC,  0.727  (sum kernel)
     elif model_name == 'CNN':
         model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
         # for MNIST, with CNN, logistic accuracy 0.78 (20 epochs) for full MMD
         # for Fashion-MNIST, with CNN, logistic accuracy 0.689 (20 epochs) for full MMD
-        # for MNIST, with CNN, 0.7563 (sum kernel)
+        # for MNIST, with CNN, 0.7649 (sum kernel)
+        # for Fashion-MNIST, with CNN, 0.732 (sum kernel)
 
     """ Training """
     # set the scale length

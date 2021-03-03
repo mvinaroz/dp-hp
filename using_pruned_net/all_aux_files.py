@@ -15,6 +15,8 @@ from collections import defaultdict, namedtuple
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
+import sys
+
 
 datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
                                                             'x_real_train', 'y_real_train',
@@ -42,6 +44,9 @@ def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
     h_i_minus_two = h_i_minus_one
     h_i_minus_one = h_i
     batch_embedding[:, degree, :] = h_i
+    if pt.isnan(h_i).any():
+      print('%s degree h_i is nan' %(degree))
+      sys.breakpoint()
 
   if return_only_last_term:
     return batch_embedding[:, -1, :]
@@ -130,7 +135,7 @@ def subsample_data(x, y, frac, balance_classes=True):
     x = x[data_ids]
     y = y[data_ids]
 
-    print(f'subsampled label count {[sum(y == k) for k in range(n_classes)]}')
+    # print(f'subsampled label count {[sum(y == k) for k in range(n_classes)]}')
   return x, y
 
 
@@ -186,10 +191,10 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
 
     print(f'training on {subsample * 100.}% of the original syntetic dataset')
 
-  print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
-        f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
-  print(f'label ranges: [{np.min(y_real_test)}, {np.max(y_real_test)}], [{np.min(y_real_train)}, '
-        f'{np.max(y_real_train)}], [{np.min(y_gen)}, {np.max(y_gen)}]')
+  # print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
+  #       f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
+  # print(f'label ranges: [{np.min(y_real_test)}, {np.max(y_real_test)}], [{np.min(y_real_train)}, '
+  #       f'{np.max(y_real_train)}], [{np.min(y_gen)}, {np.max(y_gen)}]')
 
   return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
 
