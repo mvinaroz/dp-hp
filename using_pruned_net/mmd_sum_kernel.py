@@ -6,12 +6,14 @@ def mmd_loss(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2, metho
  # set gen labels to scalars from one-hot
  _, gen_labels = pt.max(gen_labels, dim=1)
  batch_size = data_enc.shape[0]
- feature_dim = data_enc.shape[1]
+ # feature_dim = data_enc.shape[1]
  mmd_sum = 0
- mmd_sum1 = 0
+ # mmd_sum1 = 0
  for idx in range(n_labels):
   idx_data_enc = data_enc[data_labels == idx]
   idx_gen_enc = gen_enc[gen_labels == idx]
+  # print('# generated samples: %s for class %s' %(idx_gen_enc.shape[0], idx))
+  # print('# real samples: %s for this class%s' %(idx_data_enc.shape[0],idx))
   # m = idx_data_enc.shape[0]
   # n = idx_gen_enc.shape[0]
   if method=='sum_kernel':
@@ -43,9 +45,13 @@ def get_squared_dist(x, y=None):
  dx = pt.diag(xxt) # (bs)
  dy = pt.diag(yyt)
 
- dist_xx = pt.nn.functional.relu(dx[:, None] - 2.0 * xxt + dx[None, :])
- dist_xy = pt.nn.functional.relu(dx[:, None] - 2.0 * xyt + dy[None, :])
- dist_yy = pt.nn.functional.relu(dy[:, None] - 2.0 * yyt + dy[None, :])
+ # dist_xx = pt.nn.functional.relu(dx[:, None] - 2.0 * xxt + dx[None, :])
+ # dist_xy = pt.nn.functional.relu(dx[:, None] - 2.0 * xyt + dy[None, :])
+ # dist_yy = pt.nn.functional.relu(dy[:, None] - 2.0 * yyt + dy[None, :])
+
+ dist_xx = pt.abs(dx[:, None] - 2.0 * xxt + dx[None, :])
+ dist_xy = pt.abs(dx[:, None] - 2.0 * xyt + dy[None, :])
+ dist_yy = pt.abs(dy[:, None] - 2.0 * yyt + dy[None, :])
 
  return dist_xx, dist_xy, dist_yy
 
@@ -74,15 +80,15 @@ def mmd_per_class(x, y, sigma2, batch_size):
  y2_extra_dim2 = y2[None,:,:]
 
  # first term: sum_d sum_i sum_j k(x_i, x_j)
- dist_xx = pt.nn.functional.relu(x2_extra_dim1.repeat(1,m,1) - 2.0*xx + x2_extra_dim2.repeat(m,1,1))
+ dist_xx = pt.abs(x2_extra_dim1.repeat(1,m,1) - 2.0*xx + x2_extra_dim2.repeat(m,1,1))
  kxx = pt.sum(pt.exp(-dist_xx/(2.0*sigma2**2)))/(batch_size**2)
 
  # second term: sum_d sum_i sum_j k(y_i, y_j)
- dist_yy = pt.nn.functional.relu(y2_extra_dim1.repeat(1,n,1) - 2.0*yy + y2_extra_dim2.repeat(n,1,1))
+ dist_yy = pt.abs(y2_extra_dim1.repeat(1,n,1) - 2.0*yy + y2_extra_dim2.repeat(n,1,1))
  kyy = pt.sum(pt.exp(-dist_yy/(2.0*sigma2**2)))/(batch_size**2)
 
  # third term: sum_d sum_i sum_j k(x_i, y_j)
- dist_xy = pt.nn.functional.relu(x2_extra_dim1.repeat(1,n,1) - 2.0*xy + y2_extra_dim2.repeat(m,1,1))
+ dist_xy = pt.abs(x2_extra_dim1.repeat(1,n,1) - 2.0*xy + y2_extra_dim2.repeat(m,1,1))
  kxy = pt.sum(pt.exp(-dist_xy/(2.0*sigma2**2)))/(batch_size*batch_size)
 
  mmd = kxx + kyy - 2.0*kxy

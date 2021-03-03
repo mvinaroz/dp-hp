@@ -48,11 +48,12 @@ def load_data(data_name, batch_size):
 def main():
 
     data_name = 'digits' # 'digits' or 'fashion'
-    method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
+    # method = 'a_Gaussian_kernel' # sum_kernel or a_Gaussian_kernel
+    method = 'sum_kernel'
     """ this code only works for MMDest, for ME with HP, use ME_sum_kernel.py"""
     loss_type = 'MMDest'
-    model_name = 'CNN' # CNN or FC
-    report_intermidiate_result = False
+    model_name = 'FC' # CNN or FC
+    report_intermidiate_result = True
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     """ Load data to test """
@@ -60,8 +61,6 @@ def main():
     test_batch_size = 200
     data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
     train_loader = data_pkg.train_loader
-    # # test_loader = data_pkg.test_loader
-    # n_train_data = data_pkg.n_data
 
     # train_loader = load_data(data_name, batch_size)
     n_train_data = 60000
