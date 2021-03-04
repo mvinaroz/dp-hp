@@ -5,7 +5,7 @@ from data_loading import get_dataloaders
 from models_gen import FCCondGen, ConvCondGen
 from mmd_real import get_real_mmd_loss
 from torch.optim.lr_scheduler import StepLR
-from aux import flatten_features
+from aux import flatten_features, meddistance
 from gen_balanced import log_gen_data, test_results
 from gen_balanced import synthesize_data_with_uniform_labels
 import os
@@ -64,7 +64,7 @@ def mmd_per_class(x, y, sigma2, batch_size):
  return mmd
 
 
-def mmd_sum_kernel_sliced(data_enc, data_labels, gen_enc, gen_labels, n_labels, digma2, method, list_patch):
+def mmd_sum_kernel_sliced(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2, method, list_patch):
     # set gen labels to scalars from one-hot
     _, gen_labels = pt.max(gen_labels, dim=1)
     batch_size_data = data_enc.shape[0]
@@ -127,13 +127,33 @@ elif model_name=="CNN":
 # set the scale length
 num_iter = data_pkg.n_data/batch_size
 if method=='sum_kernel_sliced':
-    sigma2_arr = 0.05
-    sigma2 = pt.tensor(np.mean(sigma2_arr))
-    print('length scale', sigma2)
+    
     #Generate the list containing the slices for each image.
     list_patch=check_slices_list(n_features, num_slice)
+    
+    sigma2_arr = np.zeros((np.int(num_iter), np.int(n_features/num_slice**2)))
+    
+    for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
+        # print('batch idx', batch_idx)
+        data, labels = data.to(device), labels.to(device)
+        data = flatten_features(data) # minibatch by feature_dim
+        data_numpy = data.detach().cpu().numpy()
+        #print("data to numpy array: ", data_numpy)
+        count_dim=0
+        for i in range(len(list_patch)-1):
+            sliced_data_numpy=data_numpy[:, list_patch[i]:list_patch[i+1]]
+
+            med = meddistance(data_numpy[:,list_patch[i]:list_patch[i+1]])
+            sigma2 = med ** 2            
+            sigma2_arr[batch_idx, count_dim] = sigma2
+            count_dim+=1
+            
 else:
     pass
+
+sigma2 = pt.tensor(np.mean(sigma2_arr))
+print('length scale', sigma2)
+    
 
 """ Init optimizer """
 lr=0.01
