@@ -269,12 +269,12 @@ def extract_numpy_data_mats():
     x = np.reshape(x, (-1, 784)) / 255
     return x, y
 
-  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False))
+  x_trn, y_trn = prep_data(datasets.MNIST('data', train=True, download=True))
+  x_tst, y_tst = prep_data(datasets.MNIST('data', train=False, download=True))
   np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
 
-  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True))
-  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False))
+  x_trn, y_trn = prep_data(datasets.FashionMNIST('data', train=True,  download=True))
+  x_tst, y_tst = prep_data(datasets.FashionMNIST('data', train=False, download=True))
   np.savez('data/FashionMNIST/numpy_fmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
 
 

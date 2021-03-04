@@ -2,6 +2,19 @@
 
 # from __future__ import print_function
 import torch
+<<<<<<< Updated upstream
+=======
+from test_transfer_learning import load_trained_model, data_loader
+from torch.optim.lr_scheduler import StepLR
+import sys
+sys.path.append('/Users/margaritavinaroz/Desktop/DPDR/code_balanced')
+from models_gen import FCCondGen, ConvCondGen
+from aux import meddistance
+# from full_mmd import mmd_loss
+from mmd_sum_kernel import mmd_loss
+from aux import flatten_features
+import torch.optim as optim
+>>>>>>> Stashed changes
 import numpy as np
 import os
 from torch.optim.lr_scheduler import StepLR

@@ -234,6 +234,6 @@ def eigen_func(k, rho, x, device):
     return eigen_funcs
 
 
-u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cuda')), torch.zeros([100], device=torch.device('cuda')), 4
-                     , torch.tensor(0.5, device=torch.device('cuda'))
-                     , torch.device('cuda'), 1))
+u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cpu')), torch.zeros([100], device=torch.device('cpu')), 4
+                     , torch.tensor(0.5, device=torch.device('cpu'))
+                     , torch.device('cpu'), 1))
