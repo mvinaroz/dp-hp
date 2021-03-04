@@ -46,7 +46,10 @@ def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
     batch_embedding[:, degree, :] = h_i
     if pt.isnan(h_i).any():
       print('%s degree h_i is nan' %(degree))
-      sys.breakpoint()
+      for i in pt.arange(0,h_i.shape[0]):
+        if pt.isnan(h_i[i,:]).any():
+          print('%s th h has nan and values are ' %(i, h_i[i,:]))
+
 
   if return_only_last_term:
     return batch_embedding[:, -1, :]
