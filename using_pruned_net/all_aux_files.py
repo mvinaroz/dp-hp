@@ -40,15 +40,21 @@ def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
   h_i_minus_one, h_i_minus_two = None, None
   for degree in range(n_degrees):
     h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_in, probabilists=False)
+    if (h_i != h_i).any():
+      print('h_i has nan', h_i)
 
     h_i_minus_two = h_i_minus_one
     h_i_minus_one = h_i
     batch_embedding[:, degree, :] = h_i
-    if pt.isnan(h_i).any():
-      print('%s degree h_i is nan' %(degree))
-      for i in pt.arange(0,h_i.shape[0]):
-        if pt.isnan(h_i[i,:]).any():
-          print('%s th h has nan and values are ' %(i, h_i[i,:]))
+    # if pt.isnan(h_i).any():
+    #   print('%s degree h_i is nan' %(degree))
+    #   print('h_i is ', h_i)
+    #   print('is x nan?', pt.isnan(x_in))
+    #   print('x is', x_in)
+    #   break
+      # for i in pt.arange(0,h_i.shape[0]):
+      #   if pt.isnan(h_i[i,:]).any():
+      #     print('%s th h has nan and values are ' %(i, h_i[i,:]))
 
 
   if return_only_last_term:
