@@ -177,12 +177,14 @@ def mmd_sum_kernel_sliced(data_enc, data_labels, gen_enc, gen_labels, n_labels, 
         idx_data_enc = reshaped_data_enc[data_labels == idx]
         
         #print("Data shape: ", idx_data_enc.shape)
+        #Slices on real images of each label
         a=idx_data_enc.unfold(2, num_slice, num_slice).unfold(3, num_slice, num_slice)
         a = a.contiguous().view(a.size(0), a.size(1), -1, a.size(4), a.size(5))
         
         
         idx_gen_enc = reshaped_data_enc[gen_labels == idx]
         #print("Generated data shape: ", idx_gen_enc.shape)
+        #Slices on generated images of each label
         b=idx_gen_enc.unfold(2, num_slice, num_slice).unfold(3, num_slice, num_slice)
         b = b.contiguous().view(b.size(0), b.size(1), -1, b.size(4), b.size(5))
         

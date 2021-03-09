@@ -43,6 +43,7 @@ def load_data(data_name, batch_size):
 def find_rho(sigma2):
     alpha = 1 / (2.0 * sigma2)
     rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
+    rho = np.abs(rho)
     return rho
 
 def find_order(rho,eigen_val_threshold):
@@ -55,15 +56,58 @@ def find_order(rho,eigen_val_threshold):
     print('The number of orders for Hermite Polynomials is', order)
     return order
 
+
+def feature_map_HP(k, x, rho, device):
+    # k: degree of polynomial
+    # rho: a parameter (related to length parameter)
+    # x: where to evaluate the function at
+    # print('device', device)
+    eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
+    eigen_vals = eigen_vals.to(device)
+    # print('eigen_vals', eigen_vals)
+    eigen_funcs_x = eigen_func(k, rho, x, device)  # output dim: number of datapoints by number of degree
+    # print('eigen_funcs', eigen_funcs_x)
+    sqrt_eig_vals = torch.sqrt(torch.abs(eigen_vals))
+
+    if (sqrt_eig_vals!=sqrt_eig_vals).any():
+        print('sqrt eig values are nan', sqrt_eig_vals)
+    phi_x = torch.einsum('ij,j-> ij', eigen_funcs_x, sqrt_eig_vals)  # number of datapoints by order
+    # n_data = eigen_funcs_x.shape[0]
+    # mean_phi_x = torch.sum(phi_x,0)/n_data
+
+    if (phi_x != phi_x).any():
+      print('phi_x has nan', phi_x)
+
+    return phi_x, eigen_vals
+
 def ME_with_HP(x, order, rho, device):
     n_data, input_dim = x.shape
 
     # reshape x, such that x is a long vector
     x_flattened = x.view(-1)
     x_flattened = x_flattened[:,None]
-    phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, torch.tensor(rho), device)
+    phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
+    # if (phi_x_axis_flattened != phi_x_axis_flattened).any():
+    #     print('phi_x_axis_flattened inside ME_with_HP is nan', phi_x_axis_flattened)
     phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order+1)
-    phi_x = torch.mean(phi_x, axis=0)
+    # if (phi_x != phi_x).any():
+    #     print('reshaped phi_x_axis_flattened inside ME_with_HP is nan', phi_x)
+    # phi_x = torch.mean(phi_x, axis=0)
+    # phi_x2 = torch.tensor(phi_x, dtype=float)
+    phi_x = phi_x.type(torch.float)
+    sum_val = torch.sum(phi_x, axis=0)
+    # if (sum_val !=sum_val).any():
+    #     print('sum val is nan', sum_val)
+
+    if n_data ==0:
+        phi_x = sum_val/(1+n_data)
+        print('n_data is zero, so we are adding 1 to n_data to avoid nan')
+    else:
+        phi_x = sum_val/n_data
+
+    # if (phi_x != phi_x).any():
+    #     print('mean embedding inside ME_with_HP is nan', phi_x)
+    #     print('n_data is ', n_data)
     phi_x = phi_x.view(-1) # size: input_dim*(order+1)
 
     # phi_x_mat = torch.zeros(input_dim*(order+1))
@@ -80,25 +124,6 @@ def ME_with_HP(x, order, rho, device):
 
     return phi_x
 
-
-def feature_map_HP(k, x, rho, device):
-    # k: degree of polynomial
-    # rho: a parameter (related to length parameter)
-    # x: where to evaluate the function at
-    # print('device', device)
-    eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
-    eigen_vals = eigen_vals.to(device)
-    # print('eigen_vals', eigen_vals)
-    eigen_funcs_x = eigen_func(k, rho, x, device)  # output dim: number of datapoints by number of degree
-    # print('eigen_funcs', eigen_funcs_x)
-
-    phi_x = torch.einsum('ij,j-> ij', eigen_funcs_x, torch.sqrt(eigen_vals))  # number of datapoints by order
-    # n_data = eigen_funcs_x.shape[0]
-    # mean_phi_x = torch.sum(phi_x,0)/n_data
-
-    return phi_x, eigen_vals
-
-
 def eigen_func(k, rho, x, device):
     # k: degree of polynomial
     # rho: a parameter (related to length parameter)
@@ -112,14 +137,13 @@ def eigen_func(k, rho, x, device):
         print('H_k has nan')
     # H_k = eval_hermite(orders, x)  # input arguments: degree, where to evaluate at.
     # output dim: number of datapoints by number of degree
-    # rho = torch.tensor(rho, dtype=float, device=device)
+    rho = torch.tensor(rho, dtype=float, device=device)
     # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
-    N_k = (2 ** orders) * ((orders + 1).to(torch.float).lgamma().exp()) * torch.sqrt(((1 - rho) / (1 + rho)))
-    eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
-
-    if torch.isnan(eigen_funcs).any():
-        print('eigen_funcs has nan')
+    N_k = (2 ** orders) * ((orders + 1).to(torch.float).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
+    eigen_funcs = 1 / torch.sqrt(torch.abs(N_k)) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
+    if (eigen_funcs != eigen_funcs).any():
+      print('eigen_funcs has nan', eigen_funcs)
 
     return eigen_funcs
 
@@ -127,7 +151,7 @@ def eigen_func(k, rho, x, device):
 def main():
 
     torch.manual_seed(0)
-    data_name = 'digits' # 'digits' or 'fashion'
+    data_name = 'fashion' # 'digits' or 'fashion'
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
     single_release = False
@@ -137,10 +161,10 @@ def main():
 
     """ Load data to test """
     batch_size = 100
-    train_loader = load_data(data_name, batch_size)
-    # test_batch_size = 200
-    # data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
-    # train_loader = data_pkg.train_loader
+    # train_loader = load_data(data_name, batch_size)
+    test_batch_size = 200
+    data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    train_loader = data_pkg.train_loader
     n_train_data = 60000
 
     """ Define a generator """
@@ -153,44 +177,38 @@ def main():
     elif model_name == 'CNN':
         model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
 
-    """ Training """
-    # set the scale length
-    num_iter = np.int(n_train_data/batch_size)
-    if data_name == 'digits':
+
+    """ set the scale length """
+    num_iter = np.int(n_train_data / batch_size)
+    if data_name=='digits':
         sigma2_arr = 0.05
-    else:
-        sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
-        for batch_idx, (data, labels) in enumerate(train_loader):
-            # print('batch idx', batch_idx)
-            data, labels = data.to(device), labels.to(device)
-            data = flatten_features(data)  # minibatch by feature_dim
-            data_numpy = data.detach().cpu().numpy()
-            for dim in np.arange(0, feature_dim):
-                med = meddistance(np.expand_dims(data_numpy[:, dim], axis=1))
-                sigma2 = med ** 2
-                sigma2_arr[batch_idx, dim] = sigma2
-
-
-    base_dir = 'logs/gen/'
-    log_dir = base_dir + data_name + method + loss_type + model_name + 'single_release'+str(single_release) + '/'
-    log_dir2 = data_name + method + loss_type + model_name + 'single_release' + str(single_release) + '/'
-    if not os.path.exists(log_dir):
-        os.makedirs(log_dir)
-
-    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
-    scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    elif data_name=='fashion':
+        sigma2_arr = 0.07
+    # # these are values we computed from the script below
+    # sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
+    # for batch_idx, (data, labels) in enumerate(train_loader):
+    #     # print('batch idx', batch_idx)
+    #     data, labels = data.to(device), labels.to(device)
+    #     data = flatten_features(data)  # minibatch by feature_dim
+    #     data_numpy = data.detach().cpu().numpy()
+    #     for dim in np.arange(0, feature_dim):
+    #         med = meddistance(np.expand_dims(data_numpy[:, dim], axis=1))
+    #         sigma2 = med ** 2
+    #         sigma2_arr[batch_idx, dim] = sigma2
 
     sigma2 = np.mean(sigma2_arr)
+    print('sigma2 is', sigma2)
     rho = find_rho(sigma2)
-    ev_thr = 1e-3  # eigen value threshold, below this, we wont consider for approximation
+    ev_thr = 0.01  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 30
+    or_thr = 10
     if order>or_thr:
         order = or_thr
+        print('chosen order is', order)
     if single_release:
         print('single release is', single_release)
         print('computing mean embedding of data')
-        data_embedding = torch.zeros(feature_dim*(order+1), n_classes, num_iter)
+        data_embedding = torch.zeros(feature_dim*(order+1), n_classes, num_iter, device=device)
         for batch_idx, (data, labels) in enumerate(train_loader):
             # print(batch_idx)
             data, labels = data.to(device), labels.to(device)
@@ -202,6 +220,20 @@ def main():
         data_embedding = torch.mean(data_embedding,axis=2)
         print('done with computing mean embedding of data')
 
+    """ name the directories """
+    base_dir = 'logs/gen/'
+    log_dir = base_dir + data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
+              + '_' + 'order_threshold' + '_' +str(order) + '/'
+    log_dir2 = data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
+              + '_' + 'order_threshold' + '_' +str(order) + '/'
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
+
+
+    """ Training """
+    optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
+    scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+
     print('start training the generator')
     for epoch in range(1, n_epochs + 1):
         model.train()
@@ -209,30 +241,47 @@ def main():
             data, labels = data.to(device), labels.to(device)
             data = flatten_features(data)
 
-            optimizer.zero_grad()
             gen_code, gen_labels = model.get_code(batch_size, device)
             gen_samples = model(gen_code) # batch_size by 784
 
             if single_release:
-                synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes))
+                synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
                     synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
             else:
-                synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes))
-                data_embedding = torch.zeros((feature_dim * (order+1), n_classes))
+                synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
+                data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_data = data[labels == idx]
+                    # if len(idx_data.shape)==0:
+                    #     print('there is no real data samples for this class')
+                    # if torch.isnan(idx_data).any():
+                    #     print('true data has nan')
                     data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device)
-                    idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
+                    # if torch.isnan(data_embedding[:,idx]).any():
+                    #     print('data mean embedding of selected datapoints has nan')
 
-            loss = torch.mean((data_embedding - synth_data_embedding) ** 2)
+                    idx_synth_data = gen_samples[gen_labels_numerical == idx]
+                    # if len(idx_synth_data.shape)==0:
+                    #     print('there is no generated samples for this class')
+                    # if torch.isnan(idx_synth_data).any():
+                    #     print('true data has nan')
+                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
+                    # if torch.isnan(synth_data_embedding[:,idx]).any():
+                    #     print('data mean embedding of generated datapoints has nan')
+
+            loss = torch.norm(data_embedding - synth_data_embedding)**2
+            # if torch.isnan(loss):
+            #     print('loss is nan')
+            #     print(loss)
+            # print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), n_train_data, loss.item()))
             # print('syn_data_me', torch.mean(synth_data_embedding))
             # print('batch_idx:%s, loss:%f' %(batch_idx, loss))
 
+            optimizer.zero_grad()
             loss.backward()
             optimizer.step()
         # end for
