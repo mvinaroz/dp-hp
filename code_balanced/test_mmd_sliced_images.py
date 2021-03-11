@@ -169,7 +169,7 @@ def mmd_sum_kernel_sliced(data_enc, data_labels, gen_enc, gen_labels, n_labels, 
     check_eq=pt.all(pt.eq(reshaped_data_enc, original_data)) #to check if the reshape is producing the same images as before flatten them.
     print("ARE THE ORIGINAL IMAGES AND RESHAPED ONES EQUAL?: ", check_eq)
     
-    reshaped_data_enc=pt.reshape(gen_enc, (gen_enc.shape[0], 1,  num_pix, num_pix))
+    reshaped_gen_enc=pt.reshape(gen_enc, (gen_enc.shape[0], 1,  num_pix, num_pix))
     #print("Reshaped data generated shape: ", reshaped_data_enc.shape)
     
     mmd_sum = 0
@@ -182,7 +182,7 @@ def mmd_sum_kernel_sliced(data_enc, data_labels, gen_enc, gen_labels, n_labels, 
         a = a.contiguous().view(a.size(0), a.size(1), -1, a.size(4), a.size(5))
         
         
-        idx_gen_enc = reshaped_data_enc[gen_labels == idx]
+        idx_gen_enc = reshaped_gen_enc[gen_labels == idx]
         #print("Generated data shape: ", idx_gen_enc.shape)
         #Slices on generated images of each label
         b=idx_gen_enc.unfold(2, num_slice, num_slice).unfold(3, num_slice, num_slice)
