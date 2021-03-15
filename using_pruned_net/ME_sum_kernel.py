@@ -9,7 +9,12 @@ from all_aux_files import FCCondGen, ConvCondGen, flatten_features, meddistance
 from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
+import math
+from math import factorial
 import sys
+import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -142,6 +147,7 @@ def eigen_func(k, rho, x, device):
     # rho: a parameter (related to length parameter)
     # x: where to evaluate the function at, size: number of data points by input_dimension
     # print('device', device)
+    # orders = torch.arange(0, k + 1, device=device, dtype=torch.float32)
     orders = torch.arange(0, k + 1, device=device)
     H_k = eval_hermite_pytorch(x, k + 1, device, return_only_last_term=False)
     H_k = H_k[:, :, 0]
@@ -154,6 +160,19 @@ def eigen_func(k, rho, x, device):
     # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
     N_k = (2 ** orders) * ((orders + 1).to(torch.float32).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
+
+
+    # N_k1 = 2**torch.arange(0, k + 1, device=device, dtype=torch.float32)
+    #
+    # ord = np.arange(0, k + 1)
+    # N_k2 = [factorial(num) for num in ord]
+    # N_k2 = np.array(N_k2, dtype=np.int)
+    # N_k2 = torch.tensor(N_k2, dtype=torch.float, device=device)
+    #
+    # N_k3 = torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
+    # N_k = N_k1*N_k2*N_k3
+
+
     if torch.isnan(1 / torch.sqrt(N_k)).any():
         print('oops, 1/N_k has nan')
     eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
@@ -177,10 +196,10 @@ def main():
 
     """ Load data to test """
     batch_size = 100
-    # train_loader = load_data(data_name, batch_size)
-    test_batch_size = 200
-    data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
-    train_loader = data_pkg.train_loader
+    train_loader = load_data(data_name, batch_size)
+    # test_batch_size = 200
+    # data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    # train_loader = data_pkg.train_loader
     n_train_data = 60000
 
     """ Define a generator """
@@ -217,7 +236,7 @@ def main():
     rho = find_rho(sigma2)
     ev_thr = 0.001  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 100
+    or_thr = 45
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)

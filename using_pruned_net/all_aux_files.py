@@ -24,8 +24,10 @@ datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
 
 def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=False):
   fac = 1. if probabilists else 2.
+  # fac = pt.tensor(2., dtype=pt.double, device=x_in.device)
   if degree == 0:
     return pt.tensor(1., dtype=pt.float32, device=x_in.device)
+    # return pt.tensor(1., dtype=pt.double, device=x_in.device)
   elif degree == 1:
     return fac * x_in
   else:
@@ -42,6 +44,7 @@ def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
     h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_in, probabilists=False)
     if (h_i != h_i).any():
       print('h_i has nan', h_i)
+      print('the degree is', degree)
 
     h_i_minus_two = h_i_minus_one
     h_i_minus_one = h_i
