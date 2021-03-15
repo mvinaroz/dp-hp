@@ -9,6 +9,7 @@ from all_aux_files import FCCondGen, ConvCondGen, flatten_features, meddistance
 from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
+import sys
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -43,7 +44,19 @@ def load_data(data_name, batch_size):
 def find_rho(sigma2):
     alpha = 1 / (2.0 * sigma2)
     rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
-    rho = np.abs(rho)
+    rho_1 = -1 / 2 / alpha - np.sqrt(1 / alpha ** 2 + 4) / 2
+
+    if rho<1: # rho is always non-negative
+        print('rho is less than 1. so we take this value.')
+    elif rho>1:
+        print('rho is larger than 1. Mehler formula does not hold')
+        if rho_1>-1: # rho_1 is always negative
+            print('rho_1 is larger than -1. so we take this value.')
+            rho = rho_1
+        else: # if rho_1 <-1,
+            print('rho_1 is smaller than -1. Mehler formula does not hold')
+            sys.exit('no rho values satisfy the Mehler formulas. We have to stop the run')
+
     return rho
 
 def find_order(rho,eigen_val_threshold):
@@ -137,11 +150,13 @@ def eigen_func(k, rho, x, device):
         print('H_k has nan')
     # H_k = eval_hermite(orders, x)  # input arguments: degree, where to evaluate at.
     # output dim: number of datapoints by number of degree
-    rho = torch.tensor(rho, dtype=float, device=device)
+    rho = torch.tensor(rho, dtype=torch.float32, device=device)
     # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
-    N_k = (2 ** orders) * ((orders + 1).to(torch.float).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
-    eigen_funcs = 1 / torch.sqrt(torch.abs(N_k)) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
+    N_k = (2 ** orders) * ((orders + 1).to(torch.float32).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
+    if torch.isnan(1 / torch.sqrt(N_k)).any():
+        print('oops, 1/N_k has nan')
+    eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
     if (eigen_funcs != eigen_funcs).any():
       print('eigen_funcs has nan', eigen_funcs)
 
@@ -151,12 +166,13 @@ def eigen_func(k, rho, x, device):
 def main():
 
     torch.manual_seed(0)
-    data_name = 'fashion' # 'digits' or 'fashion'
+    data_name = 'digits' # 'digits' or 'fashion'
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
     single_release = False
-    model_name = 'FC' # CNN or FC
+    model_name = 'CNN' # CNN or FC
     report_intermidiate_result = True
+    subsampling_rate_for_synthetic_data = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     """ Load data to test """
@@ -199,9 +215,9 @@ def main():
     sigma2 = np.mean(sigma2_arr)
     print('sigma2 is', sigma2)
     rho = find_rho(sigma2)
-    ev_thr = 0.01  # eigen value threshold, below this, we wont consider for approximation
+    ev_thr = 0.001  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 10
+    or_thr = 100
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
@@ -233,6 +249,7 @@ def main():
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    score_mat = np.zeros(n_epochs)
 
     print('start training the generator')
     for epoch in range(1, n_epochs + 1):
@@ -302,8 +319,9 @@ def main():
                 os.makedirs(dir_syn_data)
 
             np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-            final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=0.1, custom_keys='logistic_reg')
+            final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=subsampling_rate_for_synthetic_data, custom_keys='logistic_reg')
             print('on logistic regression, accuracy is', final_score)
+            score_mat[epoch - 1] = final_score
 
     #     end if
     # end for
@@ -319,8 +337,15 @@ def main():
         os.makedirs(dir_syn_data)
 
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=0.1, custom_keys='logistic_reg')
+    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=subsampling_rate_for_synthetic_data, custom_keys='logistic_reg')
     print('on logistic regression, accuracy is', final_score)
+
+    max_score = np.max(score_mat)
+    max_score = np.max([max_score, final_score])
+
+    dir_max_score = log_dir + data_name + '/max_score'
+    np.save(dir_max_score+'max_score', max_score)
+    print('max score is', max_score)
 
 
 if __name__ == '__main__':

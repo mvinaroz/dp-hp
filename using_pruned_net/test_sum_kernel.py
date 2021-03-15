@@ -56,7 +56,7 @@ def main():
         order = 'infty'
         single_release = False
 
-    model_name = 'CNN' # CNN or FC
+    model_name = 'FC' # CNN or FC
     report_intermidiate_result = True
     subsampling_rate_for_synthetic_data = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
