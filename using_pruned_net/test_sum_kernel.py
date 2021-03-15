@@ -46,19 +46,26 @@ def load_data(data_name, batch_size):
 
 def main():
 
+    torch.manual_seed(0)
     data_name = 'fashion' # 'digits' or 'fashion'
     # method = 'a_Gaussian_kernel' # sum_kernel or a_Gaussian_kernel
     method = 'sum_kernel'
     """ this code only works for MMDest, for ME with HP, use ME_sum_kernel.py"""
     loss_type = 'MMDest'
-    model_name = 'FC' # CNN or FC
+    if loss_type == 'MMDest':
+        order = 'infty'
+        single_release = False
+
+    model_name = 'CNN' # CNN or FC
     report_intermidiate_result = True
+    subsampling_rate_for_synthetic_data = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('device', device)
 
     """ Load data to test """
     batch_size = 100
     test_batch_size = 200
+    # train_loader = load_data(data_name, batch_size)
     data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
     train_loader = data_pkg.train_loader
 
@@ -89,17 +96,19 @@ def main():
     if method=='sum_kernel':
         if data_name=='digits':
             sigma2_arr = 0.05
+            # sigma2_arr = 0.1
         else:
-            sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
-            for batch_idx, (data, labels) in enumerate(train_loader):
-                # print('batch idx', batch_idx)
-                data, labels = data.to(device), labels.to(device)
-                data = flatten_features(data) # minibatch by feature_dim
-                data_numpy = data.detach().cpu().numpy()
-                for dim in np.arange(0,feature_dim):
-                    med = meddistance(np.expand_dims(data_numpy[:,dim],axis=1))
-                    sigma2 = med ** 2
-                    sigma2_arr[batch_idx, dim] = sigma2
+            sigma2_arr = 0.07
+            # sigma2_arr = np.zeros((np.int(num_iter), feature_dim))
+            # for batch_idx, (data, labels) in enumerate(train_loader):
+            #     # print('batch idx', batch_idx)
+            #     data, labels = data.to(device), labels.to(device)
+            #     data = flatten_features(data) # minibatch by feature_dim
+            #     data_numpy = data.detach().cpu().numpy()
+            #     for dim in np.arange(0,feature_dim):
+            #         med = meddistance(np.expand_dims(data_numpy[:,dim],axis=1))
+            #         sigma2 = med ** 2
+            #         sigma2_arr[batch_idx, dim] = sigma2
 
     elif method=='a_Gaussian_kernel':
         sigma2_arr = np.zeros(np.int(num_iter))
@@ -116,13 +125,18 @@ def main():
 
 
     base_dir = 'logs/gen/'
-    log_dir = base_dir + data_name + method + model_name + '/'
-    log_dir2 = data_name + method + model_name + '/'
+    # log_dir = base_dir + data_name + method + model_name + '/'
+    # log_dir2 = data_name + method + model_name + '/'
+    log_dir = base_dir + data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
+              + '_' + 'order_threshold' + '_' +str(order) + '/'
+    log_dir2 = data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
+              + '_' + 'order_threshold' + '_' +str(order) + '/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
     optimizer = torch.optim.Adam(list(model.parameters()), lr=0.001)
     scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
+    score_mat = np.zeros(n_epochs)
 
     for epoch in range(1, n_epochs + 1):
         model.train()
@@ -155,8 +169,9 @@ def main():
                 os.makedirs(dir_syn_data)
 
             np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-            final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=0.1, custom_keys='logistic_reg')
+            final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=subsampling_rate_for_synthetic_data, custom_keys='logistic_reg')
             print('on logistic regression, accuracy is', final_score)
+            score_mat[epoch-1] = final_score
 
         # end if
     # end for
@@ -172,8 +187,15 @@ def main():
         os.makedirs(dir_syn_data)
 
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=0.1, custom_keys='logistic_reg')
+    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=subsampling_rate_for_synthetic_data, custom_keys='logistic_reg')
     print('on logistic regression, accuracy is', final_score)
+
+    max_score = np.max(score_mat)
+    max_score = np.max([max_score, final_score])
+
+    dir_max_score = log_dir + data_name + '/max_score'
+    np.save(dir_max_score+'max_score', max_score)
+    print('max score is', max_score)
 
 
 if __name__ == '__main__':

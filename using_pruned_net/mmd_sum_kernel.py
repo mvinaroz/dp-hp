@@ -20,9 +20,13 @@ def mmd_loss(data_enc, data_labels, gen_enc, gen_labels, n_labels, sigma2, metho
      mmd_sum += mmd_per_class(idx_data_enc, idx_gen_enc, pt.sqrt(sigma2), batch_size)
 
      # for dim in np.arange(0, feature_dim):
-     #  print('dimension', dim)
+     #  # print('dimension', dim)
      #  dxx, dxy, dyy = get_squared_dist(idx_data_enc[:, dim].unsqueeze(1), idx_gen_enc[:, dim].unsqueeze(1))
      #  mmd_sum1 += mmd_g(dxx, dxy, dyy, pt.sqrt(sigma2), batch_size)
+     #
+     # print('mmd_sum', mmd_sum)
+     # print('mmd_sum1', mmd_sum1)
+
   else:
      dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
      mmd_sum += mmd_g(dxx, dxy, dyy, pt.sqrt(sigma2), batch_size)
