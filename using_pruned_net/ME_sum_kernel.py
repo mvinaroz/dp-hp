@@ -196,10 +196,10 @@ def main():
 
     """ Load data to test """
     batch_size = 100
-    train_loader = load_data(data_name, batch_size)
-    # test_batch_size = 200
-    # data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
-    # train_loader = data_pkg.train_loader
+    # train_loader = load_data(data_name, batch_size)
+    test_batch_size = 200
+    data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    train_loader = data_pkg.train_loader
     n_train_data = 60000
 
     """ Define a generator """
