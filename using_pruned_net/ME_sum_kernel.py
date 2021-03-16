@@ -189,7 +189,7 @@ def main():
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
     single_release = False
-    model_name = 'CNN' # CNN or FC
+    model_name = 'FC' # CNN or FC
     report_intermidiate_result = True
     subsampling_rate_for_synthetic_data = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -236,7 +236,7 @@ def main():
     rho = find_rho(sigma2)
     ev_thr = 0.001  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 45
+    or_thr = 32
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
