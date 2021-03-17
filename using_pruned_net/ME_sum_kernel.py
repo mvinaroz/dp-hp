@@ -9,6 +9,7 @@ from all_aux_files import FCCondGen, ConvCondGen, flatten_features, meddistance
 from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
+from autodp import privacy_calibrator
 import math
 from math import factorial
 import sys
@@ -98,7 +99,7 @@ def feature_map_HP(k, x, rho, device):
 
     return phi_x, eigen_vals
 
-def ME_with_HP(x, order, rho, device):
+def ME_with_HP(x, order, rho, device, n_training_data):
     n_data, input_dim = x.shape
 
     # reshape x, such that x is a long vector
@@ -114,14 +115,15 @@ def ME_with_HP(x, order, rho, device):
     # phi_x2 = torch.tensor(phi_x, dtype=float)
     phi_x = phi_x.type(torch.float)
     sum_val = torch.sum(phi_x, axis=0)
-    # if (sum_val !=sum_val).any():
-    #     print('sum val is nan', sum_val)
-
-    if n_data ==0:
-        phi_x = sum_val/(1+n_data)
-        print('n_data is zero, so we are adding 1 to n_data to avoid nan')
-    else:
-        phi_x = sum_val/n_data
+    phi_x = sum_val / n_training_data
+    # # if (sum_val !=sum_val).any():
+    # #     print('sum val is nan', sum_val)
+    #
+    # if n_data ==0:
+    #     phi_x = sum_val/(1+n_data)
+    #     print('n_data is zero, so we are adding 1 to n_data to avoid nan')
+    # else:
+    #     phi_x = sum_val/n_data
 
     # if (phi_x != phi_x).any():
     #     print('mean embedding inside ME_with_HP is nan', phi_x)
@@ -188,7 +190,11 @@ def main():
     data_name = 'digits' # 'digits' or 'fashion'
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
-    single_release = False
+    single_release = True
+    private = False # this flag can be true or false only when single_release is true.
+    if private:
+        epsilon=1.0
+        delta = 1e-5
     model_name = 'FC' # CNN or FC
     report_intermidiate_result = True
     subsampling_rate_for_synthetic_data = 0.1
@@ -236,7 +242,7 @@ def main():
     rho = find_rho(sigma2)
     ev_thr = 0.001  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 32
+    or_thr = 5
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
@@ -250,17 +256,37 @@ def main():
             data = flatten_features(data)
             for idx in range(n_classes):
                 idx_data = data[labels == idx]
-                phi_data = ME_with_HP(idx_data, order, rho, device)
+                phi_data = ME_with_HP(idx_data, order, rho, device, n_train_data)
                 data_embedding[:,idx, batch_idx] = phi_data
         data_embedding = torch.mean(data_embedding,axis=2)
         print('done with computing mean embedding of data')
 
+        if private:
+            print('we add noise to the data mean embedding as the private flag is true')
+            k = 1 # how many compositions we do, here it's just once.
+            privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
+            privacy_param = privacy_param['sigma']
+            print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param)
+            std = (2 * privacy_param * np.sqrt(feature_dim) / n_train_data)
+            noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+
+            print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+
+            data_embedding = data_embedding + noise
+
+            print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (
+            torch.mean(data_embedding), torch.std(data_embedding)))
+
+        else:
+            print('we do not add noise to the data mean embedding as the private flag is false')
+
+
     """ name the directories """
     base_dir = 'logs/gen/'
     log_dir = base_dir + data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
-              + '_' + 'order_threshold' + '_' +str(order) + '/'
+              + '_' + 'order_' + '_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
     log_dir2 = data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
-              + '_' + 'order_threshold' + '_' +str(order) + '/'
+              + '_' + 'order_' + '_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -285,7 +311,7 @@ def main():
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
+                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
             else:
                 synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
                 data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
@@ -296,7 +322,7 @@ def main():
                     #     print('there is no real data samples for this class')
                     # if torch.isnan(idx_data).any():
                     #     print('true data has nan')
-                    data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device)
+                    data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, batch_size)
                     # if torch.isnan(data_embedding[:,idx]).any():
                     #     print('data mean embedding of selected datapoints has nan')
 
@@ -305,7 +331,7 @@ def main():
                     #     print('there is no generated samples for this class')
                     # if torch.isnan(idx_synth_data).any():
                     #     print('true data has nan')
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device)
+                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
                     # if torch.isnan(synth_data_embedding[:,idx]).any():
                     #     print('data mean embedding of generated datapoints has nan')
 
