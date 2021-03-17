@@ -191,11 +191,11 @@ def main():
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
     single_release = True
-    private = False # this flag can be true or false only when single_release is true.
+    private = True # this flag can be true or false only when single_release is true.
     if private:
-        epsilon=1.0
+        epsilon = 1.0
         delta = 1e-5
-    model_name = 'FC' # CNN or FC
+    model_name = 'CNN' # CNN or FC
     report_intermidiate_result = True
     subsampling_rate_for_synthetic_data = 0.1
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -212,7 +212,7 @@ def main():
     input_size = 5 # dimension of z
     feature_dim = 784
     n_classes = 10
-    n_epochs = 20
+    n_epochs = 30
     if model_name == 'FC':
         model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True).to(device)
     elif model_name == 'CNN':
@@ -258,7 +258,8 @@ def main():
                 idx_data = data[labels == idx]
                 phi_data = ME_with_HP(idx_data, order, rho, device, n_train_data)
                 data_embedding[:,idx, batch_idx] = phi_data
-        data_embedding = torch.mean(data_embedding,axis=2)
+        # data_embedding = torch.mean(data_embedding,axis=2)
+        data_embedding = torch.sum(data_embedding, axis=2)
         print('done with computing mean embedding of data')
 
         if private:
@@ -284,9 +285,9 @@ def main():
     """ name the directories """
     base_dir = 'logs/gen/'
     log_dir = base_dir + data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
-              + '_' + 'order_' + '_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
+              + '_' + 'order_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
     log_dir2 = data_name + '_' + method + '_' + loss_type + '_' + model_name + '_' + 'single_release' + '_' +str(single_release) \
-              + '_' + 'order_' + '_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
+              + '_' + 'order_' +str(order) + '_' + 'private' + '_' + str(private) + '/'
     if not os.path.exists(log_dir):
         os.makedirs(log_dir)
 
@@ -335,7 +336,8 @@ def main():
                     # if torch.isnan(synth_data_embedding[:,idx]).any():
                     #     print('data mean embedding of generated datapoints has nan')
 
-            loss = torch.norm(data_embedding - synth_data_embedding)**2
+            # loss = torch.norm(data_embedding - synth_data_embedding)**2
+            loss = torch.sum((data_embedding - synth_data_embedding) ** 2)
             # if torch.isnan(loss):
             #     print('loss is nan')
             #     print(loss)
