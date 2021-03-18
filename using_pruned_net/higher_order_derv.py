@@ -9,10 +9,14 @@ def nth_derivative(f, wrt, n):
 
         grads = grad(f, wrt, create_graph=True)[0]
         f = grads.sum()
+        print('order %s th grads are' %(i+1))
+        print(grads)
 
     return grads
 
-x = torch.arange(4.0, requires_grad=True).reshape(2, 2)
+# x = torch.arange(4.0, requires_grad=True).reshape(2, 2)
+x = torch.tensor([1.0,3.0], requires_grad=True)
 loss = (x ** 4).sum()
 
-print(nth_derivative(f=loss, wrt=x, n=3))
+print('x is', x)
+nth_derivative(f=loss, wrt=x, n=3)
