@@ -16,6 +16,7 @@ import sys
 import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
+from torch.autograd import grad
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -76,26 +77,43 @@ def find_order(rho,eigen_val_threshold):
     return order
 
 
+
+def nth_derivative(f, wrt, n, rho):
+
+    store_varying_term = torch.ones((wrt.shape[0], n+1))
+    for i in range(n):
+        # print('order', i+1)
+        # i is the order of HP
+        const = rho**(0.5*(i+1))/np.sqrt(factorial(i+1)*2**(i+1.0))
+        # print('const', const)
+        # grads = grad(const*f, wrt, create_graph=True)[0]
+        f_const = f*const
+        f_const.backward(retain_graph=True)
+        # grads = grad(const * f, wrt, retain_graph=True)
+        grads = wrt.grad
+        store_varying_term[:,i+1] = grads.squeeze()*(-1)**(i+1)*torch.exp(-wrt.squeeze()**2)
+        grads = grads / const
+        f = f_const/const
+
+    return grads, store_varying_term
+
 def feature_map_HP(k, x, rho, device):
     # k: degree of polynomial
     # rho: a parameter (related to length parameter)
     # x: where to evaluate the function at
-    # print('device', device)
+
     eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
     eigen_vals = eigen_vals.to(device)
-    # print('eigen_vals', eigen_vals)
     eigen_funcs_x = eigen_func(k, rho, x, device)  # output dim: number of datapoints by number of degree
-    # print('eigen_funcs', eigen_funcs_x)
     sqrt_eig_vals = torch.sqrt(torch.abs(eigen_vals))
-
-    if (sqrt_eig_vals!=sqrt_eig_vals).any():
-        print('sqrt eig values are nan', sqrt_eig_vals)
     phi_x = torch.einsum('ij,j-> ij', eigen_funcs_x, sqrt_eig_vals)  # number of datapoints by order
-    # n_data = eigen_funcs_x.shape[0]
-    # mean_phi_x = torch.sum(phi_x,0)/n_data
 
-    if (phi_x != phi_x).any():
-      print('phi_x has nan', phi_x)
+    # """ An alternative computation of phi_x for numerical stability at high orders """
+    # constant_term = (1-rho)**(0.25)*(1+rho)**(0.25)*torch.exp(-rho/(1+rho)*x**2)
+    # x_for_Hk = x.clone().detach().requires_grad_(True)
+    # f = (torch.exp(-x_for_Hk ** 2)).sum()
+    # grads, store_varying_term = nth_derivative(f=f, wrt=x_for_Hk, n=k, rho=rho)
+    # phi_x = torch.einsum('ij,i-> ij', store_varying_term.to(device), constant_term.squeeze())
 
     return phi_x, eigen_vals
 
@@ -106,30 +124,14 @@ def ME_with_HP(x, order, rho, device, n_training_data):
     x_flattened = x.view(-1)
     x_flattened = x_flattened[:,None]
     phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
-    # if (phi_x_axis_flattened != phi_x_axis_flattened).any():
-    #     print('phi_x_axis_flattened inside ME_with_HP is nan', phi_x_axis_flattened)
     phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order+1)
-    # if (phi_x != phi_x).any():
-    #     print('reshaped phi_x_axis_flattened inside ME_with_HP is nan', phi_x)
-    # phi_x = torch.mean(phi_x, axis=0)
-    # phi_x2 = torch.tensor(phi_x, dtype=float)
     phi_x = phi_x.type(torch.float)
     sum_val = torch.sum(phi_x, axis=0)
     phi_x = sum_val / n_training_data
-    # # if (sum_val !=sum_val).any():
-    # #     print('sum val is nan', sum_val)
-    #
-    # if n_data ==0:
-    #     phi_x = sum_val/(1+n_data)
-    #     print('n_data is zero, so we are adding 1 to n_data to avoid nan')
-    # else:
-    #     phi_x = sum_val/n_data
 
-    # if (phi_x != phi_x).any():
-    #     print('mean embedding inside ME_with_HP is nan', phi_x)
-    #     print('n_data is ', n_data)
     phi_x = phi_x.view(-1) # size: input_dim*(order+1)
 
+    # """ this was for sanity check """
     # phi_x_mat = torch.zeros(input_dim*(order+1))
     # for axis in torch.arange(input_dim):
     #     # print(axis)
@@ -148,8 +150,7 @@ def eigen_func(k, rho, x, device):
     # k: degree of polynomial
     # rho: a parameter (related to length parameter)
     # x: where to evaluate the function at, size: number of data points by input_dimension
-    # print('device', device)
-    # orders = torch.arange(0, k + 1, device=device, dtype=torch.float32)
+
     orders = torch.arange(0, k + 1, device=device)
     H_k = eval_hermite_pytorch(x, k + 1, device, return_only_last_term=False)
     H_k = H_k[:, :, 0]
@@ -162,18 +163,6 @@ def eigen_func(k, rho, x, device):
     # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
     N_k = (2 ** orders) * ((orders + 1).to(torch.float32).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
-
-
-    # N_k1 = 2**torch.arange(0, k + 1, device=device, dtype=torch.float32)
-    #
-    # ord = np.arange(0, k + 1)
-    # N_k2 = [factorial(num) for num in ord]
-    # N_k2 = np.array(N_k2, dtype=np.int)
-    # N_k2 = torch.tensor(N_k2, dtype=torch.float, device=device)
-    #
-    # N_k3 = torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
-    # N_k = N_k1*N_k2*N_k3
-
 
     if torch.isnan(1 / torch.sqrt(N_k)).any():
         print('oops, 1/N_k has nan')
@@ -191,7 +180,7 @@ def main():
     method = 'sum_kernel' # sum_kernel or a_Gaussian_kernel
     loss_type = 'MEHP'
     single_release = True
-    private = True # this flag can be true or false only when single_release is true.
+    private = False # this flag can be true or false only when single_release is true.
     if private:
         epsilon = 1.0
         delta = 1e-5
@@ -201,7 +190,7 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     """ Load data to test """
-    batch_size = 100
+    batch_size = 1000
     # train_loader = load_data(data_name, batch_size)
     test_batch_size = 200
     data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
@@ -212,7 +201,7 @@ def main():
     input_size = 5 # dimension of z
     feature_dim = 784
     n_classes = 10
-    n_epochs = 30
+    n_epochs = 100
     if model_name == 'FC':
         model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True).to(device)
     elif model_name == 'CNN':
@@ -258,7 +247,6 @@ def main():
                 idx_data = data[labels == idx]
                 phi_data = ME_with_HP(idx_data, order, rho, device, n_train_data)
                 data_embedding[:,idx, batch_idx] = phi_data
-        # data_embedding = torch.mean(data_embedding,axis=2)
         data_embedding = torch.sum(data_embedding, axis=2)
         print('done with computing mean embedding of data')
 
@@ -319,34 +307,15 @@ def main():
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_data = data[labels == idx]
-                    # if len(idx_data.shape)==0:
-                    #     print('there is no real data samples for this class')
-                    # if torch.isnan(idx_data).any():
-                    #     print('true data has nan')
                     data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, batch_size)
-                    # if torch.isnan(data_embedding[:,idx]).any():
-                    #     print('data mean embedding of selected datapoints has nan')
-
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    # if len(idx_synth_data.shape)==0:
-                    #     print('there is no generated samples for this class')
-                    # if torch.isnan(idx_synth_data).any():
-                    #     print('true data has nan')
                     synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
-                    # if torch.isnan(synth_data_embedding[:,idx]).any():
-                    #     print('data mean embedding of generated datapoints has nan')
 
-            # loss = torch.norm(data_embedding - synth_data_embedding)**2
-            loss = torch.sum((data_embedding - synth_data_embedding) ** 2)
-            # if torch.isnan(loss):
-            #     print('loss is nan')
-            #     print(loss)
-            # print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), n_train_data, loss.item()))
-            # print('syn_data_me', torch.mean(synth_data_embedding))
-            # print('batch_idx:%s, loss:%f' %(batch_idx, loss))
+            loss = torch.sum((data_embedding - synth_data_embedding)**2)
 
             optimizer.zero_grad()
             loss.backward()
+            # loss.backward(retain_graph=True)
             optimizer.step()
         # end for
 
@@ -373,6 +342,13 @@ def main():
     #     end if
     # end for
 
+    if report_intermidiate_result:
+        max_score = np.max(score_mat)
+
+        dir_max_score = log_dir + data_name + '/max_score'
+        np.save(dir_max_score+'max_score', max_score)
+        print('max score among the training runs is', max_score)
+
     #########################################################################3
     """ Once we have a trained generator, we store synthetic data from it and test them on logistic regression """
     syn_data, syn_labels = synthesize_data_with_uniform_labels(model, device, gen_batch_size=batch_size,
@@ -384,15 +360,13 @@ def main():
         os.makedirs(dir_syn_data)
 
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=subsampling_rate_for_synthetic_data, custom_keys='logistic_reg')
-    print('on logistic regression, accuracy is', final_score)
+    final_score = test_gen_data(log_dir2 + data_name, data_name, subsample=1.0, custom_keys='logistic_reg')
 
-    max_score = np.max(score_mat)
-    max_score = np.max([max_score, final_score])
+    dir_score = log_dir + data_name + '/score_60k'
+    np.save(dir_score + 'score_60k', final_score)
+    print('score with 60k samples is', final_score)
 
-    dir_max_score = log_dir + data_name + '/max_score'
-    np.save(dir_max_score+'max_score', max_score)
-    print('max score is', max_score)
+
 
 
 if __name__ == '__main__':
