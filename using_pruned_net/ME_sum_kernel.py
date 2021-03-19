@@ -10,6 +10,7 @@ from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
 from autodp import privacy_calibrator
+from torch.autograd import grad
 import math
 from math import factorial
 import sys
@@ -77,25 +78,34 @@ def find_order(rho,eigen_val_threshold):
     return order
 
 
+def phi_recursion(phi_k, phi_k_minus_1, rho, degree, x_in):
 
-def nth_derivative(f, wrt, n, rho):
+  if degree == 0:
+      phi_0 = (1 - rho) ** (0.25) * (1 + rho) ** (0.25) * torch.exp(-rho/(1+rho)*x_in**2)
+      return phi_0
+  elif degree == 1:
+      phi_1 = np.sqrt(2*rho)*x_in*phi_k
+      return phi_1
+  else: # from degree ==2 (k=1 in the recursion formula)
+    k = degree - 1
+    first_term = np.sqrt(rho)/np.sqrt(2*(k+1))*2*x_in*phi_k
+    second_term = rho/np.sqrt(k*(k+1))*k*phi_k_minus_1
+    phi_k_plus_one = first_term - second_term
+    return phi_k_plus_one
 
-    store_varying_term = torch.ones((wrt.shape[0], n+1))
-    for i in range(n):
-        # print('order', i+1)
-        # i is the order of HP
-        const = rho**(0.5*(i+1))/np.sqrt(factorial(i+1)*2**(i+1.0))
-        # print('const', const)
-        # grads = grad(const*f, wrt, create_graph=True)[0]
-        f_const = f*const
-        f_const.backward(retain_graph=True)
-        # grads = grad(const * f, wrt, retain_graph=True)
-        grads = wrt.grad
-        store_varying_term[:,i+1] = grads.squeeze()*(-1)**(i+1)*torch.exp(-wrt.squeeze()**2)
-        grads = grads / const
-        f = f_const/const
+def compute_phi(x_in, n_degrees, rho, device):
+  first_dim = x_in.shape[0]
+  batch_embedding = torch.empty(first_dim, n_degrees, dtype=torch.float32, device=device)
+  phi_i_minus_one, phi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    phi_i = phi_recursion(phi_i_minus_one, phi_i_minus_two, rho, degree, x_in.squeeze())
+    batch_embedding[:, degree] = phi_i
 
-    return grads, store_varying_term
+    phi_i_minus_two = phi_i_minus_one
+    phi_i_minus_one = phi_i
+
+  return batch_embedding
+
 
 def feature_map_HP(k, x, rho, device):
     # k: degree of polynomial
@@ -104,16 +114,12 @@ def feature_map_HP(k, x, rho, device):
 
     eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
     eigen_vals = eigen_vals.to(device)
-    eigen_funcs_x = eigen_func(k, rho, x, device)  # output dim: number of datapoints by number of degree
-    sqrt_eig_vals = torch.sqrt(torch.abs(eigen_vals))
-    phi_x = torch.einsum('ij,j-> ij', eigen_funcs_x, sqrt_eig_vals)  # number of datapoints by order
+    # eigen_funcs_x = eigen_func(k, rho, x, device)  # output dim: number of datapoints by number of degree
+    # sqrt_eig_vals = torch.sqrt(torch.abs(eigen_vals))
+    # phi_x = torch.einsum('ij,j-> ij', eigen_funcs_x, sqrt_eig_vals)  # number of datapoints by order
 
     # """ An alternative computation of phi_x for numerical stability at high orders """
-    # constant_term = (1-rho)**(0.25)*(1+rho)**(0.25)*torch.exp(-rho/(1+rho)*x**2)
-    # x_for_Hk = x.clone().detach().requires_grad_(True)
-    # f = (torch.exp(-x_for_Hk ** 2)).sum()
-    # grads, store_varying_term = nth_derivative(f=f, wrt=x_for_Hk, n=k, rho=rho)
-    # phi_x = torch.einsum('ij,i-> ij', store_varying_term.to(device), constant_term.squeeze())
+    phi_x = compute_phi(x, k+1, rho, device)
 
     return phi_x, eigen_vals
 
@@ -123,6 +129,7 @@ def ME_with_HP(x, order, rho, device, n_training_data):
     # reshape x, such that x is a long vector
     x_flattened = x.view(-1)
     x_flattened = x_flattened[:,None]
+    # phi_x_axis_flattened = feature_map_HP_val_fun_combined(order, x_flattened, rho, device)
     phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
     phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order+1)
     phi_x = phi_x.type(torch.float)
@@ -163,12 +170,7 @@ def eigen_func(k, rho, x, device):
     # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
     exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
     N_k = (2 ** orders) * ((orders + 1).to(torch.float32).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
-
-    if torch.isnan(1 / torch.sqrt(N_k)).any():
-        print('oops, 1/N_k has nan')
     eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
-    if (eigen_funcs != eigen_funcs).any():
-      print('eigen_funcs has nan', eigen_funcs)
 
     return eigen_funcs
 
@@ -229,9 +231,9 @@ def main():
     sigma2 = np.mean(sigma2_arr)
     print('sigma2 is', sigma2)
     rho = find_rho(sigma2)
-    ev_thr = 0.001  # eigen value threshold, below this, we wont consider for approximation
+    ev_thr = 0.00001  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 5
+    or_thr = 100
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
