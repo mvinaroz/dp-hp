@@ -118,6 +118,10 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
     # mmd_real    =   0
     print(rho)
     for idx in range(n_labels):
+# <<<<<<< HEAD
+# =======
+# # <<<<<<< HEAD
+# >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
         if (torch.sum(data_labels==idx)>0 and torch.sum(data_labels==idx)>0):
             # print('The SUM is ', torch.sum(data_labels==idx))
             idx_data_enc = data_enc[data_labels == idx]
@@ -127,6 +131,7 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
             # if (math.isnan(a)):
             #     print(data_enc)
             mmd_sum   +=a
+# <<<<<<< HEAD
       # idx_data_enc = data_enc[data_labels == idx]
       # idx_gen_enc = gen_enc[gen_labels == idx]
       # # print('Data_enc Shape:', idx_data_enc.shape)
@@ -135,6 +140,18 @@ def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
       # #     print(data_enc)
       # mmd_sum   +=a
       #mmd_real  +=b
+# =======
+# =======
+#       idx_data_enc = data_enc[data_labels == idx]
+#       idx_gen_enc = gen_enc[gen_labels == idx]
+#       # print('Data_enc Shape:', idx_data_enc.shape)
+#       a         = mmd_hp(idx_data_enc, idx_gen_enc, order, rho, device)
+#       # if (math.isnan(a)):
+#       #     print(data_enc)
+#       mmd_sum   +=a
+# >>>>>>> d8b62a786b3a97a84413c87f1181c112dc44689c
+#       #mmd_real  +=b
+# >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
 
           
     #print('Real MMD is ', mmd_real)
@@ -231,6 +248,6 @@ def eigen_func(k, rho, x, device):
     return eigen_funcs
 
 
-u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cuda')), torch.zeros([100], device=torch.device('cuda')), 4
-                     , torch.tensor(0.5, device=torch.device('cuda'))
-                     , torch.device('cuda'), 1))
+u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cpu')), torch.zeros([100], device=torch.device('cpu')), 4
+                     , torch.tensor(0.5, device=torch.device('cpu'))
+                     , torch.device('cpu'), 1))

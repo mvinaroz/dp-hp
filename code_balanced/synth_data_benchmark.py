@@ -222,11 +222,12 @@ def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_result
   if data_path is None:
     data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
   datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
-  mean_acc = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
+  mean_acc, accs = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
                                   subsample, custom_keys, skip_slow_models, only_slow_models,
                                   skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
                                   print_conf_mat, norm_data)
-  return mean_acc
+  print(accs)
+  return mean_acc, accs
 
 
 def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
@@ -292,7 +293,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
     print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
   print(f'mean: {mean_acc}')
-  return mean_acc
+  return mean_acc, g_to_r_acc_summary
 
 
 def main():

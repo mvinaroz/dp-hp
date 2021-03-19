@@ -83,8 +83,13 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
       # minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+# <<<<<<< HEAD
       # print('Real Sampling Rate is ', ar.sampling_rate)
       #print('Real Sampling Rate is ', ar.sampling_rate)
+# =======
+#       print('Real Sampling Rate is ', ar.sampling_rate)
+
+# >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
       single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
@@ -154,7 +159,7 @@ def get_args():
   parser.add_argument('--sample-dims', action='store_true', default=True, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=True)
   
-  parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
+  parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=5, help='')
 
   ar = parser.parse_args()
@@ -209,8 +214,8 @@ def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data
 def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downstream_model):
   if data_key in {'digits', 'fashion'}:
     if not skip_downstream_model:
-      final_score = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg')
-      log_final_score(log_dir, final_score)
+      final_score, accs = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg,random_forest,gaussian_nb,bernoulli_nb,linear_svc,decision_tree,lda,adaboost,mlp,bagging,gbm,xgboost')
+      log_final_score(log_dir, accs)
   elif data_key == '2d':
     if not skip_downstream_model:
       final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
