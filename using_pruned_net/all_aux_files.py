@@ -16,6 +16,8 @@ from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
 import sys
+import math
+from math import factorial
 
 
 datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
@@ -24,10 +26,8 @@ datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
 
 def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=False):
   fac = 1. if probabilists else 2.
-  # fac = pt.tensor(2., dtype=pt.double, device=x_in.device)
   if degree == 0:
     return pt.tensor(1., dtype=pt.float32, device=x_in.device)
-    # return pt.tensor(1., dtype=pt.double, device=x_in.device)
   elif degree == 1:
     return fac * x_in
   else:
@@ -49,16 +49,6 @@ def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
     h_i_minus_two = h_i_minus_one
     h_i_minus_one = h_i
     batch_embedding[:, degree, :] = h_i
-    # if pt.isnan(h_i).any():
-    #   print('%s degree h_i is nan' %(degree))
-    #   print('h_i is ', h_i)
-    #   print('is x nan?', pt.isnan(x_in))
-    #   print('x is', x_in)
-    #   break
-      # for i in pt.arange(0,h_i.shape[0]):
-      #   if pt.isnan(h_i[i,:]).any():
-      #     print('%s th h has nan and values are ' %(i, h_i[i,:]))
-
 
   if return_only_last_term:
     return batch_embedding[:, -1, :]
@@ -247,7 +237,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
-  model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
+  model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 50000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
   model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
   model_specs['bernoulli_nb'] = {'binarize': 0.5}
