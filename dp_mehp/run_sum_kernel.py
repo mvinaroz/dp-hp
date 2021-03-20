@@ -19,10 +19,10 @@ def get_args():
     parser.add_argument('--data_name', type=str, default='digits', help='options are digits or fashion')
 
     # OPTIMIZATION
-    parser.add_argument('--batch-size', type=int, default=500)
+    parser.add_argument('--batch-size', type=int, default=1000)
     parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=5)
-    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # MODEL DEFINITION
@@ -36,8 +36,8 @@ def get_args():
     # OTHERS
     parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
     parser.add_argument('--report-intermediate-result', default=True, help='test synthetic data on logistic regression at every epoch')
-    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
-    parser.add_argument('--kernel-length', type=float, default=0.01, help='')
+    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument('--kernel-length', type=float, default=0.001, help='')
     parser.add_argument('--order-hermite', type=int, default=10, help='')
     # parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 

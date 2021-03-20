@@ -62,9 +62,9 @@ def find_order(rho, eigen_val_threshold):
   eigen_vals = (1 - rho) * (rho ** np.arange(0, k + 1))
   idx_keep = eigen_vals > eigen_val_threshold
   keep_eigen_vals = eigen_vals[idx_keep]
-  print('keep_eigen_vals are ', keep_eigen_vals)
+  # print('keep_eigen_vals are ', keep_eigen_vals)
   order = len(keep_eigen_vals)
-  print('The number of orders for Hermite Polynomials is', order)
+  # print('The number of orders for Hermite Polynomials is', order)
   return order
 
 
@@ -266,7 +266,7 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
     x_gen, y_gen = subsample_data(x_gen, y_gen, subsample, sub_balanced_labels)
     x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, subsample, sub_balanced_labels)
 
-    print(f'training on {subsample * 100.}% of the original syntetic dataset')
+    # print(f'training on {subsample * 100.}% of the original syntetic dataset')
 
   # print(f'data ranges: [{np.min(x_real_test)}, {np.max(x_real_test)}], [{np.min(x_real_train)}, '
   #       f'{np.max(x_real_train)}], [{np.min(x_gen)}, {np.max(x_gen)}]')
@@ -406,11 +406,11 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
     else:
       r_to_g_acc, r_to_g_f1, r_to_g_conv = -1, -1, -np.ones((10, 10))
 
-    print(a_str)
-    print(f_str)
-    if print_conf_mat:
-      print('gen to real confusion matrix:')
-      print(g_to_r_conf)
+    # print(a_str)
+    # print(f_str)
+    # if print_conf_mat:
+    #   print('gen to real confusion matrix:')
+    #   print(g_to_r_conf)
 
     if log_results:
       accs = np.asarray([base_acc, g_to_r_acc, r_to_g_acc])
