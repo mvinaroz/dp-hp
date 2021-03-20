@@ -10,14 +10,9 @@ from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
 from autodp import privacy_calibrator
-from torch.autograd import grad
-import math
-from math import factorial
 import sys
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-from torch.autograd import grad
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
