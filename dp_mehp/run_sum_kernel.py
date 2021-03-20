@@ -19,14 +19,14 @@ def get_args():
     parser.add_argument('--data_name', type=str, default='digits', help='options are digits or fashion')
 
     # OPTIMIZATION
-    parser.add_argument('--batch-size', type=int, default=500)
+    parser.add_argument('--batch-size', type=int, default=2000)
     parser.add_argument('--test-batch-size', type=int, default=1000)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # MODEL DEFINITION
-    parser.add_argument('--model-name', action='store_true', default='CNN', help='either CNN or FC')
+    parser.add_argument('--model-name', type=str, default='FC', help='either CNN or FC')
 
     # DP SPEC
     parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
@@ -38,7 +38,7 @@ def get_args():
     parser.add_argument('--report-intermediate-result', default=True, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
-    parser.add_argument('--order-hermite', type=int, default=10, help='')
+    parser.add_argument('--order-hermite', type=int, default=50, help='')
     # parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
     ar = parser.parse_args()
@@ -97,7 +97,7 @@ def main():
     feature_dim = 784
     n_classes = 10
     if model_name == 'FC':
-        model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True).to(device)
+        model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=True, batch_norm=True).to(device)
     elif model_name == 'CNN':
         model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
 
