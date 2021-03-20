@@ -1,4 +1,4 @@
-# We train a generator by minimizing the sum of pixel-wise MMD
+# We train a generator by minimizing the sum of pixel-wise MMD without HP approximations
 
 # from __future__ import print_function
 import torch

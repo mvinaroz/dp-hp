@@ -1,6 +1,7 @@
 """ this contains all the relevant scripts, copied from the code_balanced folder"""
 
 import torch as pt
+import torch
 import torch.nn as nn
 import numpy as np
 from collections import namedtuple
@@ -16,44 +17,118 @@ from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
 import sys
-import math
-from math import factorial
+
+train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
+                                                       'train_data', 'test_data',
+                                                       'n_features', 'n_data', 'n_labels', 'eval_func'])
+
+
+def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
+  if dataset_key in {'digits', 'fashion'}:
+    train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
+                                                                          dataset=dataset_key, normalize=normalize,
+                                                                          return_datasets=True)
+    n_features = 784
+    n_data = 60_000
+    n_labels = 10
+    eval_func = None
+  else:
+    raise ValueError
+
+  return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
+
+
+def find_rho(sigma2):
+  alpha = 1 / (2.0 * sigma2)
+  rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
+  rho_1 = -1 / 2 / alpha - np.sqrt(1 / alpha ** 2 + 4) / 2
+
+  if rho < 1:  # rho is always non-negative
+    print('rho is less than 1. so we take this value.')
+  elif rho > 1:
+    print('rho is larger than 1. Mehler formula does not hold')
+    if rho_1 > -1:  # rho_1 is always negative
+      print('rho_1 is larger than -1. so we take this value.')
+      rho = rho_1
+    else:  # if rho_1 <-1,
+      print('rho_1 is smaller than -1. Mehler formula does not hold')
+      sys.exit('no rho values satisfy the Mehler formulas. We have to stop the run')
+
+  return rho
+
+
+def find_order(rho, eigen_val_threshold):
+  k = 100
+  eigen_vals = (1 - rho) * (rho ** np.arange(0, k + 1))
+  idx_keep = eigen_vals > eigen_val_threshold
+  keep_eigen_vals = eigen_vals[idx_keep]
+  print('keep_eigen_vals are ', keep_eigen_vals)
+  order = len(keep_eigen_vals)
+  print('The number of orders for Hermite Polynomials is', order)
+  return order
+
+
+def phi_recursion(phi_k, phi_k_minus_1, rho, degree, x_in):
+  if degree == 0:
+    phi_0 = (1 - rho) ** (0.25) * (1 + rho) ** (0.25) * torch.exp(-rho / (1 + rho) * x_in ** 2)
+    return phi_0
+  elif degree == 1:
+    phi_1 = np.sqrt(2 * rho) * x_in * phi_k
+    return phi_1
+  else:  # from degree ==2 (k=1 in the recursion formula)
+    k = degree - 1
+    first_term = np.sqrt(rho) / np.sqrt(2 * (k + 1)) * 2 * x_in * phi_k
+    second_term = rho / np.sqrt(k * (k + 1)) * k * phi_k_minus_1
+    phi_k_plus_one = first_term - second_term
+    return phi_k_plus_one
+
+
+def compute_phi(x_in, n_degrees, rho, device):
+  first_dim = x_in.shape[0]
+  batch_embedding = torch.empty(first_dim, n_degrees, dtype=torch.float32, device=device)
+  phi_i_minus_one, phi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    phi_i = phi_recursion(phi_i_minus_one, phi_i_minus_two, rho, degree, x_in.squeeze())
+    batch_embedding[:, degree] = phi_i
+
+    phi_i_minus_two = phi_i_minus_one
+    phi_i_minus_one = phi_i
+
+  return batch_embedding
+
+
+def feature_map_HP(k, x, rho, device):
+  # k: degree of polynomial
+  # rho: a parameter (related to length parameter)
+  # x: where to evaluate the function at
+
+  eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
+  eigen_vals = eigen_vals.to(device)
+  phi_x = compute_phi(x, k + 1, rho, device)
+
+  return phi_x, eigen_vals
+
+
+def ME_with_HP(x, order, rho, device, n_training_data):
+  n_data, input_dim = x.shape
+
+  # reshape x, such that x is a long vector
+  x_flattened = x.view(-1)
+  x_flattened = x_flattened[:, None]
+  phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
+  phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order + 1)
+  phi_x = phi_x.type(torch.float)
+  sum_val = torch.sum(phi_x, axis=0)
+  phi_x = sum_val / n_training_data
+
+  phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
+
+  return phi_x
 
 
 datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
                                                             'x_real_train', 'y_real_train',
                                                             'x_real_test', 'y_real_test'])
-
-def hermite_polynomial_induction(h_n, h_n_minus_1, degree, x_in, probabilists=False):
-  fac = 1. if probabilists else 2.
-  if degree == 0:
-    return pt.tensor(1., dtype=pt.float32, device=x_in.device)
-  elif degree == 1:
-    return fac * x_in
-  else:
-    n = degree - 1
-    h_n_plus_one = fac*x_in*h_n - fac*n*h_n_minus_1
-    return h_n_plus_one
-
-def eval_hermite_pytorch(x_in, n_degrees, device, return_only_last_term=True):
-  n_samples = x_in.shape[0]
-  n_features = x_in.shape[1]
-  batch_embedding = pt.empty(n_samples, n_degrees, n_features, dtype=pt.float32, device=device)
-  h_i_minus_one, h_i_minus_two = None, None
-  for degree in range(n_degrees):
-    h_i = hermite_polynomial_induction(h_i_minus_one, h_i_minus_two, degree, x_in, probabilists=False)
-    if (h_i != h_i).any():
-      print('h_i has nan', h_i)
-      print('the degree is', degree)
-
-    h_i_minus_two = h_i_minus_one
-    h_i_minus_one = h_i
-    batch_embedding[:, degree, :] = h_i
-
-  if return_only_last_term:
-    return batch_embedding[:, -1, :]
-  else:
-    return batch_embedding
 
 def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
   gen.eval()
