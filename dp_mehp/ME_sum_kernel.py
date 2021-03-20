@@ -6,7 +6,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from all_aux_files import FCCondGen, ConvCondGen, flatten_features, meddistance
-from all_aux_files import eval_hermite_pytorch, get_mnist_dataloaders
+from all_aux_files import get_mnist_dataloaders
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from collections import namedtuple
 from autodp import privacy_calibrator
@@ -148,26 +148,6 @@ def ME_with_HP(x, order, rho, device, n_training_data):
 
     return phi_x
 
-def eigen_func(k, rho, x, device):
-    # k: degree of polynomial
-    # rho: a parameter (related to length parameter)
-    # x: where to evaluate the function at, size: number of data points by input_dimension
-
-    orders = torch.arange(0, k + 1, device=device)
-    H_k = eval_hermite_pytorch(x, k + 1, device, return_only_last_term=False)
-    H_k = H_k[:, :, 0]
-
-    if torch.isnan(H_k).any():
-        print('H_k has nan')
-    # H_k = eval_hermite(orders, x)  # input arguments: degree, where to evaluate at.
-    # output dim: number of datapoints by number of degree
-    rho = torch.tensor(rho, dtype=torch.float32, device=device)
-    # print('Device of Rho is ', rho.device, 'and device of x is ', x.device)
-    exp_trm = torch.exp(-rho / (1 + rho) * (x ** 2))  # output dim: number of datapoints by 1
-    N_k = (2 ** orders) * ((orders + 1).to(torch.float32).lgamma().exp()) * torch.sqrt(torch.abs((1 - rho) / (1 + rho)))
-    eigen_funcs = 1 / torch.sqrt(N_k) * (H_k * exp_trm)  # output dim: number of datapoints by number of degree
-
-    return eigen_funcs
 
 
 def main():
