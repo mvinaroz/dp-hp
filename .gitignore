@@ -1,10 +1,15 @@
 code_balanced/__pycache__/*.pyc
 code_balanced/data/
 code_balanced/logs/
+
 dp_mehp/logs/
 dp_mehp/data/
-using_pruned_net/__pycache__/*.pyc
 dp_mehp/__pycache__/*.pyc
+
+using_pretrained_net/__pycache__/*.pyc
+using_pretrained_net/*.t7
+using_pretrained_net/Trained_ResNet 
+
 
 .idea/
 
