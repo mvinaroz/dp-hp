@@ -376,7 +376,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
   g_to_r_acc_summary = []
   dc = datasets_colletion
   for key in run_keys:
-    print(f'Model: {key}')
+    # print(f'Model: {key}')
     a_str, f_str = 'acc:', 'f1:'
 
     if not skip_gen_to_real:
@@ -419,11 +419,11 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
       file_name = f'sub{subsample}_{key}_log'
       np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
-  print('acc summary:')
+  # print('acc summary:')
   for acc in g_to_r_acc_summary:
     print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
-  print(f'mean: {mean_acc}')
+  # print(f'mean: {mean_acc}')
   return mean_acc
 
 
