@@ -420,8 +420,8 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
       np.savez(os.path.join(log_save_dir, file_name), accuracies=accs, f1_scores=f1_scores, conf_mats=conf_mats)
 
   # print('acc summary:')
-  for acc in g_to_r_acc_summary:
-    print(acc)
+  # for acc in g_to_r_acc_summary:
+    # print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
   # print(f'mean: {mean_acc}')
   return mean_acc
