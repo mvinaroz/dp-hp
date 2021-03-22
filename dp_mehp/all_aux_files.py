@@ -276,7 +276,7 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
   return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
 
 
-def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_path=None,
+def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=True, data_path=None,
                   data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
                   custom_keys=None, skip_slow_models=False, only_slow_models=False,
                   skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
@@ -453,6 +453,13 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downst
   # elif data_key == '1d':
   #   plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
   #   plot_data_1d(data_tuple.x_real_test, data_tuple.y_real_test.flatten(), os.path.join(log_dir, 'plot_data'))
+
+
+def test_results_subsampling_rate(data_key, log_name, log_dir, data_tuple, eval_func, skip_downstream_model, subsampling_rate):
+  if data_key in {'digits', 'fashion'}:
+    if not skip_downstream_model:
+      final_score = test_gen_data(log_name, data_key, subsample=subsampling_rate, custom_keys='logistic_reg,random_forest,gaussian_nb,bernoulli_nb,linear_svc,decision_tree,lda,adaboost,mlp,bagging,gbm,xgboost')
+      log_final_score(log_dir, final_score)
 
 def log_args(log_dir, args):
   """ print and save all args """

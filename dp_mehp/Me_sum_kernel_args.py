@@ -8,7 +8,7 @@ from torchvision import datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
 from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP
-from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results
+from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from autodp import privacy_calibrator
 from collections import namedtuple
@@ -24,17 +24,6 @@ from torch.autograd import grad
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
                                                        'n_features', 'n_data', 'n_labels', 'eval_func'])
-def load_data(data_name, batch_size):
-    transform_digits = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.1307], [0.3081])])
-    transform_fashion = transforms.Compose([transforms.ToTensor()])
-
-    if data_name == 'digits':
-        train_dataset = datasets.MNIST(root='data', train=True, transform=transform_digits, download=True)
-    elif data_name == 'fashion':
-        train_dataset = datasets.FashionMNIST(root='data', train=True, transform=transform_fashion, download=True)
-
-    train_loader = DataLoader(dataset=train_dataset,batch_size=batch_size,num_workers=0,shuffle=True)
-    return train_loader
 
 
 def get_args():
@@ -73,6 +62,7 @@ def get_args():
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
   parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
+  parser.add_argument('--order-hermite', type=int, default=50, help='')
   
   ar = parser.parse_args()
 
@@ -112,7 +102,7 @@ def main():
   
     """ Define a generator """
     if ar.model_name == 'FC':
-        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=False, batch_norm=True).to(device)
+        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
     elif ar.model_name == 'CNN':
         model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True, batch_norm=True).to(device)
       
@@ -120,13 +110,13 @@ def main():
     """ set the scale length """
     num_iter = np.int(data_pkg.n_data / ar.batch_size)
 
-    sigma2 = np.mean(ar.sigma_arr)
-    print('sigma2 is', sigma2)
-    rho = find_rho(sigma2)
+#    sigma2 = np.mean(ar.sigma_arr)
+    print('sigma2 is', ar.sigma_arr)
+    rho = find_rho(ar.sigma_arr)
   
-    ev_thr = 0.00001  # eigen value threshold, below this, we wont consider for approximation
+    ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = 100
+    or_thr = ar.order_hermite
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
@@ -189,22 +179,6 @@ def main():
 
         log_gen_data(model, device, ar.epochs, data_pkg.n_labels, ar.log_dir)
         scheduler.step()
-    
-
-        if ar.report_intermediate:
-            """ now we save synthetic data and test them on logistic regression """
-            syn_data, syn_labels = synthesize_data_with_uniform_labels(model, device, gen_batch_size=ar.batch_size,
-                                                                       n_data=data_pkg.n_data,
-                                                                       n_labels=data_pkg.n_labels)
-            data_id = "synthetic_mnist" if ar.data in {"digits", "fashion"} else 'gen_data'
-            dir_syn_data = ar.log_dir + ar.data + '/synthetic_mnist'
-            if not os.path.exists(dir_syn_data):
-                os.makedirs(dir_syn_data)
-
-            np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-            final_score = test_gen_data(ar.log_name + ar.data_, ar.data, subsample=ar.sampling_rate_synth, custom_keys='logistic_reg')
-            print('on logistic regression, accuracy is', final_score)
-            score_mat[epoch - 1] = final_score
 
     #     end if
     # end for
@@ -231,7 +205,7 @@ def main():
     data_tuple = datasets_colletion_def(syn_data, syn_labels,
                                         data_pkg.train_data.data, data_pkg.train_data.targets,
                                         data_pkg.test_data.data, data_pkg.test_data.targets)
-    test_results(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, data_tuple, data_pkg.eval_func, ar.skip_downstream_model)
+    test_results_subsampling_rate(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, data_tuple, data_pkg.eval_func, ar.skip_downstream_model, ar.sampling_rate_synth)
     
     
 #    dir_score = ar.log_dir + '/' + ar.data + '/score_60k'
