@@ -89,8 +89,9 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
     # mmd_real    =   0
     num_data_idx    =   np.zeros(shape=[n_labels, ])
     for t in range(sr_me_division):
-        lb          =   t*np.floor(size_data/sr_me_division) #Lower Bound of indices in each data batch
-        ub          =   np.min([(t+1)*np.floor(size_data/sr_me_division),size_data])
+        lb          =   int(t*np.floor(size_data[0]/sr_me_division)) #Lower Bound of indices in each data batch
+        ub          =   int(np.min([(t+1)*np.floor(size_data[0]/sr_me_division),size_data[0]]))
+        print('ub is ', ub, ' and lb is ', lb)
         subdata     =   data[lb:ub, :] 
         sublabel    =   label[lb:ub][:]  
         for idx in range(n_labels):
