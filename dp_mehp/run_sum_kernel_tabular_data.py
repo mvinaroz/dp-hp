@@ -21,7 +21,7 @@ def get_args():
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=0, help='sets random seed')
+    parser.add_argument('--seed', type=int, default=1, help='sets random seed')
     parser.add_argument('--data-name', type=str, default='epileptic', \
                         help='choose among cervical, adult, census, intrusion, covtype, epileptic, credit, isolet')
 
@@ -42,8 +42,8 @@ def get_args():
 
     # OTHERS
     parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
-    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
-    parser.add_argument('--kernel-length', type=float, default=0.005, help='')
+    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
 
@@ -55,6 +55,13 @@ def get_args():
     log_args(ar.log_dir, ar)
 
     return ar
+# kernel-length 0.1
+# roc mean across methods is 0.587
+# prc mean across methods is 0.321
+
+# kernel-length 0.01
+# roc mean across methods is 0.623
+# prc mean across methods is 0.356
 
 def preprocess_args(ar):
 

@@ -23,7 +23,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.neural_network import MLPClassifier
 import xgboost
-
+from collections import defaultdict, namedtuple
+from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import roc_auc_score
 from sklearn.metrics import average_precision_score
 from sklearn.model_selection import ParameterGrid
@@ -549,13 +550,22 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
     f1_arr = []
 
     models = np.array(
-        [LogisticRegression(solver='lbfgs', max_iter=2000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(),
-         DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(),
-         RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()])
+        [LogisticRegression(solver='lbfgs', max_iter=50000), GaussianNB(), BernoulliNB(alpha=0.02),
+         LinearSVC(max_iter=10000, tol=1e-8, loss='hinge'),
+         DecisionTreeClassifier(class_weight='balanced', criterion='gini', splitter='best',
+                                    min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0.0,
+                                    min_impurity_decrease=0.0),
+         LinearDiscriminantAnalysis(solver='eigen', tol=1e-8, shrinkage=0.5),
+         AdaBoostClassifier(n_estimators=100, algorithm='SAMME.R'),
+         BaggingClassifier(max_samples=0.1, n_estimators=20),
+         RandomForestClassifier(n_estimators=100, class_weight='balanced'),
+         GradientBoostingClassifier(subsample=0.1, n_estimators=50),
+         MLPClassifier(),
+         xgboost.XGBClassifier()])
+
     models_to_test = models[np.array(args)]
 
     for model in models_to_test:
-
         print('\n', type(model))
         model.fit(X_tr, y_tr)
         pred = model.predict(X_te)  # test on real data
