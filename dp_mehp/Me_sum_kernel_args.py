@@ -1,4 +1,3 @@
-
 import torch
 import numpy as np
 import os
@@ -10,7 +9,7 @@ import torchvision.transforms as transforms
 from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP
 from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
-from autodp import privacy_calibrator
+#from autodp import privacy_calibrator
 from collections import namedtuple
 from torch.autograd import grad
 import math
@@ -36,7 +35,7 @@ def get_args():
   parser.add_argument('--log-dir', type=str, default=None, help='override save path. constructed if None')
   parser.add_argument('--data', type=str, default='digits', help='options are digits, fashion and 2d')
   parser.add_argument('--create-dataset', action='store_true', default=True, help='if true, make 60k synthetic code_balanced')
-  parser.add_argument('--sigma_arr', '-sigma', type=float, default=None, help='standard dev. for filter sampling')
+
   
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=1000)
@@ -63,6 +62,8 @@ def get_args():
   parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=50, help='')
+  parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+  parser.add_argument('--kernel-length', type=float, default=0.001, help='')
   
   ar = parser.parse_args()
 
@@ -84,8 +85,7 @@ def preprocess_args(ar):
     if ar.seed is None:
         ar.seed = np.random.randint(0, 1000)
         assert ar.data in {'digits', 'fashion'}
-    if ar.sigma_arr is None:
-        ar.sigma_arr = '0.05' if ar.data == 'digits' else '0.07'
+        
 
 
     
@@ -110,9 +110,16 @@ def main():
     """ set the scale length """
     num_iter = np.int(data_pkg.n_data / ar.batch_size)
 
-#    sigma2 = np.mean(ar.sigma_arr)
-    print('sigma2 is', ar.sigma_arr)
-    rho = find_rho(ar.sigma_arr)
+    if ar.heuristic_sigma:
+        if ar.data=='digits':
+            sigma2 = 0.05
+        elif ar.data=='fashion':
+            sigma2 = 0.07
+    else:
+        sigma2 = ar.kernel_length
+        
+    print('sigma2 is', sigma2)
+    rho = find_rho(sigma2)
   
     ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
