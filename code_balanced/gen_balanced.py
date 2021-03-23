@@ -90,7 +90,7 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
 #       print('Real Sampling Rate is ', ar.sampling_rate)
 
 # >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
-      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
+      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma, ar.mmd_computation)
   else:
     raise ValueError
 
@@ -161,6 +161,7 @@ def get_args():
   
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=5, help='')
+  parser.add_argument('--mmd-computation', type=str, default='cross', help='Use cross or mean_emb')
 
   ar = parser.parse_args()
 

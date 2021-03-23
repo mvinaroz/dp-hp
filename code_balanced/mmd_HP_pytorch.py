@@ -7,7 +7,7 @@ from aux import meddistance
 import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  single_release=True, sample_dims=False, heuristic_sigma=True):
+def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  single_release=True, sample_dims=False, heuristic_sigma=True, mmd_computation):
     # print('Sampling Rate is ', sampling_rate)    
     if (single_release):
         data_acc    =   []
@@ -38,7 +38,10 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  si
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
             print('loss')
-            return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
+            if (mmd_computation=='mean_emb'):
+                return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
+            elif (mmd_computation='cross'):
+                return mmd_loss_hp_approx(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss_minibatch   =   None
     else:
         def hp_loss_minibatch(data_enc, labels, gen_enc, gen_labels):
@@ -55,7 +58,10 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  si
                 gen_enc     =   gen_enc[:, rchoice]
             # print('Size is ', int(np.floor(dim_data*sampling_rate)))
             # print('Total Size is ', dim_data)
-            return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
+            if (mmd_computation=='mean_emb'):
+                return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
+            elif (mmd_computation='cross'):
+                return mmd_mean_embedding(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss     =   None
     return hp_loss, hp_loss_minibatch
           
