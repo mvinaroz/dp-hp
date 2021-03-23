@@ -37,6 +37,11 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, mmd_computation, s
         
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
+            if (sample_dims):
+                n_data, dim_data    =   data_enc.shape
+                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+                data_tensor    =   data_tensor[:, rchoice]
+                gen_enc     =   gen_enc[:, rchoice]
             print('loss')
             if (mmd_computation=='mean_emb'):
                 return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
@@ -96,7 +101,7 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
         sublabel    =   label[lb:ub][:]  
         for idx in range(n_labels):
           # print(data.shape)
-          print('Indexed dimensions are ', (sublabel==idx).shape)
+          # print('Indexed dimensions are ', (sublabel==idx).shape)
           idx_data_enc          =   subdata[sublabel == idx][:]
           num_data_id  , _      =   idx_data_enc.shape
           num_data_idx[idx]     +=  num_data_id
@@ -111,16 +116,20 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
 
 def tensor_fmap_hp(data, order, rho, device):
     data_dim    =    data.size()[0]
+    print('Data dim is ' , data_dim)
+    print('Data shape is ', data.shape)
+    print('Data[0] shape is ', data[0].shape)
+    
     fmap, _    =   feature_map_HP(order, data[0].unsqueeze(0).unsqueeze(0), rho, device)
     fmap        =   fmap[0, :]
     for dim in range(data_dim-1):
         fmap_dim, _    =   feature_map_HP(order, data[dim+1].unsqueeze(0).unsqueeze(0), rho, device)
         fmap_dim    =   fmap_dim[0, :]
-        # print('Fmap_dim is ', fmap_dim, 'and Fmap is ', fmap)
+        print('Fmap_dim is ', fmap_dim)
         fmap    =   torch.matmul(fmap.unsqueeze(dim+1), fmap_dim.unsqueeze(0))
     return fmap
         
-      
+       
 def mmd_loss_hp_approx(data_enc, data_labels, gen_enc, gen_labels, n_labels, order, rho, device, labels_to_one_hot=False, sr_me_division=1):
     if (labels_to_one_hot==True):
         # set gen labels to scalars from one-hot
