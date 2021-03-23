@@ -40,7 +40,7 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, sampling_rate,  si
             print('loss')
             if (mmd_computation=='mean_emb'):
                 return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
-            elif (mmd_computation='cross'):
+            elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss_minibatch   =   None
     else:
