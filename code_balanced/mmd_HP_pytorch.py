@@ -97,7 +97,8 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
           # print(data.shape)
           print('Indexed dimensions are ', (sublabel==idx).shape)
           idx_data_enc          =   subdata[sublabel == idx][:]
-          num_data_idx[idx]  , _     +=   idx_data_enc.shape
+          num_data_id  , _      =   idx_data_enc.shape
+          num_data_idx[idx]     +=  num_data_id
           for idx_data in range(num_data_idx):
               # print(idx_data)
               mp    =  tensor_fmap_hp(idx_data_enc[idx_data, :], order, rho, device)
@@ -262,6 +263,6 @@ def eigen_func(k, rho, x, device):
     return eigen_funcs
 
 
-u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cpu')), torch.zeros([100], device=torch.device('cpu')), 4
-                     , torch.tensor(0.5, device=torch.device('cpu'))
-                     , torch.device('cpu'), 1))
+# u=(mean_embedding_proxy(torch.randn(size=[100, 4], device=torch.device('cpu')), torch.zeros([100], device=torch.device('cpu')), 4
+#                      , torch.tensor(0.5, device=torch.device('cpu'))
+#                      , torch.device('cpu'), 1))
