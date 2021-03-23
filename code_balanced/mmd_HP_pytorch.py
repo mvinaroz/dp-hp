@@ -75,7 +75,7 @@ def mmd_mean_embedding(data_enc, data_labels, gen_enc, gen_labels, n_labels, ord
     
 def mean_embedding_proxy(data, label, order, rho, device, n_labels, labels_to_one_hot=False):
     
-    if (labels_to_one_hot==True):
+    if (labels_to_one_hot==True or len(label.shape)!=1):
         # set gen labels to scalars from one-hot
         _, label = torch.max(label, dim=1)
     
@@ -83,11 +83,13 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, labels_to_on
     # for each label, take the associated encodings
     # print('Number of labels:', n_labels)
     mean_size   =   torch.hstack([torch.tensor(n_labels, dtype=int), (order+1)*torch.ones(size=[dim_data,], dtype=int)])
+    print('Mean Size is ', mean_size)
     # print(mean_size)
     mean_proxy  =   torch.zeros(tuple((mean_size.numpy()).tolist()), device=device)
     # mmd_real    =   0
     for idx in range(n_labels):
       print(data.shape)
+      print('Indexed dimensions are ', (label==idx).shape)
       idx_data_enc          =   data[label == idx][:]
       num_data_idx  , _     =   idx_data_enc.shape
       for idx_data in range(num_data_idx):
