@@ -69,6 +69,7 @@ class Generative_Model_homogeneous_data(nn.Module):
             self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
             self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
             self.relu = torch.nn.ReLU()
+            self.sigmoid = torch.nn.Sigmoid()
             self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
             self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
             self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
@@ -82,6 +83,7 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc2(relu)
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
+            output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
 
             return output
 
@@ -114,6 +116,7 @@ class Generative_Model_heterogeneous_data(nn.Module):
                 output = self.fc3(output)
 
                 output_numerical = self.relu(output[:, 0:self.num_numerical_inputs])  # these numerical values are non-negative
+                output_numerical = self.sigmoid(output_numerical) # because we preprocess data such that each feature is [0,1]
                 output_categorical = self.sigmoid(output[:, self.num_numerical_inputs:])
                 output_combined = torch.cat((output_numerical, output_categorical), 1)
 
@@ -549,7 +552,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
         [LogisticRegression(solver='lbfgs', max_iter=2000), GaussianNB(), BernoulliNB(alpha=0.02), LinearSVC(),
          DecisionTreeClassifier(), LinearDiscriminantAnalysis(), AdaBoostClassifier(), BaggingClassifier(),
          RandomForestClassifier(), GradientBoostingClassifier(), MLPClassifier(), xgboost.XGBClassifier()])
-    models_to_test = models[np.array(args.classifiers)]
+    models_to_test = models[np.array(args)]
 
     for model in models_to_test:
 
@@ -613,7 +616,7 @@ def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim
 
         sigma_array = np.zeros(num_numerical_inputs)
         for i in np.arange(0, num_numerical_inputs):
-            med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=1000)
+            med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=5000)
             sigma_array[i] = med
 
         print('we will use separate frequencies for each column of numerical features')
@@ -623,8 +626,8 @@ def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim
     elif dataset == 'credit':
 
         # large value at the last column
-        med = meddistance(X_train[:, 0:-1], subsample=1000)
-        med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=1000)
+        med = meddistance(X_train[:, 0:-1], subsample=5000)
+        med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=5000)
         sigma_array = np.concatenate((med * np.ones(input_dim - 1), [med_last]))
 
         sigma2 = sigma_array ** 2
@@ -633,9 +636,11 @@ def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim
     else:
 
         if dataset in heterogeneous_datasets:
-            med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=1000)
+            med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=5000)
+        elif dataset == 'cervical':
+            med = meddistance(X_train, subsample=500)
         else:
-            med = meddistance(X_train, subsample=1000)
+            med = meddistance(X_train, subsample=5000)
 
         sigma2 = med ** 2
 
