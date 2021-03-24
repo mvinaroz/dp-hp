@@ -18,6 +18,7 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
 from sklearn.model_selection import ParameterGrid
 import sys
+# from contextlib import redirect_stdout
 
 def get_args():
 
@@ -110,7 +111,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     true_labels = onehot_encoder.fit_transform(y_train)
 
     # standardize the inputs
-    print('normalizing the data')
+    # print('normalizing the data')
     X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
     X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
 
@@ -118,7 +119,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     # MODEL
     # batch_size = np.int(np.round(ar.batch_rate * n))
     batch_size = np.int(np.round(batch_rate * n))
-    print("minibatch: ", batch_size)
+    # print("minibatch: ", batch_size)
     input_size = 20 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
@@ -140,13 +141,13 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ set the scale length """
     if ar.heuristic_sigma:
-        print('we use the median heuristic for length scale')
+        # print('we use the median heuristic for length scale')
         sigma = heuristic_for_length_scale(data_name, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets)
         sigma2 = np.median(sigma**2)
-        print('sigma2 value is', sigma2)
+        # print('sigma2 value is', sigma2)
     else:
         sigma2 = ar.kernel_length
-    print('sigma2 is', sigma2)
+    # print('sigma2 is', sigma2)
 
     rho = find_rho(sigma2)
     ev_thr = 1e-10  # eigen value threshold, below this, we wont consider for approximation
@@ -155,45 +156,45 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     or_thr = order_hermite
     if order>or_thr:
         order = or_thr
-        print('chosen order is', order)
+        # print('chosen order is', order)
 
 
     ########## data mean embedding ##########
     """ compute the weights """
-    print('computing mean embedding of data: (1) compute the weights')
+    # print('computing mean embedding of data: (1) compute the weights')
     unnormalized_weights = np.sum(true_labels, 0)
     weights = unnormalized_weights / np.sum(unnormalized_weights) # weights = m_c / n
-    print('\n weights with no privatization are', weights, '\n')
+    # print('\n weights with no privatization are', weights, '\n')
 
     if ar.is_private:
-        print("private")
+        # print("private")
         k = 2 # because we add noise to the weights and means separately.
         privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
-        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+        # print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
 
         sensitivity_for_weights = np.sqrt(2) / n  # double check if this is sqrt(2) or 2
         noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
         weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
         weights[weights < 0] = 1e-3  # post-processing so that we don't have negative weights.
-        print('weights after privatization are', weights)
+        # print('weights after privatization are', weights)
 
     """ compute the means """
-    print('computing mean embedding of data: (2) compute the mean')
+    # print('computing mean embedding of data: (2) compute the mean')
     data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
     for idx in range(n_classes):
         idx_data = X_train[y_train.squeeze()==idx,:]
         phi_data = ME_with_HP(torch.Tensor(idx_data), order, rho, device, n)
         data_embedding[:,idx] = phi_data # this includes 1/n factor inside
-    print('done with computing mean embedding of data')
+    # print('done with computing mean embedding of data')
 
     if ar.is_private:
-        print('we add noise to the data mean embedding as the private flag is true')
+        # print('we add noise to the data mean embedding as the private flag is true')
         std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
-        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+        # print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
         data_embedding = data_embedding + noise
-        print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+        # print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
 
     # the final mean embedding of data is,
     data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
@@ -201,7 +202,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
-    print('start training the generator')
+    # print('start training the generator')
     num_iter = np.int(n / batch_size)
 
     for epoch in range(n_epochs):  # loop over the dataset multiple times
@@ -251,7 +252,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             loss.backward()
             optimizer.step()
 
-        print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+        # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
         scheduler.step()
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
@@ -327,9 +328,19 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
+    # with open('out.txt', 'w') as f:
+    #     with redirect_stdout(f):
+    #         print('data')
     data_name = "epileptic"
     base_dir = 'logs/gen/'
-    sys.stdout = open(base_dir + '/' + data_name + 'result_txt.txt', "w")
+    txt_dir = base_dir + data_name + '/'
+    # sys.stdout = open(base_dir + '/' + data_name + 'result_txt.txt', "w")
+    if not os.path.exists(txt_dir):
+        os.makedirs(txt_dir)
+
+    orig_stdout = sys.stdout
+    f = open(txt_dir + 'out.txt', 'w')
+    sys.stdout = f
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
@@ -342,7 +353,7 @@ if __name__ == '__main__':
         n_features_arg = [10, 100, 200, 400]
         mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
         # undersampling_rates = [1.]
-        length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015]
+        length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015, 0.017, 0.02]
 
         # if dataset == 'adult':
         #     mini_batch_arg = [0.1]
@@ -444,7 +455,10 @@ if __name__ == '__main__':
             print("Setup: ", max_elem)
             print('*'*100)
 
-    sys.stdout.close()
+    # sys.stdout.close()
+
+    sys.stdout = orig_stdout
+    f.close()
 
     # main()
 
