@@ -18,10 +18,16 @@ from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
 
 def get_args():
+# seed 2
+# roc mean across methods is 0.601
+# prc mean across methods is 0.324
 
+# seed 3
+# roc mean across methods is 0.552
+# prc mean across methods is 0.257
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--seed', type=int, default=1, help='sets random seed')
+    parser.add_argument('--seed', type=int, default=0, help='sets random seed')
     parser.add_argument('--data-name', type=str, default='epileptic', \
                         help='choose among cervical, adult, census, intrusion, covtype, epileptic, credit, isolet')
 
@@ -55,13 +61,7 @@ def get_args():
     log_args(ar.log_dir, ar)
 
     return ar
-# kernel-length 0.1
-# roc mean across methods is 0.587
-# prc mean across methods is 0.321
 
-# kernel-length 0.01
-# roc mean across methods is 0.623
-# prc mean across methods is 0.356
 
 def preprocess_args(ar):
 
@@ -194,7 +194,7 @@ def main():
 
     if ar.is_private:
         print('we add noise to the data mean embedding as the private flag is true')
-        std = (2 * privacy_param * np.sqrt(input_dim) / n)
+        std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
         print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
@@ -206,7 +206,7 @@ def main():
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
-    scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
+    # scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
     print('start training the generator')
     num_iter = np.int(n / batch_size)
 
@@ -216,13 +216,22 @@ def main():
         for i in range(num_iter):
 
             """ (1) produce labels uniformly across different classes """
-            label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(torch.FloatTensor)
+            # label_input = torch.multinomial(torch.Tensor([weights]),
+            #                                 batch_size, replacement=True).type(torch.FloatTensor)
+            # label_input = label_input.transpose_(0, 1)
+            # label_input = label_input.squeeze()
+            # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(torch.FloatTensor)
 
             if data_name in homogeneous_datasets:  # In our case, if a dataset is homogeneous, then it is a binary dataset.
 
+                # label_input = label_input.to(device)
+                # feature_input = torch.randn((batch_size, input_size - 1)).to(device)
+                # input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
+                label_input = (1 * (torch.rand((batch_size)) < weights[1])).type(torch.FloatTensor)
                 label_input = label_input.to(device)
                 feature_input = torch.randn((batch_size, input_size - 1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
+
 
             else:  # heterogeneous data
 
@@ -254,7 +263,7 @@ def main():
             optimizer.step()
 
         print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-        scheduler.step()
+        # scheduler.step()
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
     """ now we save synthetic data of size 60K and test them on logistic regression """
@@ -263,7 +272,8 @@ def main():
 
         """ draw final data samples """
         # (1) generate labels
-        label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
+        # label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
+        label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.transpose_(0, 1)
         label_input = label_input.to(device)
 
@@ -288,15 +298,21 @@ def main():
     else:  # homogeneous datasets
 
         """ draw final data samples """
-        # weights[1] represents the fraction of the positive labels in the dataset,
-        # and we would like to generate a similar fraction of the postive/negative datapoints
+        # label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
+        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
+        #     torch.FloatTensor)
+        # label_input = label_input.to(device)
+        #
+        # feature_input = torch.randn((n, input_size - 1)).to(device)
+        # input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
+        # outputs = model(input_to_model)
+
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
         input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
         outputs = model(input_to_model)
-
         # if arguments.save_generated:
         #     save_generated_samples(outputs)
 
