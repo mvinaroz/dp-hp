@@ -13,18 +13,14 @@ import matplotlib
 matplotlib.use('Agg')
 import argparse
 from all_aux_files_tab_data import data_loading, Generative_Model_homogeneous_data, Generative_Model_heterogeneous_data, heuristic_for_length_scale
-from all_aux_files_tab_data import test_models
+from all_aux_files_tab_data import test_models, save_generated_samples
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
+from sklearn.model_selection import ParameterGrid
+import sys
 
 def get_args():
-# seed 2
-# roc mean across methods is 0.601
-# prc mean across methods is 0.324
 
-# seed 3
-# roc mean across methods is 0.552
-# prc mean across methods is 0.257
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--seed', type=int, default=0, help='sets random seed')
@@ -32,14 +28,10 @@ def get_args():
                         help='choose among cervical, adult, census, intrusion, covtype, epileptic, credit, isolet')
 
     # OPTIMIZATION
-    parser.add_argument("--batch-rate", type=float, default=0.5)
-    parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=200)
+    parser.add_argument("--batch-rate", type=float, default=0.1)
+    parser.add_argument('--epochs', type=int, default=100)
     parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
-
-    # MODEL DEFINITION
-    parser.add_argument('--model-name', type=str, default='FC', help='either CNN or FC')
 
     # DP SPEC
     parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
@@ -47,7 +39,6 @@ def get_args():
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
     # OTHERS
-    parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
@@ -57,8 +48,8 @@ def get_args():
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
     ar = parser.parse_args()
-    preprocess_args(ar)
-    log_args(ar.log_dir, ar)
+    # preprocess_args(ar)
+    # log_args(ar.log_dir, ar)
 
     return ar
 
@@ -67,26 +58,36 @@ def preprocess_args(ar):
 
     """ name the directories """
     base_dir = 'logs/gen/'
-    log_name = ar.data_name + '_' + ar.model_name + '_' + 'single_release=' + str(ar.single_release) +  \
+    log_name = ar.data_name + '_' + 'seed=' + str(ar.seed) +  \
                '_' + 'order=' + str(ar.order_hermite) + '_' + 'private=' + str(ar.is_private) + '_' \
                + 'epsilon=' + str(ar.epsilon) + '_' + 'delta=' + str(ar.delta) + '_' \
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'br=' + str(ar.batch_rate) + '_' + 'lr=' + str(ar.lr) + '_' \
-               + 'nepoch=' + str(ar.epochs)
+               + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate)
 
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
     if not os.path.exists(ar.log_dir):
         os.makedirs(ar.log_dir)
 
-def main():
+# def main():
+def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length):
 
     # load settings
     ar = get_args()
-    torch.manual_seed(ar.seed)
-    data_name = ar.data_name
-    n_epochs = ar.epochs
-    model_name = ar.model_name
+    ar.data_name = data_name
+    ar.seed_num = seed_num
+    ar.order_hermite = order_hermite
+    ar.batch_rate = batch_rate
+    ar.n_epochs = n_epochs
+    ar.kernel_length = kernel_length
+
+    preprocess_args(ar)
+    log_args(ar.log_dir, ar)
+
+    torch.manual_seed(seed_num)
+    # data_name = ar.data_name
+    # n_epochs = ar.epochs
     if ar.is_private:
         epsilon = ar.epsilon
         delta = ar.delta
@@ -110,26 +111,18 @@ def main():
 
     # standardize the inputs
     print('normalizing the data')
-    # X_train = preprocessing.scale(X_train)
-    # X_test = preprocessing.scale(X_test)
     X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
     X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
 
     ######################################
     # MODEL
-    batch_size = np.int(np.round(ar.batch_rate * n))
+    # batch_size = np.int(np.round(ar.batch_rate * n))
+    batch_size = np.int(np.round(batch_rate * n))
     print("minibatch: ", batch_size)
-    input_size = 10 + 1
-    # hidden_size_1 = 500
-    # hidden_size_2 = 500
+    input_size = 20 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
-
-    # if model_name == 'FC':
-    #     model = FCCondGen(input_size, '500,500', output_size, n_classes, use_sigmoid=True, batch_norm=True).to(device)
-    # elif model_name == 'CNN':
-    #     model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
 
     if data_name in homogeneous_datasets:
 
@@ -149,7 +142,7 @@ def main():
     if ar.heuristic_sigma:
         print('we use the median heuristic for length scale')
         sigma = heuristic_for_length_scale(data_name, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets)
-        sigma2 = np.mean(sigma**2)
+        sigma2 = np.median(sigma**2)
         print('sigma2 value is', sigma2)
     else:
         sigma2 = ar.kernel_length
@@ -158,7 +151,8 @@ def main():
     rho = find_rho(sigma2)
     ev_thr = 1e-10  # eigen value threshold, below this, we wont consider for approximation
     order = find_order(rho, ev_thr)
-    or_thr = ar.order_hermite
+    # or_thr = ar.order_hermite
+    or_thr = order_hermite
     if order>or_thr:
         order = or_thr
         print('chosen order is', order)
@@ -206,7 +200,7 @@ def main():
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
-    # scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
+    scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
     print('start training the generator')
     num_iter = np.int(n / batch_size)
 
@@ -216,18 +210,13 @@ def main():
         for i in range(num_iter):
 
             """ (1) produce labels uniformly across different classes """
-            # label_input = torch.multinomial(torch.Tensor([weights]),
-            #                                 batch_size, replacement=True).type(torch.FloatTensor)
-            # label_input = label_input.transpose_(0, 1)
-            # label_input = label_input.squeeze()
+            label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(torch.FloatTensor)
+            label_input = label_input.transpose_(0, 1)
+            label_input = label_input.squeeze()
             # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(torch.FloatTensor)
 
             if data_name in homogeneous_datasets:  # In our case, if a dataset is homogeneous, then it is a binary dataset.
 
-                # label_input = label_input.to(device)
-                # feature_input = torch.randn((batch_size, input_size - 1)).to(device)
-                # input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
-                label_input = (1 * (torch.rand((batch_size)) < weights[1])).type(torch.FloatTensor)
                 label_input = label_input.to(device)
                 feature_input = torch.randn((batch_size, input_size - 1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
@@ -263,7 +252,7 @@ def main():
             optimizer.step()
 
         print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-        # scheduler.step()
+        scheduler.step()
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
     """ now we save synthetic data of size 60K and test them on logistic regression """
@@ -272,8 +261,7 @@ def main():
 
         """ draw final data samples """
         # (1) generate labels
-        # label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
-        label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(torch.FloatTensor)
+        label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.transpose_(0, 1)
         label_input = label_input.to(device)
 
@@ -293,28 +281,16 @@ def main():
         generated_labels_final = label_input.cpu().detach().numpy()
 
         roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, n_classes, "generated", ar.classifiers)
-        roc_return, prc_return = roc, prc
 
     else:  # homogeneous datasets
 
         """ draw final data samples """
-        # label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
-        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
-        #     torch.FloatTensor)
-        # label_input = label_input.to(device)
-        #
-        # feature_input = torch.randn((n, input_size - 1)).to(device)
-        # input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
-        # outputs = model(input_to_model)
-
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
         input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
         outputs = model(input_to_model)
-        # if arguments.save_generated:
-        #     save_generated_samples(outputs)
 
         samp_input_features = outputs
 
@@ -330,9 +306,146 @@ def main():
         generated_labels_final = samp_labels.cpu().detach().numpy()
         generated_labels = np.argmax(generated_labels_final, axis=1)
 
-        f1 = test_models(generated_input_features_final, generated_labels, X_test, y_test, n_classes, "generated", ar.classifiers)
-        # test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
+        roc, prc = test_models(generated_input_features_final, generated_labels, X_test, y_test, n_classes, "generated", ar.classifiers)
 
+    ####################################################
+    """ saving results """
+    dir_result = ar.log_dir + '/scores'
+    np.save(dir_result + '_roc', roc)
+    np.save(dir_result + '_prc', prc)
+    np.save(dir_result + '_mean_roc', np.mean(roc))
+    np.save(dir_result + '_mean_prc', np.mean(prc))
+
+    """ saving synthetic data """
+    dir_syn_data = ar.log_dir + '/synthetic_data'
+    if not os.path.exists(dir_syn_data):
+        os.makedirs(dir_syn_data)
+    np.save(dir_syn_data + '/input_features', samp_input_features.detach().cpu().numpy())
+    np.save(dir_syn_data + '/labels', samp_labels.detach().cpu().numpy())
+
+    return roc, prc, ar.log_dir
 
 if __name__ == '__main__':
-    main()
+
+    data_name = "epileptic"
+    base_dir = 'logs/gen/'
+    sys.stdout = open(base_dir + '/' + data_name + 'result_txt.txt', "w")
+
+    # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
+    # for dataset in [arguments.dataset]:
+    for dataset in ["epileptic"]:
+        print("\n\n")
+        # print('is private?', is_priv_arg)
+
+
+        how_many_epochs_arg = [100, 200, 300]
+        n_features_arg = [10, 100, 200, 400]
+        mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
+        # undersampling_rates = [1.]
+        length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015]
+
+        # if dataset == 'adult':
+        #     mini_batch_arg = [0.1]
+        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
+        #     undersampling_rates = [.4]#[.8, .6, .4] #dummy
+        # elif dataset=='census':
+        #     mini_batch_arg=[0.1]
+        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+        #     undersampling_rates = [0.4]#[0.2, 0.3, 0.4]
+        # elif dataset=='covtype':
+        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
+        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+        #     mini_batch_arg=[0.03]
+        #     repetitions=3
+        #     undersampling_rates = [1.] #dummy
+        # elif dataset == 'intrusion':
+        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
+        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
+        #     mini_batch_arg = [0.03]
+        #     repetitions=3
+        #     undersampling_rates=[0.3]#[0.1, 0.2, 0.3]
+        # elif dataset=='credit':
+        #     undersampling_rates = [0.005]#[0.01, 0.005, 0.02]
+        # elif dataset=='cervical':
+        #     undersampling_rates = [1.]#[0.1, 0.3, 0.5, 0.7, 1.0]
+        # elif dataset=='isolet':
+        #     undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
+        # elif dataset=='epileptic':
+        #     undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
+
+
+
+        grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
+                              "n_epochs": how_many_epochs_arg, "kernel_length": length_scale})
+
+
+        repetitions = 5 # seed: 0 to 4
+
+        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
+
+            max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc, max_elem=0, 0, 0, 0, [0,0], 0
+
+            for elem in grid:
+                print(elem, "\n")
+                prc_arr_all = []; roc_arr_all = []
+
+                for ii in range(repetitions):
+                    print("\nRepetition: ",ii)
+
+                    roc, prc, dir_result  = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"])
+
+                    roc_arr_all.append(roc)
+                    prc_arr_all.append(prc)
+
+                    # print('sys')
+                    # sys.stdout.close()
+
+
+
+                roc_each_method_avr=np.mean(roc_arr_all, 0)
+                prc_each_method_avr=np.mean(prc_arr_all, 0)
+                roc_each_method_std = np.std(roc_arr_all, 0)
+                prc_each_method_std = np.std(prc_arr_all, 0)
+                roc_arr=np.mean(roc_arr_all, 1)
+                prc_arr = np.mean(prc_arr_all, 1)
+
+                # sys.stdout = open(dir_result+'result_txt.txt', "w")
+
+                print("\n", "-" * 40, "\n\n")
+                print("For each of the methods")
+                print("Average ROC each method: ", roc_each_method_avr);
+                print("Average PRC each method: ", prc_each_method_avr);
+                print("Std ROC each method: ", roc_each_method_std);
+                print("Std PRC each method: ", prc_each_method_std)
+
+
+                print("Average over repetitions across all methods")
+                print("Average ROC: ", np.mean(roc_arr)); print("Average PRC: ", np.mean(prc_arr))
+                print("Std ROC: ", np.std(roc_arr)); print("Variance PRC: ", np.std(prc_arr), "\n")
+                print("\n", "-" * 80, "\n\n\n")
+
+                # sys.stdout.close()
+
+                if np.mean(roc_arr)>max_aver_roc:
+                    max_aver_roc=np.mean(roc_arr)
+
+                if np.mean(prc_arr)>max_aver_prc:
+                    max_aver_prc=np.mean(prc_arr)
+
+                if np.mean(roc_arr) + np.mean(prc_arr)> max_aver_rocprc[0]+max_aver_rocprc[1]:
+                    max_aver_rocprc = [np.mean(roc_arr), np.mean(prc_arr)]
+                    max_elem = elem
+
+
+            print("\n\n", "*"*30, )
+            print(dataset)
+            print("Max ROC! ", max_aver_rocprc[0])
+            print("Max PRC! ", max_aver_rocprc[1])
+            print("Setup: ", max_elem)
+            print('*'*100)
+
+    sys.stdout.close()
+
+    # main()
+
+

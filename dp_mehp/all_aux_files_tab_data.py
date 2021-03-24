@@ -610,13 +610,13 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
 
 
-def save_generated_samples(samples, args):
-    path_gen_data = f"../data/generated/{args.dataset}"
-    os.makedirs(path_gen_data, exist_ok=True)
+def save_generated_samples(samples, args, path_gen_data):
+    # path_gen_data = f"../data/generated/{args.dataset}"
+    # os.makedirs(path_gen_data, exist_ok=True)
     if args.is_private:
-        np.save(os.path.join(path_gen_data, f"{args.dataset}_generated_privatized_{args.is_private}_eps_{args.epsilon}_epochs_{args.epochs}_features_{args.num_features}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
+        np.save(os.path.join(path_gen_data, f"{args.data_name}_generated_privatized_{args.is_private}_eps_{args.epsilon}_epochs_{args.epochs}_order_{args.hermite_order}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
     else:
-        np.save(os.path.join(path_gen_data, f"{args.dataset}_generated_privatized_{args.is_private}_epochs_{args.epochs}_features_{args.num_features}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
+        np.save(os.path.join(path_gen_data, f"{args.data_name}_generated_privatized_{args.is_private}_epochs_{args.epochs}_order_{args.hermite_order}_samples_{samples.shape[0]}_features_{samples.shape[1]}"), samples.detach().cpu().numpy())
     print(f"Generated data saved to {path_gen_data}")
 
 
