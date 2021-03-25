@@ -37,16 +37,17 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, mmd_computation, s
         
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
+            print(data_tensor.shape)
             if (sample_dims):
-                n_data, dim_data    =   data_enc.shape
+                n_data, dim_data    =   data_tensor.shape
                 rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
-                data_tensor    =   data_tensor[:, rchoice]
+                data_ten    =   data_tensor[:, rchoice]
                 gen_enc     =   gen_enc[:, rchoice]
             print('loss')
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
             elif (mmd_computation=='cross'):
-                return mmd_loss_hp_approx(data_tensor, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
         hp_loss_minibatch   =   None
     else:
         def hp_loss_minibatch(data_enc, labels, gen_enc, gen_labels):
@@ -126,7 +127,10 @@ def tensor_fmap_hp(data, order, rho, device):
         fmap_dim, _    =   feature_map_HP(order, data[dim+1].unsqueeze(0).unsqueeze(0), rho, device)
         fmap_dim    =   fmap_dim[0, :]
         print('Fmap_dim is ', fmap_dim)
-        fmap    =   torch.matmul(fmap.unsqueeze(dim+1), fmap_dim.unsqueeze(0))
+        if (dim!=0):
+            fmap    =   torch.einsum('i...l, j->i...lj', fmap, fmap_dim)#matmul(fmap.unsqueeze(dim+1), fmap_dim.unsqueeze(0))
+        else:
+            fmap    =   torch.einsum('i, j->ij', fmap, fmap_dim)
     return fmap
         
        
