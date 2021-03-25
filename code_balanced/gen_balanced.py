@@ -90,7 +90,7 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
 #       print('Real Sampling Rate is ', ar.sampling_rate)
 
 # >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
-      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.mmd_computation
+      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.bs, ar.sampling_multirelease, ar.mmd_computation
                                                               , ar.sampling_rate, ar.sr_me_division, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
@@ -164,7 +164,7 @@ def get_args():
   parser.add_argument('--order-hermite', type=int, default=5, help='')
   parser.add_argument('--mmd-computation', type=str, default='cross', help='Use cross or mean_emb')
   parser.add_argument('--sr-me-division', type=int, default=1, help='The number of batches that mean embedding is found on them. Then we sum them up. This helps us to save memory.')
-
+  parser.add_argument('--sampling-multirelease', action='store_true', default=False, help='If you set this parameter, in each minibatch you will have a different subsampling of the data')
 
   ar = parser.parse_args()
 

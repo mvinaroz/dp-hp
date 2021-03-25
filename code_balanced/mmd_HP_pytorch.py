@@ -7,9 +7,9 @@ from aux import meddistance
 import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
+def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
     # print('Sampling Rate is ', sampling_rate)    
-    if (single_release):
+    if (smp_mult):
         data_acc    =   []
         label_acc   =   []
         i   =   0
@@ -37,13 +37,51 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, mmd_computation, s
         
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
-            print(data_tensor.shape)
             if (sample_dims):
                 n_data, dim_data    =   data_tensor.shape
                 rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
                 data_ten    =   data_tensor[:, rchoice]
                 gen_enc     =   gen_enc[:, rchoice]
-            print('loss')
+            # print('loss')
+            if (mmd_computation=='mean_emb'):
+                return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+            elif (mmd_computation=='cross'):
+                return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+        hp_loss_minibatch   =   None        
+    elif (single_release):
+        data_acc    =   []
+        label_acc   =   []
+        i   =   0
+        for data, labels in train_loader:
+            data, labels = data.to(device), labels.to(device)
+            data_acc.append(data)
+            label_acc.append(labels)
+            i   +=1
+        # print('Size of train_loader: ', i, "and size of labels", labels.size())
+            
+        s1              =   np.hstack([len(data_acc)*data.shape[0], data.shape[1:]]).astype(int)
+        s2              =   np.hstack([len(label_acc)*labels.shape[0], labels.shape[1:]]).astype(int)
+        data_tensor     =   torch.zeros(list(s1), device=device)
+        label_tensor    =   torch.zeros(list(s2), device=device)
+        torch.cat(data_acc, out=data_tensor)
+        torch.cat(label_acc, out=label_tensor)
+        data_tensor     =   torch.flatten(data_tensor, start_dim=1)
+        
+        if (heuristic_sigma):
+            med             =   meddistance(data_tensor.detach().cpu().numpy())
+            alpha = 1 / (2.0 * (med**2))
+            xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
+        else:
+            xi  =   rho
+        
+    # print(label_tensor.size)
+        def hp_loss(gen_enc, gen_labels):
+            if (sample_dims):
+                n_data, dim_data    =   data_tensor.shape
+                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+                data_ten    =   data_tensor[:, rchoice]
+                gen_enc     =   gen_enc[:, rchoice]
+            # print('loss')
             if (mmd_computation=='mean_emb'):
                 return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
             elif (mmd_computation=='cross'):
