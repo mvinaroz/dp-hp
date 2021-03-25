@@ -77,7 +77,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     # load settings
     ar = get_args()
     ar.data_name = data_name
-    ar.seed_num = seed_num
+    ar.seed = seed_num
     ar.order_hermite = order_hermite
     ar.batch_rate = batch_rate
     ar.epochs = n_epochs
