@@ -87,8 +87,6 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     log_args(ar.log_dir, ar)
 
     torch.manual_seed(seed_num)
-    # data_name = ar.data_name
-    # n_epochs = ar.epochs
     if ar.is_private:
         epsilon = ar.epsilon
         delta = ar.delta
@@ -328,13 +326,10 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
-    # with open('out.txt', 'w') as f:
-    #     with redirect_stdout(f):
-    #         print('data')
-    data_name = "epileptic"
+    # data_name = "epileptic"
+    data_name = 'isolet'
     base_dir = 'logs/gen/'
     txt_dir = base_dir + data_name + '/'
-    # sys.stdout = open(base_dir + '/' + data_name + 'result_txt.txt', "w")
     if not os.path.exists(txt_dir):
         os.makedirs(txt_dir)
 
@@ -344,16 +339,21 @@ if __name__ == '__main__':
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
-    for dataset in ["epileptic"]:
+    # for dataset in ["epileptic"]:
+    for dataset in ["isolet"]:
         print("\n\n")
         # print('is private?', is_priv_arg)
 
-
-        how_many_epochs_arg = [100, 200, 300]
-        n_features_arg = [10, 100, 200, 400]
-        mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
-        # undersampling_rates = [1.]
-        length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015, 0.017, 0.02]
+        if dataset == 'epileptic':
+            how_many_epochs_arg = [100, 200, 300]
+            n_features_arg = [10, 100, 200, 400]
+            mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
+            length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015, 0.017, 0.02]
+        elif dataset == 'isolet':
+            how_many_epochs_arg = [100, 200, 300]
+            n_features_arg = [10, 100, 200, 400]
+            mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
+            length_scale = [0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.1]
 
         # if dataset == 'adult':
         #     mini_batch_arg = [0.1]
@@ -455,11 +455,7 @@ if __name__ == '__main__':
             print("Setup: ", max_elem)
             print('*'*100)
 
-    # sys.stdout.close()
-
     sys.stdout = orig_stdout
     f.close()
-
-    # main()
 
 
