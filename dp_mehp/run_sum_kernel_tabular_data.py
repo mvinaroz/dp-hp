@@ -80,7 +80,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     ar.seed_num = seed_num
     ar.order_hermite = order_hermite
     ar.batch_rate = batch_rate
-    ar.n_epochs = n_epochs
+    ar.epochs = n_epochs
     ar.kernel_length = kernel_length
 
     preprocess_args(ar)
