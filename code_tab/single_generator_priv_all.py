@@ -985,7 +985,6 @@ def main(dataset, undersampled_rate, n_features_arg, mini_batch_size_arg, how_ma
 
         else:  # heterogeneous data
 
-
             numerical_input_data = X_train[:, 0:num_numerical_inputs]
             emb1_numerical = (RFF_Gauss(n_features, torch.Tensor(numerical_input_data), W_freq)).to(device)
 

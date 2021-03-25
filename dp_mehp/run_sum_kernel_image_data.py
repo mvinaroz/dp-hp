@@ -1,3 +1,5 @@
+### this script is to test DP-MEHP on MNIST and F-MNIST data
+
 import torch
 import numpy as np
 import os
