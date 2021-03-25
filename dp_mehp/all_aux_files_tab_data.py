@@ -622,39 +622,45 @@ def save_generated_samples(samples, args, path_gen_data):
 
 def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets):
 
-    if dataset == 'census':
-
-        sigma_array = np.zeros(num_numerical_inputs)
-        for i in np.arange(0, num_numerical_inputs):
+    # if dataset == 'census':
+    if dataset == 'isolet':
+        sigma_array = np.zeros(input_dim)
+        for i in np.arange(0, input_dim):
+            med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=4000)
+            sigma_array[i] = med
+    elif dataset == 'epileptic':
+        sigma_array = np.zeros(input_dim)
+        for i in np.arange(0, input_dim):
             med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=5000)
             sigma_array[i] = med
 
-        print('we will use separate frequencies for each column of numerical features')
-        sigma2 = sigma_array ** 2
-        sigma2[sigma2 == 0] = 1.0
 
-    elif dataset == 'credit':
+    #     print('we will use separate frequencies for each column of numerical features')
+    #     sigma2 = sigma_array ** 2
+    #     sigma2[sigma2 == 0] = 1.0
+    #
+    # elif dataset == 'credit':
+    #
+    #     # large value at the last column
+    #     med = meddistance(X_train[:, 0:-1], subsample=5000)
+    #     med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=5000)
+    #     sigma_array = np.concatenate((med * np.ones(input_dim - 1), [med_last]))
+    #
+    #     sigma2 = sigma_array ** 2
+    #     sigma2[sigma2 == 0] = 1.0
+    #
+    # else:
+    #
+    #     if dataset in heterogeneous_datasets:
+    #         med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=5000)
+    #     elif dataset == 'cervical':
+    #         med = meddistance(X_train, subsample=500)
+    #     else:
+    #         med = meddistance(X_train, subsample=5000)
+    #
+    #     sigma2 = med ** 2
 
-        # large value at the last column
-        med = meddistance(X_train[:, 0:-1], subsample=5000)
-        med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=5000)
-        sigma_array = np.concatenate((med * np.ones(input_dim - 1), [med_last]))
-
-        sigma2 = sigma_array ** 2
-        sigma2[sigma2 == 0] = 1.0
-
-    else:
-
-        if dataset in heterogeneous_datasets:
-            med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=5000)
-        elif dataset == 'cervical':
-            med = meddistance(X_train, subsample=500)
-        else:
-            med = meddistance(X_train, subsample=5000)
-
-        sigma2 = med ** 2
-
-    return sigma2
+    return sigma_array
 
 
 def meddistance(x, subsample=None, mean_on_fail=True):
