@@ -93,7 +93,7 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
     # print(mean_size)
     mean_proxy  =   torch.zeros(tuple((mean_size.numpy()).tolist()), device=device)
     # mmd_real    =   0
-    num_data_idx    =   torch.zeros([n_labels, ])
+    num_data_idx    =   torch.zeros([n_labels, ], device=device)
     for t in range(sr_me_division):
         lb          =   int(t*np.floor(size_data/sr_me_division)) #Lower Bound of indices in each data batch
         ub          =   int(np.min([(t+1)*np.floor(size_data/sr_me_division),size_data]))
@@ -111,7 +111,8 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
               mp    =  tensor_fmap_hp(idx_data_enc[idx_data, :], order, rho, device)
               # print(uu.size())
               mean_proxy[idx, :]    +=    mp
-        mean_proxy  =   torch.div(mean_proxy,num_data_idx)
+        print('Mean Proxy Shape is ', mean_proxy.shape, ' and num_data_idx shape is ', num_data_idx.shape)
+        mean_proxy  =   torch.div(mean_proxy.T,num_data_idx).T
           
     return mean_proxy
 
