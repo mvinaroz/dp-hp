@@ -83,7 +83,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     ar.batch_rate = batch_rate
     ar.epochs = n_epochs
     ar.kernel_length = kernel_length
-    ar.subsampled_rate = subsampled_rate
+    ar.undersampled_rate = subsampled_rate
 
     preprocess_args(ar)
     log_args(ar.log_dir, ar)
