@@ -359,9 +359,9 @@ if __name__ == '__main__':
             # n_features_arg = [10, 100, 200, 400]
             # mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
             # length_scale = [0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.1]
-            how_many_epochs_arg = [100]
-            n_features_arg = [100]
-            mini_batch_arg = [0.6]
+            how_many_epochs_arg = [100, 200]
+            n_features_arg = [10, 100]
+            mini_batch_arg = [0.5, 0.6]
             length_scale = [0.005, 0.01, 0.02, 0.03, 0.05]
 
         # if dataset == 'adult':
@@ -400,7 +400,7 @@ if __name__ == '__main__':
 
 
         # repetitions = 5 # seed: 0 to 4
-        repetitions = 0
+        repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
 
