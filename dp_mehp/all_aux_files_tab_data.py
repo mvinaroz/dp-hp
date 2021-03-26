@@ -550,18 +550,19 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
     f1_arr = []
 
     models = np.array(
-        [LogisticRegression(solver='lbfgs', max_iter=50000), GaussianNB(), BernoulliNB(alpha=0.02),
+        [LogisticRegression(solver='lbfgs', max_iter=50000),
+         GaussianNB(),
+         BernoulliNB(alpha=0.02),
          LinearSVC(max_iter=10000, tol=1e-8, loss='hinge'),
-         DecisionTreeClassifier(class_weight='balanced', criterion='gini', splitter='best',
-                                    min_samples_split=2, min_samples_leaf=1, min_weight_fraction_leaf=0.0,
-                                    min_impurity_decrease=0.0),
-         LinearDiscriminantAnalysis(solver='eigen', tol=1e-8, shrinkage=0.5),
-         AdaBoostClassifier(n_estimators=100, algorithm='SAMME.R'),
-         BaggingClassifier(max_samples=0.1, n_estimators=20),
-         RandomForestClassifier(n_estimators=100, class_weight='balanced'),
+         DecisionTreeClassifier(),
+         LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto'), # can't really improve this
+         AdaBoostClassifier(n_estimators=100, learning_rate=0.5), # improved
+         BaggingClassifier(), # better in the default setting
+         RandomForestClassifier(), # better in the default setting
          GradientBoostingClassifier(subsample=0.1, n_estimators=50),
-         MLPClassifier(),
-         xgboost.XGBClassifier()])
+         MLPClassifier(learning_rate='adaptive'), # improved
+         xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.4)])
+
 
     models_to_test = models[np.array(args)]
 

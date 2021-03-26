@@ -254,7 +254,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             optimizer.step()
 
 
-        # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+        print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
         scheduler.step()
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
@@ -332,7 +332,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
-    # data_name = "epileptic"
+    data_name = "epileptic"
     # data_name = 'isolet'
     # data_name = 'credit'
     # base_dir = 'logs/gen/'
@@ -347,25 +347,26 @@ if __name__ == '__main__':
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
     # for dataset in ["epileptic"]:
-    for dataset in ["epileptic", "isolet", "credit"]:
+    for dataset in [data_name]:
+    # for dataset in ["epileptic", "isolet", "credit"]:
         print("\n\n")
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            how_many_epochs_arg = [100, 200]
-            n_features_arg = [10, 100, 200, 400]
-            mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
-            length_scale = [0.001, 0.003, 0.005, 0.007, 0.01, 0.015, 0.02]
+            how_many_epochs_arg = [200]
+            n_features_arg = [100, 200]
+            mini_batch_arg = [0.5, 0.7, 0.8]
+            length_scale = [0.003, 0.005, 0.007]
             subsampled_rate = [1.0]
         elif dataset == 'isolet':
             how_many_epochs_arg = [100, 200]
-            n_features_arg = [10, 100, 200, 400]
+            n_features_arg = [100, 200]
             mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
             length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             subsampled_rate = [1.0]
         elif dataset == 'credit':
             how_many_epochs_arg = [100, 200]
-            n_features_arg = [10, 20, 50, 70]
+            n_features_arg = [50, 100]
             mini_batch_arg = [0.4, 0.5]
             length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
             subsampled_rate = [0.005]
@@ -402,7 +403,7 @@ if __name__ == '__main__':
                               "n_epochs": how_many_epochs_arg, "kernel_length": length_scale, "subsampled_rate": subsampled_rate})
 
 
-        repetitions = 5 # seed: 0 to 4
+        repetitions = 1 # seed: 0 to 4
         # repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
