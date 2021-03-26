@@ -73,7 +73,7 @@ def preprocess_args(ar):
         os.makedirs(ar.log_dir)
 
 # def main():
-def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length):
+def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length, subsampled_rate):
 
     # load settings
     ar = get_args()
@@ -83,6 +83,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     ar.batch_rate = batch_rate
     ar.epochs = n_epochs
     ar.kernel_length = kernel_length
+    ar.subsampled_rate = subsampled_rate
 
     preprocess_args(ar)
     log_args(ar.log_dir, ar)
@@ -332,11 +333,12 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # data_name = "epileptic"
-    data_name = 'isolet'
-    base_dir = 'logs/gen/'
-    txt_dir = base_dir + data_name + '/'
-    if not os.path.exists(txt_dir):
-        os.makedirs(txt_dir)
+    # data_name = 'isolet'
+    # data_name = 'credit'
+    # base_dir = 'logs/gen/'
+    # txt_dir = base_dir + data_name + '/'
+    # if not os.path.exists(txt_dir):
+    #     os.makedirs(txt_dir)
 
     # orig_stdout = sys.stdout
     # f = open(txt_dir + 'out.txt', 'w')
@@ -345,24 +347,28 @@ if __name__ == '__main__':
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
     # for dataset in ["epileptic"]:
-    for dataset in ["isolet"]:
+    for dataset in ["epileptic", "isolet", "credit"]:
         print("\n\n")
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            how_many_epochs_arg = [100, 200, 300]
+            how_many_epochs_arg = [100, 200]
             n_features_arg = [10, 100, 200, 400]
             mini_batch_arg = [0.1, 0.2, 0.4, 0.5, 0.7, 0.8]
-            length_scale = [0.001, 0.002, 0.003, 0.005, 0.007, 0.01, 0.012, 0.015, 0.017, 0.02]
+            length_scale = [0.001, 0.003, 0.005, 0.007, 0.01, 0.015, 0.02]
+            subsampled_rate = [1.0]
         elif dataset == 'isolet':
-            # how_many_epochs_arg = [100, 200, 300]
-            # n_features_arg = [10, 100, 200, 400]
-            # mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
-            # length_scale = [0.005, 0.01, 0.02, 0.03, 0.05, 0.07, 0.1]
             how_many_epochs_arg = [100, 200]
-            n_features_arg = [10, 100]
-            mini_batch_arg = [0.5, 0.6]
-            length_scale = [0.005, 0.01, 0.02, 0.03, 0.05]
+            n_features_arg = [10, 100, 200, 400]
+            mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
+            length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
+            subsampled_rate = [1.0]
+        elif dataset == 'credit':
+            how_many_epochs_arg = [100, 200]
+            n_features_arg = [10, 20, 50, 70]
+            mini_batch_arg = [0.4, 0.5]
+            length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+            subsampled_rate = [0.005]
 
         # if dataset == 'adult':
         #     mini_batch_arg = [0.1]
@@ -388,19 +394,16 @@ if __name__ == '__main__':
         #     undersampling_rates = [0.005]#[0.01, 0.005, 0.02]
         # elif dataset=='cervical':
         #     undersampling_rates = [1.]#[0.1, 0.3, 0.5, 0.7, 1.0]
-        # elif dataset=='isolet':
-        #     undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
-        # elif dataset=='epileptic':
-        #     undersampling_rates = [1.]#[0.8, 0.6, 0.4, 1.] #dummy
+
 
 
 
         grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
-                              "n_epochs": how_many_epochs_arg, "kernel_length": length_scale})
+                              "n_epochs": how_many_epochs_arg, "kernel_length": length_scale, "subsampled_rate": subsampled_rate})
 
 
-        # repetitions = 5 # seed: 0 to 4
-        repetitions = 1
+        repetitions = 5 # seed: 0 to 4
+        # repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
 
@@ -413,7 +416,7 @@ if __name__ == '__main__':
                 for ii in range(repetitions):
                     print("\nRepetition: ",ii)
 
-                    roc, prc, dir_result  = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"])
+                    roc, prc, dir_result  = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"], elem["subsampled_rate"])
 
                     roc_arr_all.append(roc)
                     prc_arr_all.append(prc)

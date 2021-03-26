@@ -209,7 +209,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         print("Creditcard fraud detection dataset") # this is homogeneous
 
-        data = pd.read_csv("../data/Kaggle_Credit/creditcard.csv")
+        data = pd.read_csv("../data/credit/creditcard.csv")
 
         feature_names = data.iloc[:, 1:30].columns
         target = data.iloc[:, 30:].columns
@@ -622,18 +622,10 @@ def save_generated_samples(samples, args, path_gen_data):
 
 def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets):
 
-    # if dataset == 'census':
-    if dataset == 'isolet':
-        sigma_array = np.zeros(input_dim)
-        for i in np.arange(0, input_dim):
-            med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=4000)
-            sigma_array[i] = med
-    elif dataset == 'epileptic':
-        sigma_array = np.zeros(input_dim)
-        for i in np.arange(0, input_dim):
-            med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=5000)
-            sigma_array[i] = med
-
+    sigma_array = np.zeros(input_dim)
+    for i in np.arange(0, input_dim):
+        med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=500)
+        sigma_array[i] = med
 
     #     print('we will use separate frequencies for each column of numerical features')
     #     sigma2 = sigma_array ** 2
