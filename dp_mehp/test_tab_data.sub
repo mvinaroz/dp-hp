@@ -1,0 +1,9 @@
+# test_tab_data.sub -- simple experiments to test tabular data on the cluster
+executable 	= test_tab.sh
+requirements = TARGET.CUDACapability >= 5.0
+log		= run_log.log
+output		= run_output.txt
+error 		= run_errors.txt
+request_gpus 	= 1
+request_memory	= 4096
+queue
