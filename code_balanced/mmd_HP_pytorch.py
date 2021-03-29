@@ -45,7 +45,7 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
             rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
             data_ten          =   data_tensor[:, rchoice[j, :]]
             mean1[j, :]       =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
-            print('Shape of Mean1 is ', mean1.shape)
+            # print('Shape of Mean1 is ', mean1.shape)
         
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels, batch_idx=-1):
@@ -170,7 +170,7 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
               mp    =  tensor_fmap_hp(idx_data_enc[idx_data, :], order, rho, device)
               # print(uu.size())
               mean_proxy[idx, :]    +=    mp
-        print('Mean Proxy Shape is ', mean_proxy.shape, ' and num_data_idx shape is ', num_data_idx.shape)
+        # print('Mean Proxy Shape is ', mean_proxy.shape, ' and num_data_idx shape is ', num_data_idx.shape)
         mean_proxy  =   torch.div(mean_proxy.T,num_data_idx).T
           
     return mean_proxy
