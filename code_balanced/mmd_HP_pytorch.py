@@ -38,7 +38,7 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
         batch_num           =   np.zeros([1])
         np.ceil(n_data/bs, out=batch_num)
         batch_num   =   int(batch_num)
-        rchoice     =   np.zeros(size=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
+        rchoice     =   np.zeros(shape=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
         
         for j in range(batch_num):
             rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
