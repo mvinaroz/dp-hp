@@ -7,7 +7,7 @@ from aux import meddistance
 import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
+def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division, bs,  single_release=True, sample_dims=False, heuristic_sigma=True):
     # print('Sampling Rate is ', sampling_rate)    
     if (smp_mult):
         data_acc    =   []
@@ -34,14 +34,25 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
             xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
         else:
             xi  =   rho
+        n_data, dim_data    =   data_tensor.shape
+        batch_num           =   0
+        torch.ceil(n_data/bs, out=batch_num)
+        batch_num   =   int(batch_num)
+        rchoice     =   torch.zeros(size=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
+        
+        for j in range(batch_num):
+            rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+            data_ten          =   data_tensor[:, rchoice]
+            mean1             =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
+            
         
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
             if (sample_dims):
                 n_data, dim_data    =   data_tensor.shape
-                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
-                data_ten    =   data_tensor[:, rchoice]
-                gen_enc     =   gen_enc[:, rchoice]
+                # rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+                # data_ten    =   data_tensor[:, rchoice]
+                gen_enc     =   gen_enc[:, rchoice[0, :]]
             # print('loss')
             if (mmd_computation=='mean_emb'):
                 return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
