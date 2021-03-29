@@ -7,7 +7,7 @@ from aux import meddistance
 import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division, bs,  single_release=True, sample_dims=False, heuristic_sigma=True):
+def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
     # print('Sampling Rate is ', sampling_rate)    
     if (smp_mult):
         data_acc    =   []

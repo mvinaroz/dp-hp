@@ -91,7 +91,7 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
 
 # >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
       single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.batch_size, ar.sampling_multirelease, ar.mmd_computation
-                                                              , ar.sampling_rate, ar.sr_me_division, ar.batch_size, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
+                                                              , ar.sampling_rate, ar.sr_me_division, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
 
