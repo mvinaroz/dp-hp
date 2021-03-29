@@ -16,11 +16,14 @@ from synth_data_2d import plot_data
 from synth_data_1d import plot_data_1d
 
 
-def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
+def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data, smp_mult):
   n_iter = n_data // batch_size
   for batch_idx in range(n_iter):
     gen_code, gen_labels = gen.get_code(batch_size, device)
-    loss = rff_mmd_loss(gen(gen_code), gen_labels, batch_idx=batch_idx)
+    if (smp_mult):
+        loss = rff_mmd_loss(gen(gen_code), gen_labels, batch_idx=batch_idx)
+    else:
+        loss = rff_mmd_loss(gen(gen_code), gen_labels)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -272,7 +275,7 @@ def main():
   for epoch in range(1, ar.epochs + 1):
     if ar.single_release:
       train_single_release(gen, device, optimizer, epoch, single_release_loss, ar.log_interval, ar.batch_size,
-                           data_pkg.n_data)
+                           data_pkg.n_data, ar.sampling_multirelease)
     else:
       train_multi_release(gen, device, data_pkg.train_loader, optimizer, epoch, minibatch_loss, ar.log_interval)
 
