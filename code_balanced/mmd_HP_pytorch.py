@@ -36,7 +36,7 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, data_num, smp_
             xi  =   rho
         n_data, dim_data    =   data_tensor.shape
         batch_num           =   np.zeros([1])
-        np.ceil(n_data/bs, out=batch_num)
+        np.ceil(data_num/bs, out=batch_num)
         batch_num   =   int(batch_num)
         rchoice     =   np.zeros(shape=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
         mean1   =   mean_embedding_proxy(data_tensor[:, 0:int(np.floor(dim_data*sampling_rate))], label_tensor, order, xi, device, n_labels, sr_me_division, False)
