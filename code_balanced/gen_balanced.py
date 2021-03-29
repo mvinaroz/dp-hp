@@ -20,7 +20,7 @@ def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interv
   n_iter = n_data // batch_size
   for batch_idx in range(n_iter):
     gen_code, gen_labels = gen.get_code(batch_size, device)
-    loss = rff_mmd_loss(gen(gen_code), gen_labels)
+    loss = rff_mmd_loss(gen(gen_code), gen_labels, batch_idx=batch_idx)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()

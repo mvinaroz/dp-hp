@@ -44,18 +44,23 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
             rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
             data_ten          =   data_tensor[:, rchoice[j, :]]
             mean1             =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
-            
+            print('Shape of Mean1 is ', mean1.shape)
         
     # print(label_tensor.size)
-        def hp_loss(gen_enc, gen_labels):
+        def hp_loss(gen_enc, gen_labels, batch_idx=-1):
             if (sample_dims):
                 n_data, dim_data    =   data_tensor.shape
                 # rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
                 # data_ten    =   data_tensor[:, rchoice]
-                gen_enc     =   gen_enc[:, rchoice[0, :]]
+                if (batch_idx==-1):
+                    gen_enc     =   gen_enc[:, rchoice]
+                    mm          =   mean1
+                else:
+                    gen_enc     =   gen_enc[:, rchoice[j, :]]
+                    mm          =   mean1[j, :]
             # print('loss')
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_mean_embedding([], [], gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
             elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
         hp_loss_minibatch   =   None        
