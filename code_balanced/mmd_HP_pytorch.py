@@ -35,8 +35,8 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
         else:
             xi  =   rho
         n_data, dim_data    =   data_tensor.shape
-        batch_num           =   0
-        torch.ceil(n_data/bs, out=batch_num)
+        batch_num           =   np.zeros([1])
+        np.ceil(n_data/bs, out=batch_num)
         batch_num   =   int(batch_num)
         rchoice     =   torch.zeros(size=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
         
