@@ -358,7 +358,7 @@ if __name__ == '__main__':
             mini_batch_arg = [0.6]
             # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             length_scale = [0.005] # dummy
-            subsampled_rate = [0.5]
+            subsampled_rate = [1.0]
         elif dataset == 'credit':
             how_many_epochs_arg = [200, 400]
             n_features_arg = [50, 100, 200]
