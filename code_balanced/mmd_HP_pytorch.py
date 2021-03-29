@@ -39,11 +39,12 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
         np.ceil(n_data/bs, out=batch_num)
         batch_num   =   int(batch_num)
         rchoice     =   np.zeros(shape=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
-        
+        mean1   =   mean_embedding_proxy(data_tensor[:, 0:int(np.floor(dim_data*sampling_rate))], label_tensor, order, xi, device, n_labels, sr_me_division, False)
+        mean1   =   torch.zeros(shape=torch.hstack([batch_num, mean1.shape]))
         for j in range(batch_num):
             rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
             data_ten          =   data_tensor[:, rchoice[j, :]]
-            mean1             =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
+            mean1[j, :]       =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
             print('Shape of Mean1 is ', mean1.shape)
         
     # print(label_tensor.size)
