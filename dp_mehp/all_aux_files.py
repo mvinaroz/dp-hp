@@ -86,6 +86,7 @@ def phi_recursion(phi_k, phi_k_minus_1, rho, degree, x_in):
 def compute_phi(x_in, n_degrees, rho, device):
   first_dim = x_in.shape[0]
   batch_embedding = torch.empty(first_dim, n_degrees, dtype=torch.float32, device=device)
+  # batch_embedding = torch.zeros(first_dim, n_degrees).to(device)
   phi_i_minus_one, phi_i_minus_two = None, None
   for degree in range(n_degrees):
     phi_i = phi_recursion(phi_i_minus_one, phi_i_minus_two, rho, degree, x_in.squeeze())

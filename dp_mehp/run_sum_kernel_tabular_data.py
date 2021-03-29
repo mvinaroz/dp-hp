@@ -4,22 +4,17 @@ import torch
 import numpy as np
 import os
 from torch.optim.lr_scheduler import StepLR
-from all_aux_files import FCCondGen, ConvCondGen
-from all_aux_files import find_rho, find_order, ME_with_HP
 from all_aux_files import log_args
-# from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from autodp import privacy_calibrator
 import matplotlib
 matplotlib.use('Agg')
 import argparse
+from all_aux_files import ME_with_HP
 from all_aux_files_tab_data import data_loading, Generative_Model_homogeneous_data, Generative_Model_heterogeneous_data, heuristic_for_length_scale
-from all_aux_files_tab_data import test_models, save_generated_samples
+from all_aux_files_tab_data import test_models, ME_with_HP_tab, find_rho_tab
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
 from sklearn.model_selection import ParameterGrid
-import sys
-# from contextlib import redirect_stdout
-
 
 def get_args():
 
@@ -41,17 +36,17 @@ def get_args():
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
     # OTHERS
-    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
     parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=True) # heuristic-sigma has to be "True", to enable separate-kernel-length
+    parser.add_argument("--normalize-data", action='store_true', default=False)
 
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
     ar = parser.parse_args()
-    # preprocess_args(ar)
-    # log_args(ar.log_dir, ar)
 
     return ar
 
@@ -65,7 +60,8 @@ def preprocess_args(ar):
                + 'epsilon=' + str(ar.epsilon) + '_' + 'delta=' + str(ar.delta) + '_' \
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'br=' + str(ar.batch_rate) + '_' + 'lr=' + str(ar.lr) + '_' \
-               + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate)
+               + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate) \
+               + '_' + 'normalize_data' + str(ar.normalize_data) + '_' + 'separate_kernel_length' + str(ar.separate_kernel_length)
 
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
@@ -74,6 +70,7 @@ def preprocess_args(ar):
 
 # def main():
 def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length, subsampled_rate):
+# def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, subsampled_rate):
 
     # load settings
     ar = get_args()
@@ -111,16 +108,20 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     true_labels = onehot_encoder.fit_transform(y_train)
 
     # standardize the inputs
-    # print('normalizing the data')
-    X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
-    X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
+    if ar.normalize_data:
+        print('normalizing the data')
+        X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
+        X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
+    else:
+        print('testing non-standardized data')
+
 
     ######################################
     # MODEL
     # batch_size = np.int(np.round(ar.batch_rate * n))
     batch_size = np.int(np.round(batch_rate * n))
     # print("minibatch: ", batch_size)
-    input_size = 20 + 1
+    input_size = 10 + 1
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
@@ -141,23 +142,19 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ set the scale length """
     if ar.heuristic_sigma:
-        # print('we use the median heuristic for length scale')
+        print('we use the median heuristic for length scale')
         sigma = heuristic_for_length_scale(data_name, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets)
-        sigma2 = np.median(sigma**2)
-        # print('sigma2 value is', sigma2)
+        if ar.separate_kernel_length:
+            print('we use a separate length scale on each coordinate of the data')
+            sigma2 = sigma**2
+        else:
+            sigma2 = np.median(sigma**2)
     else:
         sigma2 = ar.kernel_length
     # print('sigma2 is', sigma2)
 
-    rho = find_rho(sigma2)
-    ev_thr = 1e-10  # eigen value threshold, below this, we wont consider for approximation
-    order = find_order(rho, ev_thr)
-    # or_thr = ar.order_hermite
-    or_thr = order_hermite
-    if order>or_thr:
-        order = or_thr
-        # print('chosen order is', order)
-
+    rho = find_rho_tab(sigma2)
+    order = order_hermite
 
     ########## data mean embedding ##########
     """ compute the weights """
@@ -182,8 +179,12 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     # print('computing mean embedding of data: (2) compute the mean')
     data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
     for idx in range(n_classes):
+        # print(idx,'th-class')
         idx_data = X_train[y_train.squeeze()==idx,:]
-        phi_data = ME_with_HP(torch.Tensor(idx_data), order, rho, device, n)
+        if ar.separate_kernel_length:
+            phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n)
+        else:
+            phi_data = ME_with_HP(torch.Tensor(idx_data).to(device), order, rho, device, n)
         data_embedding[:,idx] = phi_data # this includes 1/n factor inside
     # print('done with computing mean embedding of data')
 
@@ -201,7 +202,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
-    scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
+    # scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
 
     # print('start training the generator')
     num_iter = np.int(n / batch_size)
@@ -241,7 +242,10 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             for idx in range(n_classes):
                 weights_syn[idx] = torch.sum(label_input == idx)
                 idx_syn_data = outputs[label_input == idx]
-                phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
+                if ar.separate_kernel_length:
+                    phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
+                else:
+                    phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
                 syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
 
             weights_syn = weights_syn / torch.sum(weights_syn)
@@ -255,7 +259,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 
         print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-        scheduler.step()
+        # scheduler.step()
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
     """ now we save synthetic data of size 60K and test them on logistic regression """
@@ -346,24 +350,25 @@ if __name__ == '__main__':
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
-    # for dataset in ["epileptic"]:
+    for dataset in ["isolet"]:
     # for dataset in [data_name]:
-    for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [100, 200]
-            mini_batch_arg = [0.5, 0.7, 0.8]
-            length_scale = [0.003, 0.005, 0.007]
+            how_many_epochs_arg = [200]
+            n_features_arg = [100]
+            mini_batch_arg = [0.4]
+            length_scale = [0.003]
             subsampled_rate = [1.0]
         elif dataset == 'isolet':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [100, 200]
-            mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
-            length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
-            subsampled_rate = [1.0]
+            how_many_epochs_arg = [200]
+            n_features_arg = [100]
+            mini_batch_arg = [0.6]
+            # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
+            length_scale = [0.005] # dummy
+            subsampled_rate = [0.5]
         elif dataset == 'credit':
             how_many_epochs_arg = [200, 400]
             n_features_arg = [50, 100, 200]
@@ -402,8 +407,11 @@ if __name__ == '__main__':
         grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
                               "n_epochs": how_many_epochs_arg, "kernel_length": length_scale, "subsampled_rate": subsampled_rate})
 
+        # grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
+        #                   "n_epochs": how_many_epochs_arg, "subsampled_rate": subsampled_rate})
 
-        repetitions = 4 # seed: 0 to 4
+
+        repetitions = 5 # seed: 0 to 4
         # repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
@@ -415,9 +423,12 @@ if __name__ == '__main__':
                 prc_arr_all = []; roc_arr_all = []
 
                 for ii in range(repetitions):
+                    # ii = ii + 4
                     print("\nRepetition: ",ii)
 
                     roc, prc, dir_result  = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"], elem["subsampled_rate"])
+                    # roc, prc, dir_result = main(dataset, ii, elem["order_hermite"], elem["batch_rate"],
+                    #                             elem["n_epochs"], elem["subsampled_rate"])
 
                     roc_arr_all.append(roc)
                     prc_arr_all.append(prc)

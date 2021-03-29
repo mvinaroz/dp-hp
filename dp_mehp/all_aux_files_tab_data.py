@@ -42,6 +42,64 @@ warnings.filterwarnings('ignore')
 
 import os
 
+
+
+def find_rho_tab(sigma2):
+  alpha = 1 / (2.0 * sigma2)
+  rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
+  if (rho>1).any():
+      print('some of the rho values are above 1. Mehler formula does not hold')
+  return rho
+
+
+def phi_recursion_tab_coord(phi_k, phi_k_minus_1, rho, degree, x_in):
+  # x_in : n_data by input_dim
+  # rho : length of input_dim
+  # every phi has to be the size of (n_data by input_dim)
+  if degree == 0:
+    phi_0 = (1 - rho) ** (0.25) * (1 + rho) ** (0.25) * torch.exp(-rho / (1 + rho) * x_in ** 2)
+    return phi_0
+  elif degree == 1:
+    phi_1 = torch.sqrt(2 * rho) * x_in * phi_k
+    return phi_1
+  else:  # from degree ==2 (k=1 in the recursion formula)
+    k = degree - 1
+    first_term = torch.sqrt(rho) / np.sqrt(2 * (k + 1)) * 2 * x_in * phi_k
+    second_term = rho / np.sqrt(k * (k + 1)) * k * phi_k_minus_1
+    phi_k_plus_one = first_term - second_term
+    return phi_k_plus_one
+
+
+def compute_phi_tab_coord(x_in, n_degrees, rho, device):
+  n_data, input_dim = x_in.shape # n_data by input_dim
+  # rho : length of input_dim
+  rho = rho[None,:] # rho : 1 by input_dim
+  rho = torch.tensor(rho).to(device)
+
+  batch_embedding = torch.empty(n_data, input_dim, n_degrees, dtype=torch.float32, device=device)
+  phi_i_minus_one, phi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    # print('degree:', degree)
+    phi_i = phi_recursion_tab_coord(phi_i_minus_one, phi_i_minus_two, rho, degree, x_in)
+    batch_embedding[:, :, degree] = phi_i
+
+    phi_i_minus_two = phi_i_minus_one
+    phi_i_minus_one = phi_i
+
+  return batch_embedding
+
+
+def ME_with_HP_tab(x, order, rho, device, n_training_data):
+
+  phi_x = compute_phi_tab_coord(x, order+1, rho, device)
+  sum_val = torch.sum(phi_x, axis=0)
+  phi_x = sum_val / n_training_data
+
+  phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
+
+  return phi_x
+
+
 def Feature_labels(labels, weights, device):
 
     weights = torch.Tensor(weights)
@@ -84,7 +142,10 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc2(relu)
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
-            output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
+
+            if str(self.dataset) == 'epileptic':
+                output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
+
 
             return output
 
@@ -550,18 +611,21 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
     f1_arr = []
 
     models = np.array(
-        [LogisticRegression(solver='lbfgs', max_iter=50000),
+        [
+         LogisticRegression(),
          GaussianNB(),
-         BernoulliNB(alpha=0.02),
-         LinearSVC(max_iter=10000, tol=1e-8, loss='hinge'),
+         BernoulliNB(),
+         LinearSVC(),
          DecisionTreeClassifier(),
-         LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto'), # can't really improve this
-         AdaBoostClassifier(n_estimators=100, learning_rate=0.5), # improved
-         BaggingClassifier(), # better in the default setting
-         RandomForestClassifier(), # better in the default setting
+         LinearDiscriminantAnalysis(),
+         AdaBoostClassifier(),
+         BaggingClassifier(),
+         RandomForestClassifier(),
          GradientBoostingClassifier(subsample=0.1, n_estimators=50),
-         MLPClassifier(learning_rate='adaptive'), # improved
-         xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.4)])
+         MLPClassifier(),
+         # xgboost.XGBClassifier()
+        xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.5)
+        ])
 
 
     models_to_test = models[np.array(args)]
@@ -570,24 +634,281 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
         print('\n', type(model))
         model.fit(X_tr, y_tr)
         pred = model.predict(X_te)  # test on real data
+        roc = roc_auc_score(y_te, pred)
+        prc = average_precision_score(y_te, pred)
 
-        if n_classes > 2:
+        if str(model) == 'BernoulliNB()':
+            model = BernoulliNB(alpha=0.02, binarize=0.1)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
 
-            f1score = f1_score(y_te, pred, average='weighted')
+            model = BernoulliNB(alpha=0.5, binarize=0.2)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
 
-            print("F1-score on test %s data is %.3f" % (datasettype, f1score))
-            f1_arr.append(f1score)
+            model = BernoulliNB(alpha=1.0, binarize=0.3)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
 
-        else:
+            model = BernoulliNB(alpha=1.0, binarize=0.4)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp4 = roc_auc_score(y_te, pred)
+            prc_temp4 = average_precision_score(y_te, pred)
 
-            roc = roc_auc_score(y_te, pred)
-            prc = average_precision_score(y_te, pred)
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
 
-            print("ROC on test %s data is %.3f" % (datasettype, roc))
-            print("PRC on test %s data is %.3f" % (datasettype, prc))
+        elif str(model) == 'GaussianNB()':
+            model = GaussianNB(var_smoothing=1e-3, priors=(sum(y_tr)/len(y_tr),1-sum(y_tr)/len(y_tr)))
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
 
-            roc_arr.append(roc)
-            prc_arr.append(prc)
+            roc = max(roc, roc_temp1)
+            prc = max(prc, prc_temp1)
+
+        elif str(model) == 'RandomForestClassifier()':
+            model = RandomForestClassifier(n_estimators=200)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = RandomForestClassifier(n_estimators=70)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = RandomForestClassifier(n_estimators=30)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            model = RandomForestClassifier(n_estimators=10)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp4 = roc_auc_score(y_te, pred)
+            prc_temp4 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+
+        elif str(model) == 'LogisticRegression()':
+
+            print('logistic regression with balanced class weight')
+            model = LogisticRegression(solver='lbfgs', max_iter=50000, class_weight='balanced', tol=1e-12)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            print('logistic regression with saga solver')
+            model = LogisticRegression(solver='saga', penalty='l1', class_weight='balanced', tol=1e-12)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            print('logistic regression with liblinear solver')
+            model = LogisticRegression(solver='liblinear', max_iter=50000, penalty='l1', class_weight='balanced',tol=1e-8, C=0.1)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            print('logistic regression with liblinear solver')
+            model = LogisticRegression(solver='liblinear', max_iter=50000, penalty='l1', class_weight='balanced',tol=1e-8, C=0.05)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp4 = roc_auc_score(y_te, pred)
+            prc_temp4 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+
+
+        elif str(model) == 'LinearSVC()':
+            model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge', class_weight='balanced')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = LinearSVC(max_iter=10000, tol=1e-12, loss='hinge', C=0.01)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+
+        elif str(model) == 'DecisionTreeClassifier()':
+
+            model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='log2')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='auto')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='sqrt')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+        elif str(model) == 'LinearDiscriminantAnalysis()':
+
+            model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.6)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.75)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+        elif str(model) == 'AdaBoostClassifier()':
+            model = AdaBoostClassifier(n_estimators=100, learning_rate=0.8)  # improved
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = AdaBoostClassifier(n_estimators=200, learning_rate=0.5)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = AdaBoostClassifier(n_estimators=100, learning_rate=0.5, algorithm='SAMME')
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+        elif str(model) == 'BaggingClassifier()':
+
+            model = BaggingClassifier(max_samples=0.1, n_estimators=20)  # improved
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1)
+            prc = max(prc, prc_temp1)
+
+        elif str(model) == 'MLPClassifier()':
+            model = MLPClassifier(learning_rate='adaptive', alpha=0.01, tol=1e-10)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = MLPClassifier(solver='lbfgs', alpha=0.001, tol=1e-8)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = MLPClassifier(solver='sgd', alpha=0.001, tol=1e-8)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+        elif str(model)[0:13] == 'XGBClassifier':
+
+            model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.7)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp1 = roc_auc_score(y_te, pred)
+            prc_temp1 = average_precision_score(y_te, pred)
+
+            model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.8)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp2 = roc_auc_score(y_te, pred)
+            prc_temp2 = average_precision_score(y_te, pred)
+
+            model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=1.0)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp3 = roc_auc_score(y_te, pred)
+            prc_temp3 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+
+        roc_arr.append(roc)
+        prc_arr.append(prc)
+
+        print("ROC on test %s data is %.3f" % (datasettype, roc))
+        print("PRC on test %s data is %.3f" % (datasettype, prc))
+
+        # if n_classes > 2:
+        #
+        #     f1score = f1_score(y_te, pred, average='weighted')
+        #
+        #     print("F1-score on test %s data is %.3f" % (datasettype, f1score))
+        #     f1_arr.append(f1score)
+        #
+        # else:
+        #
+        #     roc = roc_auc_score(y_te, pred)
+        #     prc = average_precision_score(y_te, pred)
+        #
+        #     print("ROC on test %s data is %.3f" % (datasettype, roc))
+        #     print("PRC on test %s data is %.3f" % (datasettype, prc))
+        #
+        #     roc_arr.append(roc)
+        #     prc_arr.append(prc)
 
     if n_classes > 2:
 
