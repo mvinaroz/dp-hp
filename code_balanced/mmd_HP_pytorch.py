@@ -7,7 +7,7 @@ from aux import meddistance
 import math
 #s
 
-def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
+def get_hp_losses(train_loader, device, n_labels, order, rho, bs, data_num, smp_mult, mmd_computation, sampling_rate, sr_me_division,  single_release=True, sample_dims=False, heuristic_sigma=True):
     # print('Sampling Rate is ', sampling_rate)    
     if (smp_mult):
         data_acc    =   []
@@ -34,17 +34,34 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
             xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
         else:
             xi  =   rho
+        n_data, dim_data    =   data_tensor.shape
+        batch_num           =   np.zeros([1])
+        np.ceil(data_num/bs, out=batch_num)
+        batch_num   =   int(batch_num)
+        rchoice     =   np.zeros(shape=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
+        mean1   =   mean_embedding_proxy(data_tensor[:, 0:int(np.floor(dim_data*sampling_rate))], label_tensor, order, xi, device, n_labels, sr_me_division, False)
+        mean1   =   torch.zeros(size=tuple(np.hstack([batch_num, torch.tensor(mean1.shape).detach().cpu().numpy()])))
+        for j in range(batch_num):
+            rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+            data_ten          =   data_tensor[:, rchoice[j, :]]
+            mean1[j, :]       =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
+            # print('Shape of Mean1 is ', mean1.shape)
         
     # print(label_tensor.size)
-        def hp_loss(gen_enc, gen_labels):
+        def hp_loss(gen_enc, gen_labels, batch_idx=-1):
             if (sample_dims):
                 n_data, dim_data    =   data_tensor.shape
-                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
-                data_ten    =   data_tensor[:, rchoice]
-                gen_enc     =   gen_enc[:, rchoice]
+                # rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+                # data_ten    =   data_tensor[:, rchoice]
+                if (batch_idx==-1):
+                    gen_enc     =   gen_enc[:, rchoice]
+                    mm          =   mean1
+                else:
+                    gen_enc     =   gen_enc[:, rchoice[j, :]]
+                    mm          =   mean1[j, :]
             # print('loss')
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_mean_embedding([], [], gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
             elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
         hp_loss_minibatch   =   None        
@@ -73,17 +90,20 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
             xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
         else:
             xi  =   rho
-        
+        if (sample_dims):
+            n_data, dim_data    =   data_tensor.shape
+            rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
+            data_ten    =   data_tensor[:, rchoice]
+        if (mmd_computation=='mean_emb'):
+            mean1   =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels):
             if (sample_dims):
                 n_data, dim_data    =   data_tensor.shape
-                rchoice     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
-                data_ten    =   data_tensor[:, rchoice]
                 gen_enc     =   gen_enc[:, rchoice]
             # print('loss')
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_mean_embedding([], [], gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division, known_mean1=True, mean1=mean1)
             elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
         hp_loss_minibatch   =   None
@@ -109,8 +129,9 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, smp_mult, mmd_
         hp_loss     =   None
     return hp_loss, hp_loss_minibatch
           
-def mmd_mean_embedding(data_enc, data_labels, gen_enc, gen_labels, n_labels, order, rho, device, labels_to_one_hot=False, sr_me_division=1):
-    mean1   =   mean_embedding_proxy(data_enc, data_labels, order, rho, device, n_labels, sr_me_division, labels_to_one_hot)
+def mmd_mean_embedding(data_enc, data_labels, gen_enc, gen_labels, n_labels, order, rho, device, labels_to_one_hot=False, sr_me_division=1, known_mean1=False, mean1=[]):
+    if (known_mean1==False):
+        mean1   =   mean_embedding_proxy(data_enc, data_labels, order, rho, device, n_labels, sr_me_division, labels_to_one_hot)
     mean2   =   mean_embedding_proxy(gen_enc, gen_labels, order, rho, device, n_labels, 1, labels_to_one_hot) #Generated data are not that big. Hence, I set sr_me_division=1 for them.
     
     return torch.norm(mean1-mean2)
@@ -149,7 +170,7 @@ def mean_embedding_proxy(data, label, order, rho, device, n_labels, sr_me_divisi
               mp    =  tensor_fmap_hp(idx_data_enc[idx_data, :], order, rho, device)
               # print(uu.size())
               mean_proxy[idx, :]    +=    mp
-        print('Mean Proxy Shape is ', mean_proxy.shape, ' and num_data_idx shape is ', num_data_idx.shape)
+        # print('Mean Proxy Shape is ', mean_proxy.shape, ' and num_data_idx shape is ', num_data_idx.shape)
         mean_proxy  =   torch.div(mean_proxy.T,num_data_idx).T
           
     return mean_proxy
