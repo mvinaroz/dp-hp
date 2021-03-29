@@ -142,6 +142,7 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc2(relu)
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
+            output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
 
             if str(self.dataset) == 'epileptic':
                 output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
@@ -623,7 +624,6 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
          RandomForestClassifier(),
          GradientBoostingClassifier(subsample=0.1, n_estimators=50),
          MLPClassifier(),
-         # xgboost.XGBClassifier()
         xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.5)
         ])
 
@@ -948,31 +948,6 @@ def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim
     for i in np.arange(0, input_dim):
         med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=500)
         sigma_array[i] = med
-
-    #     print('we will use separate frequencies for each column of numerical features')
-    #     sigma2 = sigma_array ** 2
-    #     sigma2[sigma2 == 0] = 1.0
-    #
-    # elif dataset == 'credit':
-    #
-    #     # large value at the last column
-    #     med = meddistance(X_train[:, 0:-1], subsample=5000)
-    #     med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=5000)
-    #     sigma_array = np.concatenate((med * np.ones(input_dim - 1), [med_last]))
-    #
-    #     sigma2 = sigma_array ** 2
-    #     sigma2[sigma2 == 0] = 1.0
-    #
-    # else:
-    #
-    #     if dataset in heterogeneous_datasets:
-    #         med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=5000)
-    #     elif dataset == 'cervical':
-    #         med = meddistance(X_train, subsample=500)
-    #     else:
-    #         med = meddistance(X_train, subsample=5000)
-    #
-    #     sigma2 = med ** 2
 
     return sigma_array
 

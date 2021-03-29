@@ -3,7 +3,6 @@
 import torch
 import numpy as np
 import os
-from torch.optim.lr_scheduler import StepLR
 from all_aux_files import log_args
 from autodp import privacy_calibrator
 import matplotlib
@@ -12,9 +11,10 @@ import argparse
 from all_aux_files import ME_with_HP
 from all_aux_files_tab_data import data_loading, Generative_Model_homogeneous_data, Generative_Model_heterogeneous_data, heuristic_for_length_scale
 from all_aux_files_tab_data import test_models, ME_with_HP_tab, find_rho_tab
+from sklearn.model_selection import ParameterGrid
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
-from sklearn.model_selection import ParameterGrid
+
 
 def get_args():
 
@@ -63,6 +63,7 @@ def preprocess_args(ar):
                + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate) \
                + '_' + 'normalize_data' + str(ar.normalize_data) + '_' + 'separate_kernel_length' + str(ar.separate_kernel_length)
 
+
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
     if not os.path.exists(ar.log_dir):
@@ -86,6 +87,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     log_args(ar.log_dir, ar)
 
     torch.manual_seed(seed_num)
+
     if ar.is_private:
         epsilon = ar.epsilon
         delta = ar.delta
@@ -122,6 +124,8 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     batch_size = np.int(np.round(batch_rate * n))
     # print("minibatch: ", batch_size)
     input_size = 10 + 1
+    # hidden_size_1 = 500
+    # hidden_size_2 = 500
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
@@ -156,19 +160,19 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     rho = find_rho_tab(sigma2)
     order = order_hermite
 
+
     ########## data mean embedding ##########
     """ compute the weights """
-    # print('computing mean embedding of data: (1) compute the weights')
+    print('computing mean embedding of data: (1) compute the weights')
     unnormalized_weights = np.sum(true_labels, 0)
     weights = unnormalized_weights / np.sum(unnormalized_weights) # weights = m_c / n
-    # print('\n weights with no privatization are', weights, '\n')
+    print('\n weights with no privatization are', weights, '\n')
 
     if ar.is_private:
-        # print("private")
+        print("private")
         k = 2 # because we add noise to the weights and means separately.
         privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
-        # print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
-
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
         sensitivity_for_weights = np.sqrt(2) / n  # double check if this is sqrt(2) or 2
         noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
         weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
@@ -202,9 +206,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
-    # scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
 
-    # print('start training the generator')
     num_iter = np.int(n / batch_size)
 
     for epoch in range(n_epochs):  # loop over the dataset multiple times
@@ -223,7 +225,6 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
                 label_input = label_input.to(device)
                 feature_input = torch.randn((batch_size, input_size - 1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
-
 
             else:  # heterogeneous data
 
@@ -257,9 +258,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             loss.backward()
             optimizer.step()
 
-
         print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
         # scheduler.step()
+
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
     """ now we save synthetic data of size 60K and test them on logistic regression """
@@ -288,6 +289,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         generated_labels_final = label_input.cpu().detach().numpy()
 
         roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, n_classes, "generated", ar.classifiers)
+
 
     else:  # homogeneous datasets
 
@@ -335,18 +337,6 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     return roc, prc, ar.log_dir
 
 if __name__ == '__main__':
-
-    # data_name = "epileptic"
-    # data_name = 'isolet'
-    # data_name = 'credit'
-    # base_dir = 'logs/gen/'
-    # txt_dir = base_dir + data_name + '/'
-    # if not os.path.exists(txt_dir):
-    #     os.makedirs(txt_dir)
-
-    # orig_stdout = sys.stdout
-    # f = open(txt_dir + 'out.txt', 'w')
-    # sys.stdout = f
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
@@ -479,10 +469,6 @@ if __name__ == '__main__':
             print("Max PRC! ", max_aver_rocprc[1])
             print("Setup: ", max_elem)
             print('*'*100)
-
-
-    # sys.stdout = orig_stdout
-    # f.close()
 
 
 
