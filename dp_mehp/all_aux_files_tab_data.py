@@ -144,6 +144,7 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc3(output)
             # output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
 
+
             # if str(self.dataset) == 'epileptic':
             #     output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
             # elif str(self.dataset) == 'isolet':
@@ -640,6 +641,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         if str(model)[0:11] == 'BernoulliNB':
             print('training again')
+
             model = BernoulliNB(alpha=0.02, binarize=0.1)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -670,8 +672,10 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
             prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
 
+
         elif str(model)[0:10] == 'GaussianNB':
             print('training again')
+
             model = GaussianNB(var_smoothing=1e-3, priors=(sum(y_tr)/len(y_tr),1-sum(y_tr)/len(y_tr)))
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -683,6 +687,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:12] == 'RandomForest':
             print('training again')
+
             model = RandomForestClassifier(n_estimators=200)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -716,14 +721,14 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
         elif str(model)[0:18] == 'LogisticRegression':
 
             print('logistic regression with balanced class weight')
-            model = LogisticRegression(solver='lbfgs', max_iter=50000, class_weight='balanced', tol=1e-12)
+            model = LogisticRegression(solver='lbfgs', max_iter=50000, tol=1e-12)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
             roc_temp1 = roc_auc_score(y_te, pred)
             prc_temp1 = average_precision_score(y_te, pred)
 
             print('logistic regression with saga solver')
-            model = LogisticRegression(solver='saga', penalty='l1', class_weight='balanced', tol=1e-12)
+            model = LogisticRegression(solver='saga', penalty='l1', tol=1e-12)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
             roc_temp2 = roc_auc_score(y_te, pred)
@@ -749,6 +754,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:9] == 'LinearSVC':
             print('training again')
+
             model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge')
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -775,6 +781,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:12] == 'DecisionTree':
             print('training again')
+
             model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='log2')
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -801,6 +808,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:26] == 'LinearDiscriminantAnalysis':
 
+            print('test LDA with different hyperparameters')
             model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto')
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -822,7 +830,9 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
             prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
 
+
         elif str(model)[0:8] == 'AdaBoost':
+
             model = AdaBoostClassifier(n_estimators=100, learning_rate=0.8)  # improved
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -846,6 +856,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:7] == 'Bagging':
 
+            print('test Bagging with different hyperparameters')
             model = BaggingClassifier(max_samples=0.1, n_estimators=20)  # improved
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -855,7 +866,9 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             roc = max(roc, roc_temp1)
             prc = max(prc, prc_temp1)
 
+
         elif str(model)[0:3] == 'MLP':
+
             model = MLPClassifier(learning_rate='adaptive', alpha=0.01, tol=1e-10)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
@@ -879,6 +892,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
         elif str(model)[0:13] == 'XGBClassifier':
 
+            print('test XGB with different hyperparameters')
             model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.7)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data

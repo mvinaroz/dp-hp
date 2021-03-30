@@ -40,8 +40,8 @@ def get_args():
     parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
-    parser.add_argument("--separate-kernel-length", action='store_true', default=True) # heuristic-sigma has to be "True", to enable separate-kernel-length
-    parser.add_argument("--normalize-data", action='store_true', default=False)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=False) # heuristic-sigma has to be "True", to enable separate-kernel-length
+    parser.add_argument("--normalize-data", action='store_true', default=True)
 
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
@@ -297,7 +297,6 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
         # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
         #     torch.FloatTensor)
-
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
@@ -358,7 +357,8 @@ if __name__ == '__main__':
         elif dataset == 'isolet':
             how_many_epochs_arg = [200]
             n_features_arg = [100]
-            mini_batch_arg = [0.6]
+            # mini_batch_arg = [0.3, 0.5, 0.7]
+            mini_batch_arg = [0.8, 0.9, 1.0]
             # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             length_scale = [0.005] # dummy
             subsampled_rate = [0.9]
@@ -405,8 +405,8 @@ if __name__ == '__main__':
         #                   "n_epochs": how_many_epochs_arg, "subsampled_rate": subsampled_rate})
 
 
-        repetitions = 5 # seed: 0 to 4
-        # repetitions = 1
+        # repetitions = 5 # seed: 0 to 4
+        repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
 
