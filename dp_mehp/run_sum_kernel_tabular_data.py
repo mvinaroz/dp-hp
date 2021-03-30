@@ -252,7 +252,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             weights_syn = weights_syn / torch.sum(weights_syn)
             syn_data_embedding = syn_data_embedding / torch.Tensor(weights_syn).to(device)
 
-            loss = torch.sum(data_embedding - syn_data_embedding) ** 2
+            loss = torch.sum((data_embedding - syn_data_embedding)**2)
 
             optimizer.zero_grad()
             loss.backward()
@@ -295,6 +295,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         """ draw final data samples """
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
+        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
+        #     torch.FloatTensor)
+
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
@@ -340,7 +343,7 @@ if __name__ == '__main__':
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
-    for dataset in ["isolet"]:
+    for dataset in ["credit"]:
     # for dataset in [data_name]:
     # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
@@ -358,12 +361,13 @@ if __name__ == '__main__':
             mini_batch_arg = [0.6]
             # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             length_scale = [0.005] # dummy
-            subsampled_rate = [1.0]
+            subsampled_rate = [0.9]
         elif dataset == 'credit':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [50, 100, 200]
-            mini_batch_arg = [0.4, 0.5]
-            length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+            how_many_epochs_arg = [400] # 400
+            n_features_arg = [100]
+            mini_batch_arg = [0.6]
+            # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+            length_scale =[0.0005]
             subsampled_rate = [0.005]
 
         # if dataset == 'adult':
