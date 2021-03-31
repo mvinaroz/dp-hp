@@ -669,8 +669,15 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             roc_temp4 = roc_auc_score(y_te, pred)
             prc_temp4 = average_precision_score(y_te, pred)
 
-            roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
-            prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+            print('training again')
+            model = BernoulliNB(alpha=1.0, binarize=0.5)
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            roc_temp5 = roc_auc_score(y_te, pred)
+            prc_temp5 = average_precision_score(y_te, pred)
+
+            roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
+            prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
 
 
         elif str(model)[0:10] == 'GaussianNB':
@@ -735,14 +742,14 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             prc_temp2 = average_precision_score(y_te, pred)
 
             print('logistic regression with liblinear solver')
-            model = LogisticRegression(solver='liblinear', max_iter=50000, penalty='l1', class_weight='balanced',tol=1e-8, C=0.1)
+            model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced',tol=1e-8, C=0.1)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
             roc_temp3 = roc_auc_score(y_te, pred)
             prc_temp3 = average_precision_score(y_te, pred)
 
             print('logistic regression with liblinear solver')
-            model = LogisticRegression(solver='liblinear', max_iter=50000, penalty='l1', class_weight='balanced',tol=1e-8, C=0.05)
+            model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced',tol=1e-8, C=0.05)
             model.fit(X_tr, y_tr)
             pred = model.predict(X_te)  # test on real data
             roc_temp4 = roc_auc_score(y_te, pred)
@@ -750,6 +757,8 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
             roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
             prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+            # roc = max(roc, roc_temp1, roc_temp2)
+            # prc = max(prc, prc_temp1, prc_temp2)
 
 
         elif str(model)[0:9] == 'LinearSVC':

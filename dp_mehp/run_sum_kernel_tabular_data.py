@@ -27,7 +27,7 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
@@ -40,8 +40,8 @@ def get_args():
     parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
-    parser.add_argument("--separate-kernel-length", action='store_true', default=False) # heuristic-sigma has to be "True", to enable separate-kernel-length
-    parser.add_argument("--normalize-data", action='store_true', default=True)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=True) # heuristic-sigma has to be "True", to enable separate-kernel-length
+    parser.add_argument("--normalize-data", action='store_true', default=False)
 
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
@@ -295,8 +295,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         """ draw final data samples """
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
-        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
-        #     torch.FloatTensor)
+        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
@@ -342,28 +341,34 @@ if __name__ == '__main__':
 
     # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
     # for dataset in [arguments.dataset]:
-    for dataset in ["credit"]:
-    # for dataset in [data_name]:
+    # for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["epileptic", "isolet"]:
+    for dataset in ["isolet, credit"]:
     # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            how_many_epochs_arg = [200]
+            # how_many_epochs_arg = [200, 400]
+            # n_features_arg = [100]
+            # mini_batch_arg = [0.5]
+            # length_scale = [0.003]
+            # subsampled_rate = [0.8, 0.9]
+            how_many_epochs_arg = [200, 400]
             n_features_arg = [100]
-            mini_batch_arg = [0.4]
+            mini_batch_arg = [0.5]
             length_scale = [0.003]
-            subsampled_rate = [1.0]
+            subsampled_rate = [0.85]
         elif dataset == 'isolet':
-            how_many_epochs_arg = [200]
+            how_many_epochs_arg = [200, 400]
             n_features_arg = [100]
-            # mini_batch_arg = [0.3, 0.5, 0.7]
-            mini_batch_arg = [0.8, 0.9, 1.0]
+            mini_batch_arg = [0.6]
+            # mini_batch_arg = [0.8, 0.9, 1.0]
             # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             length_scale = [0.005] # dummy
-            subsampled_rate = [0.9]
+            subsampled_rate = [0.8, 0.9, 1.0]
         elif dataset == 'credit':
-            how_many_epochs_arg = [400] # 400
+            how_many_epochs_arg = [100, 200, 400] # 400
             n_features_arg = [100]
             mini_batch_arg = [0.6]
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
@@ -405,8 +410,8 @@ if __name__ == '__main__':
         #                   "n_epochs": how_many_epochs_arg, "subsampled_rate": subsampled_rate})
 
 
-        # repetitions = 5 # seed: 0 to 4
-        repetitions = 1
+        repetitions = 5 # seed: 0 to 4
+        # repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
 
