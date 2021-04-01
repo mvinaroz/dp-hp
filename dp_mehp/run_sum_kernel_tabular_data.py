@@ -343,7 +343,7 @@ if __name__ == '__main__':
     # for dataset in [arguments.dataset]:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
-    for dataset in ["isolet, credit"]:
+    for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
         # print('is private?', is_priv_arg)
@@ -354,21 +354,21 @@ if __name__ == '__main__':
             # mini_batch_arg = [0.5]
             # length_scale = [0.003]
             # subsampled_rate = [0.8, 0.9]
-            how_many_epochs_arg = [200, 400]
+            how_many_epochs_arg = [600, 800]
             n_features_arg = [100]
             mini_batch_arg = [0.5]
             length_scale = [0.003]
-            subsampled_rate = [0.85]
+            subsampled_rate = [0.8]
         elif dataset == 'isolet':
-            how_many_epochs_arg = [200, 400]
+            how_many_epochs_arg = [800]
             n_features_arg = [100]
             mini_batch_arg = [0.6]
             # mini_batch_arg = [0.8, 0.9, 1.0]
             # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
             length_scale = [0.005] # dummy
-            subsampled_rate = [0.8, 0.9, 1.0]
+            subsampled_rate = [0.8]
         elif dataset == 'credit':
-            how_many_epochs_arg = [100, 200, 400] # 400
+            how_many_epochs_arg = [100, 200, 400, 600, 800] # 400
             n_features_arg = [100]
             mini_batch_arg = [0.6]
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
