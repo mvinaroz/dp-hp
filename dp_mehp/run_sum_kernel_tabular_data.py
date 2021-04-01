@@ -214,25 +214,31 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         for i in range(num_iter):
 
-            """ (1) produce labels uniformly across different classes """
-            label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(torch.FloatTensor)
-            label_input = label_input.transpose_(0, 1)
-            label_input = label_input.squeeze()
-            # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(torch.FloatTensor)
-
             if data_name in homogeneous_datasets:  # In our case, if a dataset is homogeneous, then it is a binary dataset.
 
+                label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(
+                    torch.FloatTensor)
+                label_input = label_input.transpose_(0, 1)
+                label_input = label_input.squeeze()
                 label_input = label_input.to(device)
+
                 feature_input = torch.randn((batch_size, input_size - 1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
 
             else:  # heterogeneous data
 
-                label_input = torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),1)  # to avoid no labels
+                # (1) generate labels
+                label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(
+                    torch.FloatTensor)
+                label_input = torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),
+                                        1)  # to avoid no labels
                 label_input = label_input.transpose_(0, 1)
+                label_input = label_input.squeeze()
                 label_input = label_input.to(device)
+
+                # (2) generate corresponding features
                 feature_input = torch.randn((batch_size + len(weights), input_size - 1)).to(device)
-                input_to_model = torch.cat((feature_input, label_input), 1)
+                input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
 
             """ (2) produce data """
             outputs = model(input_to_model)
@@ -277,6 +283,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         feature_input = torch.randn((n, input_size - 1)).to(device)
         input_to_model = torch.cat((feature_input, label_input), 1)
         outputs = model(input_to_model)
+
+        samp_input_features = outputs
+        samp_labels = label_input
 
         # (3) round the categorial features
         output_numerical = outputs[:, 0:num_numerical_inputs]
@@ -339,11 +348,11 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
-    # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    # for dataset in [arguments.dataset]:
+    # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
+    for dataset in ['cervical', 'census']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
-    for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
         # print('is private?', is_priv_arg)
@@ -374,31 +383,38 @@ if __name__ == '__main__':
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
             length_scale =[0.0005]
             subsampled_rate = [0.005]
-
-        # if dataset == 'adult':
-        #     mini_batch_arg = [0.1]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
-        #     undersampling_rates = [.4]#[.8, .6, .4] #dummy
-        # elif dataset=='census':
-        #     mini_batch_arg=[0.1]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     undersampling_rates = [0.4]#[0.2, 0.3, 0.4]
-        # elif dataset=='covtype':
-        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     mini_batch_arg=[0.03]
-        #     repetitions=3
-        #     undersampling_rates = [1.] #dummy
-        # elif dataset == 'intrusion':
-        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     mini_batch_arg = [0.03]
-        #     repetitions=3
-        #     undersampling_rates=[0.3]#[0.1, 0.2, 0.3]
-        # elif dataset=='credit':
-        #     undersampling_rates = [0.005]#[0.01, 0.005, 0.02]
-        # elif dataset=='cervical':
-        #     undersampling_rates = [1.]#[0.1, 0.3, 0.5, 0.7, 1.0]
+        elif dataset == 'adult':
+            how_many_epochs_arg = [200]
+            # [400, 600, 800, 1000]
+            mini_batch_arg = [0.1]
+            # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
+            n_features_arg = [100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [.4]#[.8, .6, .4] #dummy
+        elif dataset=='census':
+            how_many_epochs_arg = [200, 400, 600, 800, 1000]
+            mini_batch_arg = [0.05, 0.1, 0.2, 0.3]
+            n_features_arg = [100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]#[0.2, 0.3, 0.4]
+        elif dataset=='covtype':
+            how_many_epochs_arg = [600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.03]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [1.] #dummy
+        elif dataset == 'intrusion':
+            how_many_epochs_arg = [200, 400, 600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.01, 0.03, 0.05]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
+        elif dataset=='cervical':
+            how_many_epochs_arg = [800, 1000, 1200]
+            n_features_arg = [100]
+            mini_batch_arg = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.75, 0.8, 0.85, 0.9, 0.95, 1.0]#[0.1, 0.3, 0.5, 0.7, 1.0]
 
 
 
@@ -413,7 +429,7 @@ if __name__ == '__main__':
         repetitions = 5 # seed: 0 to 4
         # repetitions = 1
 
-        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
+        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic", "covtype", "intrusion"]:
 
             max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc, max_elem=0, 0, 0, 0, [0,0], 0
 
