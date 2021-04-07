@@ -349,7 +349,8 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['covtype']:
+    for dataset in ['intrusion']:
+    # for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -386,13 +387,13 @@ if __name__ == '__main__':
             # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
             subsampled_rate = [0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 0.009]
         elif dataset == 'adult':
-            how_many_epochs_arg = [200]
+            how_many_epochs_arg = [100, 200, 400, 600]
             # [400, 600, 800, 1000]
-            mini_batch_arg = [0.1]
+            mini_batch_arg = [0.05,0.1,0.15,0.2,0.3,0.4]
             # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
             n_features_arg = [100]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [.4]#[.8, .6, .4] #dummy
+            subsampled_rate = [0.3, 0.35, 0.4, 0.45, 0.5]#[.8, .6, .4] #dummy
         elif dataset=='census':
             how_many_epochs_arg = [200, 400, 600, 800, 1000]
             mini_batch_arg = [0.05, 0.1, 0.2, 0.3]

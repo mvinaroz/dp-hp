@@ -37,6 +37,7 @@ from sklearn import datasets
 from autodp import privacy_calibrator
 import pandas as pd
 import seaborn as sns
+import pickle
 sns.set()
 
 import warnings
@@ -433,20 +434,47 @@ def data_loading(dataset, undersampled_rate, seed_number):
    elif dataset=='adult':
 
         print("dataset is", dataset) # this is heterogenous
-        data, categorical_columns, ordinal_columns = load_dataset('adult')
+
+        # metadata = load_dataset('adult')
+        # from sdgym.datasets import load_tables
+        # tables = load_tables(metadata)
+
+        # data, categorical_columns, ordinal_columns = load_dataset('adult')
+
+        adult_data = pd.read_csv("../data/adult/adult.csv")
+
+        filename = '../data/adult/adult.p'
+        with open(filename, 'rb') as f:
+            u = pickle._Unpickler(f)
+            u.encoding = 'latin1'
+            data = u.load()
+            y_tot, x_tot = data
+
+        # [0:'age', 1:'workclass', 2:'fnlwgt', 3:'education', 4:'education_num',
+        #  5:'marital_status', 6:'occupation', 7:'relationship', 8:'race', 9:'sex',
+        #  10:'capital_gain', 11:'capital_loss', 12:'hours_per_week', 13:'country']
+
+        # categorical_columns = ['workclass', 'race', 'education', 'marital-status', 'occupation',
+        #                  'relationship', 'gender', 'native-country']
+        categorical_columns = [1, 3, 5, 6, 7, 8, 9, 13]
+        ordinal_columns = []
+
 
         """ some specifics on this dataset """
-        numerical_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
+        numerical_columns = list(set(np.arange(x_tot[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
         n_classes = 2
 
-        data = data[:, numerical_columns + ordinal_columns + categorical_columns]
+        x_tot = x_tot[:, numerical_columns + ordinal_columns + categorical_columns]
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:, :-1]
-        target = data[:, -1]
+        # inputs = data[:, :-1]
+        # target = data[:, -1]
 
-        inputs, target=undersample(inputs, target, undersampled_rate)
+        inputs = x_tot
+        target = y_tot
+
+        inputs, target = undersample(inputs, target, undersampled_rate)
 
         X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
                                                             random_state=seed_number)
@@ -506,6 +534,12 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         print("dataset is", dataset)
         data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+
+        metadata = load_dataset('intrusion')
+        from sdgym.datasets import load_tables
+        tables = load_tables(metadata)
+
+        intrusion_data = datasets.fetch_kddcup99(percent10=True)
 
         """ some specifics on this dataset """
         n_classes = 5
@@ -650,42 +684,44 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             if str(model)[0:11] == 'BernoulliNB':
                 print('training again')
 
-                model = BernoulliNB(alpha=0.02, binarize=0.1)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                roc_temp1 = roc_auc_score(y_te, pred)
-                prc_temp1 = average_precision_score(y_te, pred)
+                # model = BernoulliNB(alpha=0.02)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # roc_temp1 = roc_auc_score(y_te, pred)
+                # prc_temp1 = average_precision_score(y_te, pred)
+                #
+                # print('training again')
+                # model = BernoulliNB(alpha=0.5)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # roc_temp2 = roc_auc_score(y_te, pred)
+                # prc_temp2 = average_precision_score(y_te, pred)
+                #
+                # print('training again')
+                # model = BernoulliNB(alpha=1.0)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # roc_temp3 = roc_auc_score(y_te, pred)
+                # prc_temp3 = average_precision_score(y_te, pred)
 
-                print('training again')
-                model = BernoulliNB(alpha=0.5, binarize=0.2)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                roc_temp2 = roc_auc_score(y_te, pred)
-                prc_temp2 = average_precision_score(y_te, pred)
+                # print('training again')
+                # model = BernoulliNB(alpha=1.0, binarize=0.4)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # roc_temp4 = roc_auc_score(y_te, pred)
+                # prc_temp4 = average_precision_score(y_te, pred)
+                #
+                # print('training again')
+                # model = BernoulliNB(alpha=1.0, binarize=0.5)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # roc_temp5 = roc_auc_score(y_te, pred)
+                # prc_temp5 = average_precision_score(y_te, pred)
 
-                print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.3)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                roc_temp3 = roc_auc_score(y_te, pred)
-                prc_temp3 = average_precision_score(y_te, pred)
-
-                print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.4)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                roc_temp4 = roc_auc_score(y_te, pred)
-                prc_temp4 = average_precision_score(y_te, pred)
-
-                print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.5)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                roc_temp5 = roc_auc_score(y_te, pred)
-                prc_temp5 = average_precision_score(y_te, pred)
-
-                roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
-                prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
+                # roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
+                # prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
+                # roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                # prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
 
 
             elif str(model)[0:10] == 'GaussianNB':
