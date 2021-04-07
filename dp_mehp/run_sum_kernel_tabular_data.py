@@ -349,7 +349,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['cervical', 'census']:
+    for dataset in ['covtype']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -377,12 +377,13 @@ if __name__ == '__main__':
             length_scale = [0.005] # dummy
             subsampled_rate = [0.8]
         elif dataset == 'credit':
-            how_many_epochs_arg = [100, 200, 400, 600, 800] # 400
+            how_many_epochs_arg = [1400] # 400
             n_features_arg = [100]
-            mini_batch_arg = [0.6]
+            mini_batch_arg = [0.5]
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
             length_scale =[0.0005]
-            subsampled_rate = [0.005]
+            # subsampled_rate = [0.005]
+            subsampled_rate = [0.001, 0.003, 0.007, 0.009]
         elif dataset == 'adult':
             how_many_epochs_arg = [200]
             # [400, 600, 800, 1000]
@@ -398,11 +399,11 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
-            how_many_epochs_arg = [600, 800, 1000]
+            how_many_epochs_arg = [20, 50, 100, 300, 600, 800, 1000]
             n_features_arg = [100]
-            mini_batch_arg = [0.03]
+            mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [1.] #dummy
+            subsampled_rate = [0.03]
         elif dataset == 'intrusion':
             how_many_epochs_arg = [200, 400, 600, 800, 1000]
             n_features_arg = [100]

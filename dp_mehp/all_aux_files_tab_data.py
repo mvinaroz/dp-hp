@@ -31,6 +31,8 @@ from sklearn.model_selection import ParameterGrid
 from autodp import privacy_calibrator
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import f1_score
+import sklearn
+from sklearn import datasets
 
 from autodp import privacy_calibrator
 import pandas as pd
@@ -546,10 +548,14 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         print("dataset is", dataset)
 
-        train_data = np.load("../data/real/covtype/train.npy")
-        test_data = np.load("../data/real/covtype/test.npy")
-        # we put them together and make a new train/test split in the following
-        data = np.concatenate((train_data, test_data))
+        # train_data = np.load("../data/real/covtype/train.npy")
+        # test_data = np.load("../data/real/covtype/test.npy")
+        # # we put them together and make a new train/test split in the following
+        # data = np.concatenate((train_data, test_data))
+
+        covtype_dataset = datasets.fetch_covtype()
+        data = covtype_dataset.data
+        target = covtype_dataset.target
 
         """ some specifics on this dataset """
         numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -569,13 +575,13 @@ def data_loading(dataset, undersampled_rate, seed_number):
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:20000, :-1]
-        target = data[:20000, -1]
+        # inputs = data[:20000, :-1]
+        # target = data[:20000, -1]
 
         ##################3
 
-        raw_labels=target
-        raw_input_features=inputs
+        raw_labels = target
+        raw_input_features = data
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
@@ -600,7 +606,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
         ###############3
 
         X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30,
-                                                            random_state=seed_number)  # 60% training and 40% test
+                                                            random_state=seed_number)
 
    return X_train, X_test, y_train, y_test, n_classes, num_numerical_inputs, num_categorical_inputs
 
