@@ -383,7 +383,8 @@ if __name__ == '__main__':
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
             length_scale =[0.0005]
             # subsampled_rate = [0.005]
-            subsampled_rate = [0.001, 0.003, 0.007, 0.009]
+            # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
+            subsampled_rate = [0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 0.009]
         elif dataset == 'adult':
             how_many_epochs_arg = [200]
             # [400, 600, 800, 1000]
