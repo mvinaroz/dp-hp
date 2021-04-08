@@ -441,7 +441,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         # data, categorical_columns, ordinal_columns = load_dataset('adult')
 
-        adult_data = pd.read_csv("../data/adult/adult.csv")
+        # adult_data = pd.read_csv("../data/adult/adult.csv")
 
         filename = '../data/adult/adult.p'
         with open(filename, 'rb') as f:
@@ -1003,19 +1003,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
 
-                print('training again')
-                model = BernoulliNB(alpha=1.0)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                f1score4 = f1_score(y_te, pred, average='weighted')
-
-                print('training again')
-                model = BernoulliNB(alpha=1.0)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                f1score5 = f1_score(y_te, pred, average='weighted')
-
-                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5)
+                f1score = max(f1score, f1score1, f1score2, f1score3)
 
 
             elif str(model)[0:10] == 'GaussianNB':
