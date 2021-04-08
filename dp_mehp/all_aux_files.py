@@ -426,7 +426,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
   # for acc in g_to_r_acc_summary:
     # print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
-  # print(f'mean: {mean_acc}')
+  print(f'mean: {mean_acc}')
   return mean_acc
 
 
