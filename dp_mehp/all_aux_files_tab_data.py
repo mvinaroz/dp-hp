@@ -533,16 +533,15 @@ def data_loading(dataset, undersampled_rate, seed_number):
    elif dataset=='intrusion':
 
         print("dataset is", dataset)
-        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
 
-        metadata = load_dataset('intrusion')
-        from sdgym.datasets import load_tables
-        tables = load_tables(metadata)
+        original_train_data = np.load("../data/real/intrusion/train.npy")
+        original_test_data = np.load("../data/real/intrusion/test.npy")
 
-        intrusion_data = datasets.fetch_kddcup99(percent10=True)
+        # we put them together and make a new train/test split in the following
+        data = np.concatenate((original_train_data, original_test_data))
 
         """ some specifics on this dataset """
-        n_classes = 5
+        n_classes = 5 # removed to 5
 
         """ some changes we make in the type of features for applying to our model """
         categorical_columns_binary = [6, 11, 13, 20]  # these are binary categorical columns
@@ -1009,7 +1008,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             elif str(model)[0:10] == 'GaussianNB':
                 print('training again')
 
-                model = GaussianNB(var_smoothing=1e-3, priors=(sum(y_tr) / len(y_tr), 1 - sum(y_tr) / len(y_tr)))
+                model = GaussianNB(var_smoothing=1e-3)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')

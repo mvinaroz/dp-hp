@@ -407,7 +407,7 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.03]
         elif dataset == 'intrusion':
-            how_many_epochs_arg = [200, 400, 600, 800, 1000]
+            how_many_epochs_arg = [20, 100, 200, 400, 600, 800, 1000]
             n_features_arg = [100]
             mini_batch_arg = [0.01, 0.03, 0.05]
             length_scale = [0.005]  # dummy
