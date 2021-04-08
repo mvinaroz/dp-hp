@@ -1,0 +1,575 @@
+
+
+
+{'batch_rate': 0.01, 'kernel_length': 0.005, 'n_epochs': 20, 'order_hermite': 100, 'subsampled_rate': 0.25} 
+
+
+Repetition:  0
+ • seed                     - 0
+ • data_name                - intrusion
+ • batch_rate               - 0.01
+ • epochs                   - 20
+ • lr                       - 0.01
+ • lr_decay                 - 0.9
+ • is_private               - False
+ • epsilon                  - 1.0
+ • delta                    - 1e-05
+ • heuristic_sigma          - True
+ • kernel_length            - 0.005
+ • order_hermite            - 100
+ • undersampled_rate        - 0.25
+ • separate_kernel_length   - True
+ • normalize_data           - False
+ • classifiers              - [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+ • log_name                 - intrusion_seed=0_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue
+ • log_dir                  - logs/gen/intrusion_seed=0_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue/
+-------------------------------------------
+dataset is intrusion
+(494021, 40)
+testing non-standardized data
+we use the median heuristic for length scale
+we use a separate length scale on each coordinate of the data
+computing mean embedding of data: (1) compute the weights
+
+ weights with no privatization are [4.87498040e-01 4.86150907e-01 2.04208185e-02 5.70927597e-03
+ 2.20958246e-04] 
+
+Train Epoch: 0 	 Loss: 19.626074
+Train Epoch: 1 	 Loss: 18.306561
+Train Epoch: 2 	 Loss: 15.981407
+Train Epoch: 3 	 Loss: 14.896486
+Train Epoch: 4 	 Loss: 13.748652
+Train Epoch: 5 	 Loss: 13.875164
+Train Epoch: 6 	 Loss: 13.383620
+Train Epoch: 7 	 Loss: 12.909164
+Train Epoch: 8 	 Loss: 12.831510
+Train Epoch: 9 	 Loss: 13.060446
+Train Epoch: 10 	 Loss: 13.550562
+Train Epoch: 11 	 Loss: 12.828287
+Train Epoch: 12 	 Loss: 13.543127
+Train Epoch: 13 	 Loss: 13.111975
+Train Epoch: 14 	 Loss: 13.171610
+Train Epoch: 15 	 Loss: 12.768983
+Train Epoch: 16 	 Loss: 13.343716
+Train Epoch: 17 	 Loss: 12.907350
+Train Epoch: 18 	 Loss: 12.808214
+Train Epoch: 19 	 Loss: 12.129753
+
+ generated data
+
+
+ <class 'sklearn.linear_model._logistic.LogisticRegression'>
+logistic regression with balanced class weight
+logistic regression with saga solver
+logistic regression with liblinear solver
+logistic regression with liblinear solver
+F1-score on test generated data is 0.333
+
+ <class 'sklearn.naive_bayes.GaussianNB'>
+training again
+F1-score on test generated data is 0.897
+
+ <class 'sklearn.naive_bayes.BernoulliNB'>
+training again
+training again
+training again
+F1-score on test generated data is 0.811
+
+ <class 'sklearn.svm._classes.LinearSVC'>
+training again
+training again
+training again
+F1-score on test generated data is 0.327
+
+ <class 'sklearn.tree._classes.DecisionTreeClassifier'>
+training again
+training again
+training again
+F1-score on test generated data is 0.894
+
+ <class 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis'>
+test LDA with different hyperparameters
+F1-score on test generated data is 0.924
+
+ <class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>
+F1-score on test generated data is 0.918
+
+ <class 'sklearn.ensemble._bagging.BaggingClassifier'>
+test Bagging with different hyperparameters
+F1-score on test generated data is 0.914
+
+ <class 'sklearn.ensemble._forest.RandomForestClassifier'>
+training again
+training again
+training again
+training again
+F1-score on test generated data is 0.953
+
+ <class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
+F1-score on test generated data is 0.897
+
+ <class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>
+F1-score on test generated data is 0.329
+
+ <class 'xgboost.sklearn.XGBClassifier'>
+test XGB with different hyperparameters
+F1-score on test generated data is 0.926
+------
+f1 mean across methods is 0.760
+
+
+Repetition:  1
+ • seed                     - 1
+ • data_name                - intrusion
+ • batch_rate               - 0.01
+ • epochs                   - 20
+ • lr                       - 0.01
+ • lr_decay                 - 0.9
+ • is_private               - False
+ • epsilon                  - 1.0
+ • delta                    - 1e-05
+ • heuristic_sigma          - True
+ • kernel_length            - 0.005
+ • order_hermite            - 100
+ • undersampled_rate        - 0.25
+ • separate_kernel_length   - True
+ • normalize_data           - False
+ • classifiers              - [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+ • log_name                 - intrusion_seed=1_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue
+ • log_dir                  - logs/gen/intrusion_seed=1_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue/
+-------------------------------------------
+dataset is intrusion
+(494021, 40)
+testing non-standardized data
+we use the median heuristic for length scale
+we use a separate length scale on each coordinate of the data
+computing mean embedding of data: (1) compute the weights
+
+ weights with no privatization are [4.88460277e-01 4.84981967e-01 2.07059260e-02 5.57384995e-03
+ 2.77979729e-04] 
+
+Train Epoch: 0 	 Loss: 18.678179
+Train Epoch: 1 	 Loss: 18.440990
+Train Epoch: 2 	 Loss: 17.020262
+Train Epoch: 3 	 Loss: 15.327339
+Train Epoch: 4 	 Loss: 15.010718
+Train Epoch: 5 	 Loss: 15.156509
+Train Epoch: 6 	 Loss: 15.111691
+Train Epoch: 7 	 Loss: 15.132250
+Train Epoch: 8 	 Loss: 14.679851
+Train Epoch: 9 	 Loss: 14.622770
+Train Epoch: 10 	 Loss: 15.129539
+Train Epoch: 11 	 Loss: 14.596110
+Train Epoch: 12 	 Loss: 14.583655
+Train Epoch: 13 	 Loss: 14.262403
+Train Epoch: 14 	 Loss: 14.536605
+Train Epoch: 15 	 Loss: 14.645022
+Train Epoch: 16 	 Loss: 14.617419
+Train Epoch: 17 	 Loss: 14.574421
+Train Epoch: 18 	 Loss: 14.605627
+Train Epoch: 19 	 Loss: 14.597616
+
+ generated data
+
+
+ <class 'sklearn.linear_model._logistic.LogisticRegression'>
+logistic regression with balanced class weight
+logistic regression with saga solver
+logistic regression with liblinear solver
+logistic regression with liblinear solver
+F1-score on test generated data is 0.861
+
+ <class 'sklearn.naive_bayes.GaussianNB'>
+training again
+F1-score on test generated data is 0.491
+
+ <class 'sklearn.naive_bayes.BernoulliNB'>
+training again
+training again
+training again
+F1-score on test generated data is 0.853
+
+ <class 'sklearn.svm._classes.LinearSVC'>
+training again
+training again
+training again
+F1-score on test generated data is 0.325
+
+ <class 'sklearn.tree._classes.DecisionTreeClassifier'>
+training again
+training again
+training again
+F1-score on test generated data is 0.924
+
+ <class 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis'>
+test LDA with different hyperparameters
+F1-score on test generated data is 0.948
+
+ <class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>
+F1-score on test generated data is 0.931
+
+ <class 'sklearn.ensemble._bagging.BaggingClassifier'>
+test Bagging with different hyperparameters
+F1-score on test generated data is 0.962
+
+ <class 'sklearn.ensemble._forest.RandomForestClassifier'>
+training again
+training again
+training again
+training again
+F1-score on test generated data is 0.965
+
+ <class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
+F1-score on test generated data is 0.957
+
+ <class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>
+F1-score on test generated data is 0.352
+
+ <class 'xgboost.sklearn.XGBClassifier'>
+test XGB with different hyperparameters
+F1-score on test generated data is 0.953
+------
+f1 mean across methods is 0.794
+
+
+Repetition:  2
+ • seed                     - 2
+ • data_name                - intrusion
+ • batch_rate               - 0.01
+ • epochs                   - 20
+ • lr                       - 0.01
+ • lr_decay                 - 0.9
+ • is_private               - False
+ • epsilon                  - 1.0
+ • delta                    - 1e-05
+ • heuristic_sigma          - True
+ • kernel_length            - 0.005
+ • order_hermite            - 100
+ • undersampled_rate        - 0.25
+ • separate_kernel_length   - True
+ • normalize_data           - False
+ • classifiers              - [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+ • log_name                 - intrusion_seed=2_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue
+ • log_dir                  - logs/gen/intrusion_seed=2_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue/
+-------------------------------------------
+dataset is intrusion
+(494021, 40)
+testing non-standardized data
+we use the median heuristic for length scale
+we use a separate length scale on each coordinate of the data
+computing mean embedding of data: (1) compute the weights
+
+ weights with no privatization are [4.87391125e-01 4.86136652e-01 2.05491169e-02 5.67363754e-03
+ 2.49468987e-04] 
+
+Train Epoch: 0 	 Loss: 17.472507
+Train Epoch: 1 	 Loss: 16.499027
+Train Epoch: 2 	 Loss: 16.734777
+Train Epoch: 3 	 Loss: 14.907951
+Train Epoch: 4 	 Loss: 13.256900
+Train Epoch: 5 	 Loss: 13.531013
+Train Epoch: 6 	 Loss: 13.169408
+Train Epoch: 7 	 Loss: 13.320555
+Train Epoch: 8 	 Loss: 12.649092
+Train Epoch: 9 	 Loss: 12.926894
+Train Epoch: 10 	 Loss: 13.168577
+Train Epoch: 11 	 Loss: 13.423157
+Train Epoch: 12 	 Loss: 13.048264
+Train Epoch: 13 	 Loss: 12.976688
+Train Epoch: 14 	 Loss: 13.575242
+Train Epoch: 15 	 Loss: 13.444160
+Train Epoch: 16 	 Loss: 12.851469
+Train Epoch: 17 	 Loss: 12.673387
+Train Epoch: 18 	 Loss: 13.283477
+Train Epoch: 19 	 Loss: 13.281839
+
+ generated data
+
+
+ <class 'sklearn.linear_model._logistic.LogisticRegression'>
+logistic regression with balanced class weight
+logistic regression with saga solver
+logistic regression with liblinear solver
+logistic regression with liblinear solver
+F1-score on test generated data is 0.345
+
+ <class 'sklearn.naive_bayes.GaussianNB'>
+training again
+F1-score on test generated data is 0.185
+
+ <class 'sklearn.naive_bayes.BernoulliNB'>
+training again
+training again
+training again
+F1-score on test generated data is 0.766
+
+ <class 'sklearn.svm._classes.LinearSVC'>
+training again
+training again
+training again
+F1-score on test generated data is 0.328
+
+ <class 'sklearn.tree._classes.DecisionTreeClassifier'>
+training again
+training again
+training again
+F1-score on test generated data is 0.911
+
+ <class 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis'>
+test LDA with different hyperparameters
+F1-score on test generated data is 0.870
+
+ <class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>
+F1-score on test generated data is 0.881
+
+ <class 'sklearn.ensemble._bagging.BaggingClassifier'>
+test Bagging with different hyperparameters
+F1-score on test generated data is 0.893
+
+ <class 'sklearn.ensemble._forest.RandomForestClassifier'>
+training again
+training again
+training again
+training again
+F1-score on test generated data is 0.932
+
+ <class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
+F1-score on test generated data is 0.411
+
+ <class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>
+F1-score on test generated data is 0.327
+
+ <class 'xgboost.sklearn.XGBClassifier'>
+test XGB with different hyperparameters
+F1-score on test generated data is 0.918
+------
+f1 mean across methods is 0.647
+
+
+Repetition:  3
+ • seed                     - 3
+ • data_name                - intrusion
+ • batch_rate               - 0.01
+ • epochs                   - 20
+ • lr                       - 0.01
+ • lr_decay                 - 0.9
+ • is_private               - False
+ • epsilon                  - 1.0
+ • delta                    - 1e-05
+ • heuristic_sigma          - True
+ • kernel_length            - 0.005
+ • order_hermite            - 100
+ • undersampled_rate        - 0.25
+ • separate_kernel_length   - True
+ • normalize_data           - False
+ • classifiers              - [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+ • log_name                 - intrusion_seed=3_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue
+ • log_dir                  - logs/gen/intrusion_seed=3_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue/
+-------------------------------------------
+dataset is intrusion
+(494021, 40)
+testing non-standardized data
+we use the median heuristic for length scale
+we use a separate length scale on each coordinate of the data
+computing mean embedding of data: (1) compute the weights
+
+ weights with no privatization are [4.89322727e-01 4.84254943e-01 2.03637971e-02 5.80193588e-03
+ 2.56596673e-04] 
+
+Train Epoch: 0 	 Loss: 17.183575
+Train Epoch: 1 	 Loss: 16.655064
+Train Epoch: 2 	 Loss: 13.000706
+Train Epoch: 3 	 Loss: 13.058070
+Train Epoch: 4 	 Loss: 12.586291
+Train Epoch: 5 	 Loss: 12.492932
+Train Epoch: 6 	 Loss: 12.979799
+Train Epoch: 7 	 Loss: 13.132043
+Train Epoch: 8 	 Loss: 12.435457
+Train Epoch: 9 	 Loss: 12.753356
+Train Epoch: 10 	 Loss: 12.625238
+Train Epoch: 11 	 Loss: 12.099552
+Train Epoch: 12 	 Loss: 12.199093
+Train Epoch: 13 	 Loss: 11.732058
+Train Epoch: 14 	 Loss: 12.159285
+Train Epoch: 15 	 Loss: 12.163321
+Train Epoch: 16 	 Loss: 12.634554
+Train Epoch: 17 	 Loss: 11.866918
+Train Epoch: 18 	 Loss: 11.948793
+Train Epoch: 19 	 Loss: 11.883680
+
+ generated data
+
+
+ <class 'sklearn.linear_model._logistic.LogisticRegression'>
+logistic regression with balanced class weight
+logistic regression with saga solver
+logistic regression with liblinear solver
+logistic regression with liblinear solver
+F1-score on test generated data is 0.588
+
+ <class 'sklearn.naive_bayes.GaussianNB'>
+training again
+F1-score on test generated data is 0.493
+
+ <class 'sklearn.naive_bayes.BernoulliNB'>
+training again
+training again
+training again
+F1-score on test generated data is 0.706
+
+ <class 'sklearn.svm._classes.LinearSVC'>
+training again
+training again
+training again
+F1-score on test generated data is 0.318
+
+ <class 'sklearn.tree._classes.DecisionTreeClassifier'>
+training again
+training again
+training again
+F1-score on test generated data is 0.874
+
+ <class 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis'>
+test LDA with different hyperparameters
+F1-score on test generated data is 0.925
+
+ <class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>
+F1-score on test generated data is 0.898
+
+ <class 'sklearn.ensemble._bagging.BaggingClassifier'>
+test Bagging with different hyperparameters
+F1-score on test generated data is 0.872
+
+ <class 'sklearn.ensemble._forest.RandomForestClassifier'>
+training again
+training again
+training again
+training again
+F1-score on test generated data is 0.904
+
+ <class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
+F1-score on test generated data is 0.881
+
+ <class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>
+F1-score on test generated data is 0.322
+
+ <class 'xgboost.sklearn.XGBClassifier'>
+test XGB with different hyperparameters
+F1-score on test generated data is 0.893
+------
+f1 mean across methods is 0.723
+
+
+Repetition:  4
+ • seed                     - 4
+ • data_name                - intrusion
+ • batch_rate               - 0.01
+ • epochs                   - 20
+ • lr                       - 0.01
+ • lr_decay                 - 0.9
+ • is_private               - False
+ • epsilon                  - 1.0
+ • delta                    - 1e-05
+ • heuristic_sigma          - True
+ • kernel_length            - 0.005
+ • order_hermite            - 100
+ • undersampled_rate        - 0.25
+ • separate_kernel_length   - True
+ • normalize_data           - False
+ • classifiers              - [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+ • log_name                 - intrusion_seed=4_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue
+ • log_dir                  - logs/gen/intrusion_seed=4_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=True_kernel_length=0.005_br=0.01_lr=0.01_n_epoch=20_undersam_rate=0.25_normalize_dataFalse_separate_kernel_lengthTrue/
+-------------------------------------------
+dataset is intrusion
+(494021, 40)
+testing non-standardized data
+we use the median heuristic for length scale
+we use a separate length scale on each coordinate of the data
+computing mean embedding of data: (1) compute the weights
+
+ weights with no privatization are [4.88766768e-01 4.84896435e-01 2.05562446e-02 5.52395615e-03
+ 2.56596673e-04] 
+
+Train Epoch: 0 	 Loss: 18.511993
+Train Epoch: 1 	 Loss: 17.150883
+Train Epoch: 2 	 Loss: 17.382298
+Train Epoch: 3 	 Loss: 14.248156
+Train Epoch: 4 	 Loss: 14.038872
+Train Epoch: 5 	 Loss: 13.637630
+Train Epoch: 6 	 Loss: 13.789321
+Train Epoch: 7 	 Loss: 14.910325
+Train Epoch: 8 	 Loss: 13.528619
+Train Epoch: 9 	 Loss: 13.710688
+Train Epoch: 10 	 Loss: 13.735109
+Train Epoch: 11 	 Loss: 13.414214
+Train Epoch: 12 	 Loss: 13.605142
+Train Epoch: 13 	 Loss: 13.326250
+Train Epoch: 14 	 Loss: 13.676458
+Train Epoch: 15 	 Loss: 13.786386
+Train Epoch: 16 	 Loss: 13.270944
+Train Epoch: 17 	 Loss: 13.929031
+Train Epoch: 18 	 Loss: 13.110250
+Train Epoch: 19 	 Loss: 13.582186
+
+ generated data
+
+
+ <class 'sklearn.linear_model._logistic.LogisticRegression'>
+logistic regression with balanced class weight
+logistic regression with saga solver
+logistic regression with liblinear solver
+logistic regression with liblinear solver
+F1-score on test generated data is 0.325
+
+ <class 'sklearn.naive_bayes.GaussianNB'>
+training again
+F1-score on test generated data is 0.839
+
+ <class 'sklearn.naive_bayes.BernoulliNB'>
+training again
+training again
+training again
+F1-score on test generated data is 0.853
+
+ <class 'sklearn.svm._classes.LinearSVC'>
+training again
+training again
+training again
+F1-score on test generated data is 0.320
+
+ <class 'sklearn.tree._classes.DecisionTreeClassifier'>
+training again
+training again
+training again
+F1-score on test generated data is 0.956
+
+ <class 'sklearn.discriminant_analysis.LinearDiscriminantAnalysis'>
+test LDA with different hyperparameters
+F1-score on test generated data is 0.934
+
+ <class 'sklearn.ensemble._weight_boosting.AdaBoostClassifier'>
+F1-score on test generated data is 0.885
+
+ <class 'sklearn.ensemble._bagging.BaggingClassifier'>
+test Bagging with different hyperparameters
+F1-score on test generated data is 0.913
+
+ <class 'sklearn.ensemble._forest.RandomForestClassifier'>
+training again
+training again
+training again
+training again
+F1-score on test generated data is 0.960
+
+ <class 'sklearn.ensemble._gb.GradientBoostingClassifier'>
+F1-score on test generated data is 0.869
+
+ <class 'sklearn.neural_network._multilayer_perceptron.MLPClassifier'>
+F1-score on test generated data is 0.320
+
+ <class 'xgboost.sklearn.XGBClassifier'>
+test XGB with different hyperparameters
+F1-score on test generated data is 0.945
+------
+f1 mean across methods is 0.760
+
