@@ -460,7 +460,7 @@ if __name__ == '__main__':
                 prc_each_method_avr=np.mean(prc_arr_all, 0)
                 roc_each_method_std = np.std(roc_arr_all, 0)
                 prc_each_method_std = np.std(prc_arr_all, 0)
-                roc_arr=np.mean(roc_arr_all, 1)
+                roc_arr = np.mean(roc_arr_all, 1)
                 prc_arr = np.mean(prc_arr_all, 1)
 
                 # sys.stdout = open(dir_result+'result_txt.txt', "w")
@@ -497,6 +497,45 @@ if __name__ == '__main__':
             print("Max PRC! ", max_aver_rocprc[1])
             print("Setup: ", max_elem)
             print('*'*100)
+
+
+
+        elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
+
+            max_f1, max_aver_f1, max_elem=0, 0, 0
+
+            for elem in grid:
+                print(elem, "\n")
+                f1score_arr_all = []
+                for ii in range(repetitions):
+                    print("\nRepetition: ",ii)
+
+                    # f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    f1scr = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"], elem["subsampled_rate"])
+                    f1score_arr_all.append(f1scr[0])
+
+                f1score_each_method_avr = np.mean(f1score_arr_all, 0)
+                f1score_each_method_std = np.std(f1score_arr_all, 0)
+                f1score_arr = np.mean(f1score_arr_all, 1)
+
+                print("\n", "-" * 40, "\n\n")
+                print("For each of the methods")
+                print("Average F1: ", f1score_each_method_avr)
+                print("Std F1: ", f1score_each_method_std)
+
+
+                print("Average over repetitions across all methods")
+                print("Average f1 score: ", np.mean(f1score_arr))
+                print("Std F1: ", np.std(f1score_arr))
+                print("\n","-" * 80, "\n\n\n")
+
+                if np.mean(f1score_arr)>max_aver_f1:
+                    max_aver_f1=np.mean(f1score_arr)
+                    max_elem = elem
+
+            print("\n\n", "Max F1! ", max_aver_f1, "*"*20)
+            print("Setup: ", max_elem)
+            print('*' * 30)
 
 
 
