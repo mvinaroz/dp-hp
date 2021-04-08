@@ -5,7 +5,7 @@ import numpy as np
 import os
 from torch.optim.lr_scheduler import StepLR
 from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP
-from all_aux_files import get_dataloaders, log_args
+from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from autodp import privacy_calibrator
 import matplotlib
@@ -26,9 +26,9 @@ def get_args():
     parser.add_argument('--data-name', type=str, default='digits', help='options are digits or fashion')
 
     # OPTIMIZATION
-    parser.add_argument('--batch-size', type=int, default=2000)
+    parser.add_argument('--batch-size', type=int, default=200)
     parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=50)
+    parser.add_argument('--epochs', type=int, default=10)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
@@ -42,7 +42,7 @@ def get_args():
 
     # OTHERS
     parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
-    parser.add_argument('--report-intermediate-result', default=True, help='test synthetic data on logistic regression at every epoch')
+    parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=True)
     parser.add_argument("--separate-kernel-length", action='store_true', default=True)  # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
@@ -281,9 +281,17 @@ def main():
     if not os.path.exists(dir_syn_data):
         os.makedirs(dir_syn_data)
 
+    # np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
+    # final_score = test_gen_data(ar.log_name + '/' + data_name, data_name, subsample=1.0, custom_keys='logistic_reg')
+    # print('on logistic regression with 60K synthetic datapoints,  the accuracy is', final_score)
+
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
-    final_score = test_gen_data(ar.log_name + '/' + data_name, data_name, subsample=1.0, custom_keys='logistic_reg')
-    print('on logistic regression with 60K synthetic datapoints,  the accuracy is', final_score)
+    data_tuple = datasets_colletion_def(syn_data, syn_labels,
+                                        data_pkg.train_data.data, data_pkg.train_data.targets,
+                                        data_pkg.test_data.data, data_pkg.test_data.targets)
+    test_results_subsampling_rate(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, data_tuple, data_pkg.eval_func,
+                                  ar.skip_downstream_model, ar.sampling_rate_synth)
+
 
 if __name__ == '__main__':
     main()
