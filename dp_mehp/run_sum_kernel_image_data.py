@@ -28,7 +28,7 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument('--batch-size', type=int, default=200)
     parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=1)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
@@ -47,7 +47,8 @@ def get_args():
     parser.add_argument("--separate-kernel-length", action='store_true', default=True)  # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
     parser.add_argument('--order-hermite', type=int, default=50, help='')
-    # parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
+    parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
+    parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
     ar = parser.parse_args()
     preprocess_args(ar)
@@ -289,7 +290,7 @@ def main():
     data_tuple = datasets_colletion_def(syn_data, syn_labels,
                                         data_pkg.train_data.data, data_pkg.train_data.targets,
                                         data_pkg.test_data.data, data_pkg.test_data.targets)
-    test_results_subsampling_rate(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, data_tuple, data_pkg.eval_func,
+    test_results_subsampling_rate(ar.data_name, ar.log_name + '/' + ar.data_name, ar.log_dir, data_tuple, data_pkg.eval_func,
                                   ar.skip_downstream_model, ar.sampling_rate_synth)
 
 
