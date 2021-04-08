@@ -11,7 +11,12 @@ from autodp import privacy_calibrator
 import matplotlib
 matplotlib.use('Agg')
 import argparse
+from all_aux_files_tab_data import heuristic_for_length_scale
+from all_aux_files_tab_data import ME_with_HP_tab, find_rho_tab
 
+from torch.utils.data import DataLoader
+import torchvision.transforms as transforms
+from torchvision import datasets
 
 def get_args():
 
@@ -38,7 +43,8 @@ def get_args():
     # OTHERS
     parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
     parser.add_argument('--report-intermediate-result', default=True, help='test synthetic data on logistic regression at every epoch')
-    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=True)  # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
     parser.add_argument('--order-hermite', type=int, default=50, help='')
     # parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
@@ -65,6 +71,19 @@ def preprocess_args(ar):
     if not os.path.exists(ar.log_dir):
         os.makedirs(ar.log_dir)
 
+
+def load_data(data_name, batch_size):
+    transform_digits = transforms.Compose([transforms.ToTensor(), transforms.Normalize([0.1307], [0.3081])])
+    transform_fashion = transforms.Compose([transforms.ToTensor()])
+
+    if data_name == 'digits':
+        train_dataset = datasets.MNIST(root='data', train=True, transform=transform_digits, download=True)
+    elif data_name == 'fashion':
+        train_dataset = datasets.FashionMNIST(root='data', train=True, transform=transform_fashion, download=True)
+
+    train_loader = DataLoader(dataset=train_dataset,batch_size=batch_size,num_workers=0,shuffle=True)
+    return train_loader
+
 def main():
 
     # load settings
@@ -90,6 +109,7 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     """ Load data to test """
+    # train_loader = load_data(data_name, batch_size)
     data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
     train_loader = data_pkg.train_loader
     n_train_data = 60000
@@ -106,23 +126,43 @@ def main():
 
     """ set the scale length """
     num_iter = np.int(n_train_data / batch_size)
+
+
     if ar.heuristic_sigma:
-        if data_name=='digits':
-            sigma2 = 0.05
-        elif data_name=='fashion':
-            sigma2 = 0.07
+        if ar.separate_kernel_length:
+            sigma_all = []
+            for batch_idx, (data, labels) in enumerate(train_loader):
+                if batch_idx <=5:
+                    print('batch_idx', batch_idx)
+                    data, labels = data.to(device), labels.to(device)
+                    data = flatten_features(data)
+                    sigma = heuristic_for_length_scale(data_name, data.cpu().detach().numpy(), [], feature_dim, [])
+                    sigma_all.append(sigma)
+
+            sigma = np.mean(sigma_all, 0)
+            sigma2 = sigma ** 2
+        else:
+            if data_name=='digits':
+                sigma2 = 0.05
+            elif data_name=='fashion':
+                sigma2 = 0.07
     else:
         sigma2 = ar.kernel_length
     print('sigma2 is', sigma2)
 
 
-    rho = find_rho(sigma2)
-    ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
-    order = find_order(rho, ev_thr)
-    or_thr = ar.order_hermite
-    if order>or_thr:
-        order = or_thr
-        print('chosen order is', order)
+    if ar.separate_kernel_length:
+        rho = find_rho_tab(sigma2)
+    else:
+        rho = find_rho(sigma2)
+    # ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
+    # order = find_order(rho, ev_thr)
+    # or_thr = ar.order_hermite
+    # if order>or_thr:
+    #     order = or_thr
+    #     print('chosen order is', order)
+    order = ar.order_hermite
+
     if single_release:
         print('single release is', single_release)
         print('computing mean embedding of data')
@@ -132,7 +172,10 @@ def main():
             data = flatten_features(data)
             for idx in range(n_classes):
                 idx_data = data[labels == idx]
-                phi_data = ME_with_HP(idx_data, order, rho, device, n_train_data)
+                if ar.separate_kernel_length:
+                    phi_data = ME_with_HP_tab(idx_data, order, rho, device, n_train_data)
+                else:
+                    phi_data = ME_with_HP(idx_data, order, rho, device, n_train_data)
                 data_embedding[:,idx, batch_idx] = phi_data
         data_embedding = torch.sum(data_embedding, axis=2)
         print('done with computing mean embedding of data')
@@ -174,16 +217,25 @@ def main():
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
+                    if ar.separate_kernel_length:
+                        synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, batch_size)
+                    else:
+                        synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
             else:
                 synth_data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
                 data_embedding = torch.zeros((feature_dim * (order+1), n_classes), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(n_classes):
                     idx_data = data[labels == idx]
-                    data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, batch_size)
+                    if ar.separate_kernel_length:
+                        data_embedding[:, idx] = ME_with_HP_tab(idx_data, order, rho, device, batch_size)
+                    else:
+                        data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, batch_size)
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
+                    if ar.separate_kernel_length:
+                        synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, batch_size)
+                    else:
+                        synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, batch_size)
 
             loss = torch.sum((data_embedding - synth_data_embedding)**2)
 
