@@ -684,44 +684,42 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             if str(model)[0:11] == 'BernoulliNB':
                 print('training again')
 
-                # model = BernoulliNB(alpha=0.02)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # roc_temp1 = roc_auc_score(y_te, pred)
-                # prc_temp1 = average_precision_score(y_te, pred)
-                #
-                # print('training again')
-                # model = BernoulliNB(alpha=0.5)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # roc_temp2 = roc_auc_score(y_te, pred)
-                # prc_temp2 = average_precision_score(y_te, pred)
-                #
-                # print('training again')
-                # model = BernoulliNB(alpha=1.0)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # roc_temp3 = roc_auc_score(y_te, pred)
-                # prc_temp3 = average_precision_score(y_te, pred)
+                model = BernoulliNB(alpha=0.02)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
 
-                # print('training again')
-                # model = BernoulliNB(alpha=1.0, binarize=0.4)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # roc_temp4 = roc_auc_score(y_te, pred)
-                # prc_temp4 = average_precision_score(y_te, pred)
-                #
-                # print('training again')
-                # model = BernoulliNB(alpha=1.0, binarize=0.5)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # roc_temp5 = roc_auc_score(y_te, pred)
-                # prc_temp5 = average_precision_score(y_te, pred)
+                print('training again')
+                model = BernoulliNB(alpha=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
 
-                # roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
-                # prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
-                # roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
-                # prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+                print('training again')
+                model = BernoulliNB(alpha=1.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0, binarize=0.4)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp4 = roc_auc_score(y_te, pred)
+                prc_temp4 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0, binarize=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp5 = roc_auc_score(y_te, pred)
+                prc_temp5 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
 
 
             elif str(model)[0:10] == 'GaussianNB':
@@ -986,33 +984,33 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
             if str(model)[0:11] == 'BernoulliNB':
                 print('training again')
 
-                model = BernoulliNB(alpha=0.02, binarize=0.1)
+                model = BernoulliNB(alpha=0.02)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
 
                 print('training again')
-                model = BernoulliNB(alpha=0.5, binarize=0.2)
+                model = BernoulliNB(alpha=0.5)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score2 = f1_score(y_te, pred, average='weighted')
 
 
                 print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.3)
+                model = BernoulliNB(alpha=1.0)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
 
                 print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.4)
+                model = BernoulliNB(alpha=1.0)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score4 = f1_score(y_te, pred, average='weighted')
 
                 print('training again')
-                model = BernoulliNB(alpha=1.0, binarize=0.5)
+                model = BernoulliNB(alpha=1.0)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score5 = f1_score(y_te, pred, average='weighted')
