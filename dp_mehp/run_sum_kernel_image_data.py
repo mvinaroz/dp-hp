@@ -26,9 +26,9 @@ def get_args():
     parser.add_argument('--data-name', type=str, default='digits', help='options are digits or fashion')
 
     # OPTIMIZATION
-    parser.add_argument('--batch-size', type=int, default=200)
+    parser.add_argument('--batch-size', type=int, default=2000)
     parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=1)
+    parser.add_argument('--epochs', type=int, default=50)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
@@ -46,7 +46,7 @@ def get_args():
     parser.add_argument('--heuristic-sigma', action='store_true', default=True)
     parser.add_argument("--separate-kernel-length", action='store_true', default=True)  # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
-    parser.add_argument('--order-hermite', type=int, default=50, help='')
+    parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
     parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
@@ -149,7 +149,7 @@ def main():
                 sigma2 = 0.07
     else:
         sigma2 = ar.kernel_length
-    print('sigma2 is', sigma2)
+    # print('sigma2 is', sigma2)
 
 
     if ar.separate_kernel_length:
