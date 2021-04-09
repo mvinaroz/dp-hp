@@ -27,7 +27,7 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
@@ -178,7 +178,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
         weights[weights < 0] = 1e-3  # post-processing so that we don't have negative weights.
         weights = weights/sum(weights) # post-processing so the sum of weights equals 1.
-        # print('weights after privatization are', weights)
+        print('weights after privatization are', weights)
 
     """ compute the means """
     # print('computing mean embedding of data: (2) compute the mean')
@@ -265,7 +265,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             loss.backward()
             optimizer.step()
 
-        print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+        # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
         # scheduler.step()
 
 
@@ -350,7 +350,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['epileptic']:
+    for dataset in ['isolet']:
     # for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
@@ -366,13 +366,11 @@ if __name__ == '__main__':
             length_scale = [0.003]
             subsampled_rate = [0.8]
         elif dataset == 'isolet':
-            how_many_epochs_arg = [800]
-            n_features_arg = [100]
-            mini_batch_arg = [0.6]
-            # mini_batch_arg = [0.8, 0.9, 1.0]
-            # length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
+            how_many_epochs_arg = [1400]
+            n_features_arg = [5,10,20,40,80]
+            mini_batch_arg = [0.6,0.7,0.8]
             length_scale = [0.005] # dummy
-            subsampled_rate = [0.8]
+            subsampled_rate = [0.45,0.5,0.55, 0.6]
         elif dataset == 'credit':
             how_many_epochs_arg = [1400] # 400
             n_features_arg = [100]
