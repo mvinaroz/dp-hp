@@ -350,7 +350,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['isolet']:
+    for dataset in ['adult', 'census', 'cervical', 'credit']:
     # for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
@@ -373,27 +373,27 @@ if __name__ == '__main__':
             subsampled_rate = [0.45,0.5,0.55, 0.6]
         elif dataset == 'credit':
             how_many_epochs_arg = [1400] # 400
-            n_features_arg = [100]
+            n_features_arg = [10, 20, 50, 100]
             mini_batch_arg = [0.5]
             # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
             length_scale =[0.0005]
             # subsampled_rate = [0.005]
             # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
-            subsampled_rate = [0.001, 0.002, 0.003, 0.004, 0.006, 0.007, 0.008, 0.009]
+            subsampled_rate = [0.001]
         elif dataset == 'adult':
-            how_many_epochs_arg = [100, 200, 400, 600]
+            how_many_epochs_arg = [100]
             # [400, 600, 800, 1000]
-            mini_batch_arg = [0.05,0.1,0.15,0.2,0.3,0.4]
+            mini_batch_arg = [0.1]
             # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
-            n_features_arg = [100]
+            n_features_arg = [10, 20, 50, 100]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.3, 0.35, 0.4, 0.45, 0.5]#[.8, .6, .4] #dummy
+            subsampled_rate = [0.3, 0.4, 0.5]#[.8, .6, .4] #dummy
         elif dataset=='census':
-            how_many_epochs_arg = [200, 400, 600, 800, 1000]
-            mini_batch_arg = [0.05, 0.1, 0.2, 0.3]
-            n_features_arg = [100]
+            how_many_epochs_arg = [400]
+            mini_batch_arg = [0.1]
+            n_features_arg = [10, 20, 50, 100]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]#[0.2, 0.3, 0.4]
+            subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
             how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
             n_features_arg = [100]
@@ -407,11 +407,11 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
         elif dataset=='cervical':
-            how_many_epochs_arg = [800, 1000, 1200]
-            n_features_arg = [100]
-            mini_batch_arg = [0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+            how_many_epochs_arg = [800]
+            n_features_arg = [10, 20, 50, 100]
+            mini_batch_arg = [0.5]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.75, 0.8, 0.85, 0.9, 0.95, 1.0]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            subsampled_rate = [0.8]#[0.1, 0.3, 0.5, 0.7, 1.0]
 
 
 
