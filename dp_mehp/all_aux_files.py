@@ -313,6 +313,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
+  # model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 50000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
   model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
@@ -382,9 +383,11 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
 
     if not skip_gen_to_real:
       model = models[key](**model_specs[key])
+      print('model:', model)
       g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str + 'g2r', f_str + 'g2r')
+      print('accuracy:', g_to_r_acc)
       g_to_r_acc_summary.append(g_to_r_acc)
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
@@ -424,7 +427,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
   # for acc in g_to_r_acc_summary:
     # print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
-  # print(f'mean: {mean_acc}')
+  print(f'mean: {mean_acc}')
   return mean_acc
 
 
