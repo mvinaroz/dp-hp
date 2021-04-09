@@ -27,11 +27,11 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.001, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
@@ -177,6 +177,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
         weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
         weights[weights < 0] = 1e-3  # post-processing so that we don't have negative weights.
+        weights = weights/sum(weights) # post-processing so the sum of weights equals 1.
         # print('weights after privatization are', weights)
 
     """ compute the means """
@@ -197,9 +198,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
-        # print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
         data_embedding = data_embedding + noise
-        # print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+        print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
 
     # the final mean embedding of data is,
     data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
@@ -349,7 +350,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['covtype']:
+    for dataset in ['epileptic']:
     # for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
@@ -359,12 +360,7 @@ if __name__ == '__main__':
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            # how_many_epochs_arg = [200, 400]
-            # n_features_arg = [100]
-            # mini_batch_arg = [0.5]
-            # length_scale = [0.003]
-            # subsampled_rate = [0.8, 0.9]
-            how_many_epochs_arg = [600, 800]
+            how_many_epochs_arg = [800]
             n_features_arg = [100]
             mini_batch_arg = [0.5]
             length_scale = [0.003]
