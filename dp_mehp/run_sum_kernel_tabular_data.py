@@ -349,7 +349,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['intrusion']:
+    for dataset in ['covtype']:
     # for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
@@ -401,13 +401,13 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
-            how_many_epochs_arg = [20, 50, 100, 300, 600, 800, 1000]
+            how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
             n_features_arg = [100]
             mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.03]
         elif dataset == 'intrusion':
-            how_many_epochs_arg = [20, 100, 200, 400, 600, 800, 1000]
+            how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
             n_features_arg = [100]
             mini_batch_arg = [0.01, 0.03, 0.05]
             length_scale = [0.005]  # dummy
@@ -432,7 +432,7 @@ if __name__ == '__main__':
         repetitions = 5 # seed: 0 to 4
         # repetitions = 1
 
-        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic", "covtype", "intrusion"]:
+        if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
 
             max_aver_roc, max_aver_prc, max_roc, max_prc, max_aver_rocprc, max_elem=0, 0, 0, 0, [0,0], 0
 
