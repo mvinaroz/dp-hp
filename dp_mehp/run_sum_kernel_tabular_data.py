@@ -229,8 +229,14 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             else:  # heterogeneous data
 
                 # (1) generate labels
+                # if data_name == 'cervical':
+                #     label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(
+                #         torch.FloatTensor)
+                #     label_input = label_input[None,:]
+                # else:
                 label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(
-                    torch.FloatTensor)
+                        torch.FloatTensor)
+
                 label_input = torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),
                                         1)  # to avoid no labels
                 label_input = label_input.transpose_(0, 1)
@@ -265,7 +271,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             loss.backward()
             optimizer.step()
 
-        # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+        print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
         # scheduler.step()
 
 
@@ -276,6 +282,11 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         """ draw final data samples """
         # (1) generate labels
+        # if data_name == 'cervical':
+        #     label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
+        #         torch.FloatTensor)
+        #     label_input = label_input[None, :]
+        # else:
         label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.transpose_(0, 1)
         label_input = label_input.to(device)
@@ -414,13 +425,38 @@ if __name__ == '__main__':
             #n_features_arg = [10, 20, 50, 100]
             #mini_batch_arg = [0.5]
             length_scale = [0.005]  # dummy
-            #subsampled_rate = [0.8]#[0.1, 0.3, 0.5, 0.7, 1.0]
-            how_many_epochs_arg = [800,1000]
-            n_features_arg = [20]
+            subsampled_rate = [0.4]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            how_many_epochs_arg = [80]
+            n_features_arg = [5]
             mini_batch_arg = [1.0]
-            subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            # subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
 
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5510528501328955
+    # Max
+    # PRC!  0.16623182996611358
+    # Setup: {'batch_rate': 0.95, 'kernel_length': 0.005, 'n_epochs': 100, 'order_hermite': 5, 'subsampled_rate': 0.5}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
 
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5702186689503398
+    # Max
+    # PRC!  0.19812920779483226
+    # Setup: {'batch_rate': 1.0, 'kernel_length': 0.005, 'n_epochs': 80, 'order_hermite': 5, 'subsampled_rate': 0.5}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5480823667605276
+    # Max
+    # PRC!  0.19735431197356496
+    # Setup: {'batch_rate': 1.0, 'kernel_length': 0.005, 'n_epochs': 80, 'order_hermite': 5, 'subsampled_rate': 0.4}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
 
 
 
