@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
     parser.add_argument("--separate-kernel-length", action='store_true', default=True) # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument("--normalize-data", action='store_true', default=False)
-    parser.add_argument('--single-run', default=False)
+    # parser.add_argument('--single-run', default=False)
 
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
@@ -361,7 +361,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
-    ar = get_args()
+    # ar = get_args()
 
     for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
@@ -373,74 +373,74 @@ if __name__ == '__main__':
         print("\n\n")
         # print('is private?', ar.is_private)
 
-        if ar.single_run == True:
-            how_many_epochs_arg = [int(i) for i in ar.epochs.split(',')]
-            mini_batch_arg = [int(i) for i in ar.batch_rate.split(',')]
-            n_features_arg = [ar.order_hermite]  # [0.3]
-            subsampled_rate = [ar.undersampled_rate]  # [.8]  # dummy
-            length_scale = [0.003] # dummy
-        else:
+        # if ar.single_run == True:
+        #     how_many_epochs_arg = [int(i) for i in ar.epochs.split(',')]
+        #     mini_batch_arg = [int(i) for i in ar.batch_rate.split(',')]
+        #     n_features_arg = [ar.order_hermite]  # [0.3]
+        #     subsampled_rate = [ar.undersampled_rate]  # [.8]  # dummy
+        #     length_scale = [0.003] # dummy
+        # else:
 
-            if dataset == 'epileptic':
-                how_many_epochs_arg = [800]
-                n_features_arg = [100]
-                mini_batch_arg = [0.5]
-                length_scale = [0.003]
-                subsampled_rate = [0.8]
-            elif dataset == 'isolet':
-                how_many_epochs_arg = [1400]
-                #n_features_arg = [5,10,20,40,80]
-                #mini_batch_arg = [0.6,0.7,0.8]
-                length_scale = [0.005] # dummy
-                #subsampled_rate = [0.45,0.5,0.55, 0.6]
-                n_features_arg = [10]
-                mini_batch_arg = [0.85, 0.9, 0.95, 1.0]
-                subsampled_rate = [0.35, 0.375, 0.4]
-            elif dataset == 'credit':
-                how_many_epochs_arg = [1400] # 400
-                n_features_arg = [10, 20, 50, 100]
-                mini_batch_arg = [0.5]
-                # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
-                length_scale =[0.0005]
-                # subsampled_rate = [0.005]
-                # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
-                subsampled_rate = [0.001]
-            elif dataset == 'adult':
-                how_many_epochs_arg = [100]
-                # [400, 600, 800, 1000]
-                mini_batch_arg = [0.1]
-                # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
-                n_features_arg = [10, 20, 50, 100]
-                length_scale = [0.005]  # dummy
-                subsampled_rate = [0.3, 0.4, 0.5]#[.8, .6, .4] #dummy
-            elif dataset=='census':
-                how_many_epochs_arg = [400]
-                mini_batch_arg = [0.1]
-                n_features_arg = [10, 20, 50, 100]
-                length_scale = [0.005]  # dummy
-                subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
-            elif dataset=='covtype':
-                how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
-                n_features_arg = [100]
-                mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
-                length_scale = [0.005]  # dummy
-                subsampled_rate = [0.03]
-            elif dataset == 'intrusion':
-                how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
-                n_features_arg = [100]
-                mini_batch_arg = [0.01, 0.03, 0.05]
-                length_scale = [0.005]  # dummy
-                subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
-            elif dataset=='cervical':
-                #how_many_epochs_arg = [800]
-                #n_features_arg = [10, 20, 50, 100]
-                #mini_batch_arg = [0.5]
-                length_scale = [0.005]  # dummy
-                subsampled_rate = [0.4]#[0.1, 0.3, 0.5, 0.7, 1.0]
-                how_many_epochs_arg = [80]
-                n_features_arg = [5]
-                mini_batch_arg = [1.0]
-                # subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
+        if dataset == 'epileptic':
+            how_many_epochs_arg = [800]
+            n_features_arg = [100]
+            mini_batch_arg = [0.5]
+            length_scale = [0.003]
+            subsampled_rate = [0.8]
+        elif dataset == 'isolet':
+            how_many_epochs_arg = [1400]
+            #n_features_arg = [5,10,20,40,80]
+            #mini_batch_arg = [0.6,0.7,0.8]
+            length_scale = [0.005] # dummy
+            #subsampled_rate = [0.45,0.5,0.55, 0.6]
+            n_features_arg = [10]
+            mini_batch_arg = [0.85, 0.9, 0.95, 1.0]
+            subsampled_rate = [0.35, 0.375, 0.4]
+        elif dataset == 'credit':
+            how_many_epochs_arg = [1400] # 400
+            n_features_arg = [10, 20, 50, 100]
+            mini_batch_arg = [0.5]
+            # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+            length_scale =[0.0005]
+            # subsampled_rate = [0.005]
+            # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
+            subsampled_rate = [0.001]
+        elif dataset == 'adult':
+            how_many_epochs_arg = [100]
+            # [400, 600, 800, 1000]
+            mini_batch_arg = [0.1]
+            # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
+            n_features_arg = [10, 20, 50, 100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.3, 0.4, 0.5]#[.8, .6, .4] #dummy
+        elif dataset=='census':
+            how_many_epochs_arg = [400]
+            mini_batch_arg = [0.1]
+            n_features_arg = [10, 20, 50, 100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
+        elif dataset=='covtype':
+            how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.03]
+        elif dataset == 'intrusion':
+            how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.01, 0.03, 0.05]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
+        elif dataset=='cervical':
+            #how_many_epochs_arg = [800]
+            #n_features_arg = [10, 20, 50, 100]
+            #mini_batch_arg = [0.5]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.4]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            how_many_epochs_arg = [80]
+            n_features_arg = [5]
+            mini_batch_arg = [1.0]
+            # subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
 
         grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
                               "n_epochs": how_many_epochs_arg, "kernel_length": length_scale, "subsampled_rate": subsampled_rate})
