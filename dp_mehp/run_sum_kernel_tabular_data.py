@@ -31,7 +31,7 @@ def get_args():
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
@@ -182,17 +182,17 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         print('weights after privatization are', weights)
 
     """ compute the means """
-    # print('computing mean embedding of data: (2) compute the mean')
+    print('computing mean embedding of data: (2) compute the mean')
     data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
     for idx in range(n_classes):
-        # print(idx,'th-class')
+        print(idx,'th-class')
         idx_data = X_train[y_train.squeeze()==idx,:]
         if ar.separate_kernel_length:
             phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n)
         else:
             phi_data = ME_with_HP(torch.Tensor(idx_data).to(device), order, rho, device, n)
         data_embedding[:,idx] = phi_data # this includes 1/n factor inside
-    # print('done with computing mean embedding of data')
+    print('done with computing mean embedding of data')
 
     if ar.is_private:
         # print('we add noise to the data mean embedding as the private flag is true')
@@ -363,9 +363,9 @@ if __name__ == '__main__':
 
     # ar = get_args()
 
-    for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
+    # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
-    # for dataset in ['cervical']:
+    for dataset in ['covtype']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -420,9 +420,9 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
-            how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
+            how_many_epochs_arg = [600, 800, 1000]
             n_features_arg = [100]
-            mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
+            mini_batch_arg = [0.05]
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.03]
         elif dataset == 'intrusion':
