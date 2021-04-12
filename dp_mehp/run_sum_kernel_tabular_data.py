@@ -350,8 +350,8 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
-    for dataset in ['adult', 'census', 'cervical', 'credit']:
-    # for dataset in ['adult']:
+    # for dataset in ['adult', 'census', 'cervical', 'credit']:
+    for dataset in ['cervical']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -367,10 +367,13 @@ if __name__ == '__main__':
             subsampled_rate = [0.8]
         elif dataset == 'isolet':
             how_many_epochs_arg = [1400]
-            n_features_arg = [5,10,20,40,80]
-            mini_batch_arg = [0.6,0.7,0.8]
+            #n_features_arg = [5,10,20,40,80]
+            #mini_batch_arg = [0.6,0.7,0.8]
             length_scale = [0.005] # dummy
-            subsampled_rate = [0.45,0.5,0.55, 0.6]
+            #subsampled_rate = [0.45,0.5,0.55, 0.6]
+            n_features_arg = [10]
+            mini_batch_arg = [0.85, 0.9, 0.95, 1.0]
+            subsampled_rate = [0.35, 0.375, 0.4]
         elif dataset == 'credit':
             how_many_epochs_arg = [1400] # 400
             n_features_arg = [10, 20, 50, 100]
@@ -407,11 +410,16 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
         elif dataset=='cervical':
-            how_many_epochs_arg = [800]
-            n_features_arg = [10, 20, 50, 100]
-            mini_batch_arg = [0.5]
+            #how_many_epochs_arg = [800]
+            #n_features_arg = [10, 20, 50, 100]
+            #mini_batch_arg = [0.5]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.8]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            #subsampled_rate = [0.8]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            how_many_epochs_arg = [800,1000]
+            n_features_arg = [20]
+            mini_batch_arg = [1.0]
+            subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
+
 
 
 
