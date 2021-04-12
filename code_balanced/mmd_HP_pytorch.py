@@ -193,10 +193,10 @@ def tensor_fmap_hp(data, order, rho, device):
     # print('Data shape is ', data.shape)
     # print('Data[0] shape is ', data[0].shape)
     
-    fmap   =   compute_phi(data[0].unsqueeze(0).unsqueeze(0), order, rho, device) #Here was feature_map_HP and two outputs, the first was fmap
+    fmap   =   compute_phi(data[0].unsqueeze(0).unsqueeze(0), order-1, rho, device) #Here was feature_map_HP and two outputs, the first was fmap
     fmap        =   fmap[0, :]
     for dim in range(data_dim-1):
-        fmap_dim    =   compute_phi(data[dim+1].unsqueeze(0).unsqueeze(0), order, rho, device) #Here was feature_map_HP and two outputs
+        fmap_dim    =   compute_phi(data[dim+1].unsqueeze(0).unsqueeze(0), order-1, rho, device) #Here was feature_map_HP and two outputs
         fmap_dim    =   fmap_dim[0, :]
         # print('Fmap_dim is ', fmap_dim)
         if (dim!=0):
@@ -306,12 +306,12 @@ def mmd_prod_kernel_across_dimension_wHP(x, x_prime, order, rho, device):
         # print(axis)
         x_axis = x[:, axis]
         x_axis = x_axis[:, np.newaxis]
-        phi_x_axis = compute_phi(x_axis, order, rho,device) #Here was  phi_x_axis, eigen_vals_axis = feature_map_HP(order, x_axis,rho,device)
+        phi_x_axis = compute_phi(x_axis, order-1, rho,device) #Here was  phi_x_axis, eigen_vals_axis = feature_map_HP(order, x_axis,rho,device)
         # phi_x_mat[:, :, axis] = phi_x_axis # number of datapoints by order
 
         x_prime_axis = x_prime[:, axis]
         x_prime_axis = x_prime_axis[:, np.newaxis]
-        phi_x_prime_axis = compute_phi(order, x_prime_axis,rho,device) #Here was  phi_x_prime_axis, eigen_vals_prime_axis = feature_map_HP(order, x_prime_axis,rho,device)
+        phi_x_prime_axis = compute_phi(x_prime_axis, order-1, rho,device) #Here was  phi_x_prime_axis, eigen_vals_prime_axis = feature_map_HP(order, x_prime_axis,rho,device)
         # print(phi_x_prime_axis.size())
         # phi_x_prime_mat[:, :, axis] = phi_x_prime_axis # number of datapoints by order
         # print('Size of Phi_x_axis:', phi_x_axis.size(), "and size of Phi_x_prime_axis: ", phi_x_prime_axis.size(), "and Size of matmat: ", matmat.size())
