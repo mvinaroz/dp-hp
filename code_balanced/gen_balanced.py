@@ -259,7 +259,7 @@ def main():
 
   # init model
   if ar.conv_gen:
-    gen = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
+    gen = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True).to(device)
   else:
     use_sigmoid = ar.data in {'digits', 'fashion'}
     gen = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=use_sigmoid,
