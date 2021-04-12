@@ -3,22 +3,17 @@
 import torch
 import numpy as np
 import os
-from torch.optim.lr_scheduler import StepLR
-from all_aux_files import FCCondGen, ConvCondGen
-from all_aux_files import find_rho, find_order, ME_with_HP
 from all_aux_files import log_args
-# from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 from autodp import privacy_calibrator
 import matplotlib
 matplotlib.use('Agg')
 import argparse
+from all_aux_files import ME_with_HP
 from all_aux_files_tab_data import data_loading, Generative_Model_homogeneous_data, Generative_Model_heterogeneous_data, heuristic_for_length_scale
-from all_aux_files_tab_data import test_models, save_generated_samples
+from all_aux_files_tab_data import test_models, ME_with_HP_tab, find_rho_tab
+from sklearn.model_selection import ParameterGrid
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
-from sklearn.model_selection import ParameterGrid
-import sys
-# from contextlib import redirect_stdout
 
 
 def get_args():
@@ -32,26 +27,26 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.0001, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
     # OTHERS
-    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
     parser.add_argument('--kernel-length', type=float, default=0.01, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument("--undersampled-rate", type=float, default=1.0)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=True) # heuristic-sigma has to be "True", to enable separate-kernel-length
+    parser.add_argument("--normalize-data", action='store_true', default=False)
 
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
     ar = parser.parse_args()
-    # preprocess_args(ar)
-    # log_args(ar.log_dir, ar)
 
     return ar
 
@@ -65,7 +60,9 @@ def preprocess_args(ar):
                + 'epsilon=' + str(ar.epsilon) + '_' + 'delta=' + str(ar.delta) + '_' \
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'br=' + str(ar.batch_rate) + '_' + 'lr=' + str(ar.lr) + '_' \
-               + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate)
+               + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate) \
+               + '_' + 'normalize_data' + str(ar.normalize_data) + '_' + 'separate_kernel_length' + str(ar.separate_kernel_length)
+
 
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
@@ -74,6 +71,7 @@ def preprocess_args(ar):
 
 # def main():
 def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length, subsampled_rate):
+# def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, subsampled_rate):
 
     # load settings
     ar = get_args()
@@ -89,6 +87,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     log_args(ar.log_dir, ar)
 
     torch.manual_seed(seed_num)
+
     if ar.is_private:
         epsilon = ar.epsilon
         delta = ar.delta
@@ -111,16 +110,22 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     true_labels = onehot_encoder.fit_transform(y_train)
 
     # standardize the inputs
-    # print('normalizing the data')
-    X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
-    X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
+    if ar.normalize_data:
+        print('normalizing the data')
+        X_train = preprocessing.minmax_scale(X_train, feature_range=(0, 1), axis=0, copy=True)
+        X_test = preprocessing.minmax_scale(X_test, feature_range=(0, 1), axis=0, copy=True)
+    else:
+        print('testing non-standardized data')
+
 
     ######################################
     # MODEL
     # batch_size = np.int(np.round(ar.batch_rate * n))
     batch_size = np.int(np.round(batch_rate * n))
     # print("minibatch: ", batch_size)
-    input_size = 20 + 1
+    input_size = 10 + 1
+    # hidden_size_1 = 500
+    # hidden_size_2 = 500
     hidden_size_1 = 4 * input_dim
     hidden_size_2 = 2 * input_dim
     output_size = input_dim
@@ -141,49 +146,50 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ set the scale length """
     if ar.heuristic_sigma:
-        # print('we use the median heuristic for length scale')
+        print('we use the median heuristic for length scale')
         sigma = heuristic_for_length_scale(data_name, X_train, num_numerical_inputs, input_dim, heterogeneous_datasets)
-        sigma2 = np.median(sigma**2)
-        # print('sigma2 value is', sigma2)
+        if ar.separate_kernel_length:
+            print('we use a separate length scale on each coordinate of the data')
+            sigma2 = sigma**2
+        else:
+            sigma2 = np.median(sigma**2)
     else:
         sigma2 = ar.kernel_length
     # print('sigma2 is', sigma2)
 
-    rho = find_rho(sigma2)
-    ev_thr = 1e-10  # eigen value threshold, below this, we wont consider for approximation
-    order = find_order(rho, ev_thr)
-    # or_thr = ar.order_hermite
-    or_thr = order_hermite
-    if order>or_thr:
-        order = or_thr
-        # print('chosen order is', order)
+    rho = find_rho_tab(sigma2)
+    order = order_hermite
 
 
     ########## data mean embedding ##########
     """ compute the weights """
-    # print('computing mean embedding of data: (1) compute the weights')
+    print('computing mean embedding of data: (1) compute the weights')
     unnormalized_weights = np.sum(true_labels, 0)
     weights = unnormalized_weights / np.sum(unnormalized_weights) # weights = m_c / n
-    # print('\n weights with no privatization are', weights, '\n')
+    print('\n weights with no privatization are', weights, '\n')
 
     if ar.is_private:
-        # print("private")
+        print("private")
         k = 2 # because we add noise to the weights and means separately.
         privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
-        # print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
-
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
         sensitivity_for_weights = np.sqrt(2) / n  # double check if this is sqrt(2) or 2
         noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
         weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
         weights[weights < 0] = 1e-3  # post-processing so that we don't have negative weights.
-        # print('weights after privatization are', weights)
+        weights = weights/sum(weights) # post-processing so the sum of weights equals 1.
+        print('weights after privatization are', weights)
 
     """ compute the means """
     # print('computing mean embedding of data: (2) compute the mean')
     data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
     for idx in range(n_classes):
+        # print(idx,'th-class')
         idx_data = X_train[y_train.squeeze()==idx,:]
-        phi_data = ME_with_HP(torch.Tensor(idx_data), order, rho, device, n)
+        if ar.separate_kernel_length:
+            phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n)
+        else:
+            phi_data = ME_with_HP(torch.Tensor(idx_data).to(device), order, rho, device, n)
         data_embedding[:,idx] = phi_data # this includes 1/n factor inside
     # print('done with computing mean embedding of data')
 
@@ -192,18 +198,16 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
-        # print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
         data_embedding = data_embedding + noise
-        # print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+        print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
 
     # the final mean embedding of data is,
     data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
-    scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
 
-    # print('start training the generator')
     num_iter = np.int(n / batch_size)
 
     for epoch in range(n_epochs):  # loop over the dataset multiple times
@@ -211,26 +215,37 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         for i in range(num_iter):
 
-            """ (1) produce labels uniformly across different classes """
-            label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(torch.FloatTensor)
-            label_input = label_input.transpose_(0, 1)
-            label_input = label_input.squeeze()
-            # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(torch.FloatTensor)
-
             if data_name in homogeneous_datasets:  # In our case, if a dataset is homogeneous, then it is a binary dataset.
 
+                label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(
+                    torch.FloatTensor)
+                label_input = label_input.transpose_(0, 1)
+                label_input = label_input.squeeze()
                 label_input = label_input.to(device)
+
                 feature_input = torch.randn((batch_size, input_size - 1)).to(device)
                 input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
 
-
             else:  # heterogeneous data
 
-                label_input = torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),1)  # to avoid no labels
+                # (1) generate labels
+                # if data_name == 'cervical':
+                #     label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), batch_size, replacement=True).type(
+                #         torch.FloatTensor)
+                #     label_input = label_input[None,:]
+                # else:
+                label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(
+                        torch.FloatTensor)
+
+                label_input = torch.cat((label_input, torch.arange(len(weights), out=torch.FloatTensor()).unsqueeze(0)),
+                                        1)  # to avoid no labels
                 label_input = label_input.transpose_(0, 1)
+                label_input = label_input.squeeze()
                 label_input = label_input.to(device)
+
+                # (2) generate corresponding features
                 feature_input = torch.randn((batch_size + len(weights), input_size - 1)).to(device)
-                input_to_model = torch.cat((feature_input, label_input), 1)
+                input_to_model = torch.cat((feature_input, label_input[:,None]), 1)
 
             """ (2) produce data """
             outputs = model(input_to_model)
@@ -241,21 +256,24 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
             for idx in range(n_classes):
                 weights_syn[idx] = torch.sum(label_input == idx)
                 idx_syn_data = outputs[label_input == idx]
-                phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
+                if ar.separate_kernel_length:
+                    phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
+                else:
+                    phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
                 syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
 
             weights_syn = weights_syn / torch.sum(weights_syn)
             syn_data_embedding = syn_data_embedding / torch.Tensor(weights_syn).to(device)
 
-            loss = torch.sum(data_embedding - syn_data_embedding) ** 2
+            loss = torch.sum((data_embedding - syn_data_embedding)**2)
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
-
         print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-        scheduler.step()
+        # scheduler.step()
+
 
     """ Once the training step is over, we produce 60K samples and test on downstream tasks """
     """ now we save synthetic data of size 60K and test them on logistic regression """
@@ -264,6 +282,11 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         """ draw final data samples """
         # (1) generate labels
+        # if data_name == 'cervical':
+        #     label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(
+        #         torch.FloatTensor)
+        #     label_input = label_input[None, :]
+        # else:
         label_input = torch.multinomial(torch.Tensor([weights]), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.transpose_(0, 1)
         label_input = label_input.to(device)
@@ -272,6 +295,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         feature_input = torch.randn((n, input_size - 1)).to(device)
         input_to_model = torch.cat((feature_input, label_input), 1)
         outputs = model(input_to_model)
+
+        samp_input_features = outputs
+        samp_labels = label_input
 
         # (3) round the categorial features
         output_numerical = outputs[:, 0:num_numerical_inputs]
@@ -285,10 +311,12 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
         roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, n_classes, "generated", ar.classifiers)
 
+
     else:  # homogeneous datasets
 
         """ draw final data samples """
         label_input = (1 * (torch.rand((n)) < weights[1])).type(torch.FloatTensor)
+        # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(torch.FloatTensor)
         label_input = label_input.to(device)
 
         feature_input = torch.randn((n, input_size - 1)).to(device)
@@ -332,78 +360,114 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
 if __name__ == '__main__':
 
-    # data_name = "epileptic"
-    # data_name = 'isolet'
-    # data_name = 'credit'
-    # base_dir = 'logs/gen/'
-    # txt_dir = base_dir + data_name + '/'
-    # if not os.path.exists(txt_dir):
-    #     os.makedirs(txt_dir)
-
-    # orig_stdout = sys.stdout
-    # f = open(txt_dir + 'out.txt', 'w')
-    # sys.stdout = f
-
-    # for dataset in ["credit", "epileptic", "census", "cervical", "adult", "isolet", "covtype", "intrusion"]:
-    # for dataset in [arguments.dataset]:
-    # for dataset in ["epileptic"]:
-    # for dataset in [data_name]:
-    for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
+    # for dataset in ['adult', 'census', 'cervical', 'credit']:
+    for dataset in ['cervical']:
+    # for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["epileptic", "isolet"]:
+    # for dataset in ["epileptic", "isolet", "credit"]:
+    # for dataset in ["epileptic", "isolet", "credit"]:0
         print("\n\n")
         # print('is private?', is_priv_arg)
 
         if dataset == 'epileptic':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [100, 200]
-            mini_batch_arg = [0.5, 0.7, 0.8]
-            length_scale = [0.003, 0.005, 0.007]
-            subsampled_rate = [1.0]
+            how_many_epochs_arg = [800]
+            n_features_arg = [100]
+            mini_batch_arg = [0.5]
+            length_scale = [0.003]
+            subsampled_rate = [0.8]
         elif dataset == 'isolet':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [100, 200]
-            mini_batch_arg = [0.5, 0.6, 0.7, 0.8]
-            length_scale = [0.005, 0.01, 0.03, 0.05, 0.07, 0.1]
-            subsampled_rate = [1.0]
+            how_many_epochs_arg = [1400]
+            #n_features_arg = [5,10,20,40,80]
+            #mini_batch_arg = [0.6,0.7,0.8]
+            length_scale = [0.005] # dummy
+            #subsampled_rate = [0.45,0.5,0.55, 0.6]
+            n_features_arg = [10]
+            mini_batch_arg = [0.85, 0.9, 0.95, 1.0]
+            subsampled_rate = [0.35, 0.375, 0.4]
         elif dataset == 'credit':
-            how_many_epochs_arg = [200, 400]
-            n_features_arg = [50, 100, 200]
-            mini_batch_arg = [0.4, 0.5]
-            length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
-            subsampled_rate = [0.005]
+            how_many_epochs_arg = [1400] # 400
+            n_features_arg = [10, 20, 50, 100]
+            mini_batch_arg = [0.5]
+            # length_scale = [0.0001, 0.0005, 0.001, 0.005, 0.01]
+            length_scale =[0.0005]
+            # subsampled_rate = [0.005]
+            # subsampled_rate = [0.001, 0.003, 0.007, 0.009]
+            subsampled_rate = [0.001]
+        elif dataset == 'adult':
+            how_many_epochs_arg = [100]
+            # [400, 600, 800, 1000]
+            mini_batch_arg = [0.1]
+            # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
+            n_features_arg = [10, 20, 50, 100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.3, 0.4, 0.5]#[.8, .6, .4] #dummy
+        elif dataset=='census':
+            how_many_epochs_arg = [400]
+            mini_batch_arg = [0.1]
+            n_features_arg = [10, 20, 50, 100]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
+        elif dataset=='covtype':
+            how_many_epochs_arg = [50, 100, 300, 600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.01, 0.03, 0.05, 0.07]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.03]
+        elif dataset == 'intrusion':
+            how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
+            n_features_arg = [100]
+            mini_batch_arg = [0.01, 0.03, 0.05]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
+        elif dataset=='cervical':
+            #how_many_epochs_arg = [800]
+            #n_features_arg = [10, 20, 50, 100]
+            #mini_batch_arg = [0.5]
+            length_scale = [0.005]  # dummy
+            subsampled_rate = [0.4]#[0.1, 0.3, 0.5, 0.7, 1.0]
+            how_many_epochs_arg = [80]
+            n_features_arg = [5]
+            mini_batch_arg = [1.0]
+            # subsampled_rate = [0.6, 0.65]#[0.1, 0.3, 0.5, 0.7, 1.0]
 
-        # if dataset == 'adult':
-        #     mini_batch_arg = [0.1]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000]
-        #     undersampling_rates = [.4]#[.8, .6, .4] #dummy
-        # elif dataset=='census':
-        #     mini_batch_arg=[0.1]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     undersampling_rates = [0.4]#[0.2, 0.3, 0.4]
-        # elif dataset=='covtype':
-        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     mini_batch_arg=[0.03]
-        #     repetitions=3
-        #     undersampling_rates = [1.] #dummy
-        # elif dataset == 'intrusion':
-        #     how_many_epochs_arg = [10000, 7000, 4000, 2000, 1000]
-        #     n_features_arg = [500, 1000, 2000, 5000, 10000, 50000, 80000]
-        #     mini_batch_arg = [0.03]
-        #     repetitions=3
-        #     undersampling_rates=[0.3]#[0.1, 0.2, 0.3]
-        # elif dataset=='credit':
-        #     undersampling_rates = [0.005]#[0.01, 0.005, 0.02]
-        # elif dataset=='cervical':
-        #     undersampling_rates = [1.]#[0.1, 0.3, 0.5, 0.7, 1.0]
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5510528501328955
+    # Max
+    # PRC!  0.16623182996611358
+    # Setup: {'batch_rate': 0.95, 'kernel_length': 0.005, 'n_epochs': 100, 'order_hermite': 5, 'subsampled_rate': 0.5}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
 
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5702186689503398
+    # Max
+    # PRC!  0.19812920779483226
+    # Setup: {'batch_rate': 1.0, 'kernel_length': 0.005, 'n_epochs': 80, 'order_hermite': 5, 'subsampled_rate': 0.5}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
+    # cervical
+    # Max
+    # ROC!  0.5480823667605276
+    # Max
+    # PRC!  0.19735431197356496
+    # Setup: {'batch_rate': 1.0, 'kernel_length': 0.005, 'n_epochs': 80, 'order_hermite': 5, 'subsampled_rate': 0.4}
+    # ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** ** **
 
 
 
         grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
                               "n_epochs": how_many_epochs_arg, "kernel_length": length_scale, "subsampled_rate": subsampled_rate})
 
+        # grid = ParameterGrid({"order_hermite": n_features_arg, "batch_rate": mini_batch_arg,
+        #                   "n_epochs": how_many_epochs_arg, "subsampled_rate": subsampled_rate})
 
-        repetitions = 4 # seed: 0 to 4
+
+        repetitions = 5 # seed: 0 to 4
         # repetitions = 1
 
         if dataset in ["credit", "census", "cervical", "adult", "isolet", "epileptic"]:
@@ -415,9 +479,12 @@ if __name__ == '__main__':
                 prc_arr_all = []; roc_arr_all = []
 
                 for ii in range(repetitions):
+                    # ii = ii + 4
                     print("\nRepetition: ",ii)
 
                     roc, prc, dir_result  = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"], elem["subsampled_rate"])
+                    # roc, prc, dir_result = main(dataset, ii, elem["order_hermite"], elem["batch_rate"],
+                    #                             elem["n_epochs"], elem["subsampled_rate"])
 
                     roc_arr_all.append(roc)
                     prc_arr_all.append(prc)
@@ -431,7 +498,7 @@ if __name__ == '__main__':
                 prc_each_method_avr=np.mean(prc_arr_all, 0)
                 roc_each_method_std = np.std(roc_arr_all, 0)
                 prc_each_method_std = np.std(prc_arr_all, 0)
-                roc_arr=np.mean(roc_arr_all, 1)
+                roc_arr = np.mean(roc_arr_all, 1)
                 prc_arr = np.mean(prc_arr_all, 1)
 
                 # sys.stdout = open(dir_result+'result_txt.txt', "w")
@@ -470,8 +537,43 @@ if __name__ == '__main__':
             print('*'*100)
 
 
-    # sys.stdout = orig_stdout
-    # f.close()
+
+        elif dataset in ["covtype", "intrusion"]: # multi-class classification problems.
+
+            max_f1, max_aver_f1, max_elem=0, 0, 0
+
+            for elem in grid:
+                print(elem, "\n")
+                f1score_arr_all = []
+                for ii in range(repetitions):
+                    print("\nRepetition: ",ii)
+
+                    # f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
+                    f1scr = main(dataset, ii, elem["order_hermite"], elem["batch_rate"], elem["n_epochs"], elem["kernel_length"], elem["subsampled_rate"])
+                    f1score_arr_all.append(f1scr[0])
+
+                f1score_each_method_avr = np.mean(f1score_arr_all, 0)
+                f1score_each_method_std = np.std(f1score_arr_all, 0)
+                f1score_arr = np.mean(f1score_arr_all, 1)
+
+                print("\n", "-" * 40, "\n\n")
+                print("For each of the methods")
+                print("Average F1: ", f1score_each_method_avr)
+                print("Std F1: ", f1score_each_method_std)
+
+
+                print("Average over repetitions across all methods")
+                print("Average f1 score: ", np.mean(f1score_arr))
+                print("Std F1: ", np.std(f1score_arr))
+                print("\n","-" * 80, "\n\n\n")
+
+                if np.mean(f1score_arr)>max_aver_f1:
+                    max_aver_f1=np.mean(f1score_arr)
+                    max_elem = elem
+
+            print("\n\n", "Max F1! ", max_aver_f1, "*"*20)
+            print("Setup: ", max_elem)
+            print('*' * 30)
 
 
 

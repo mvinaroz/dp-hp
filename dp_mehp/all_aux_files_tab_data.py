@@ -31,16 +31,77 @@ from sklearn.model_selection import ParameterGrid
 from autodp import privacy_calibrator
 from sklearn.preprocessing import OneHotEncoder
 from sklearn.metrics import f1_score
+import sklearn
+from sklearn import datasets
 
 from autodp import privacy_calibrator
 import pandas as pd
 import seaborn as sns
+import pickle
 sns.set()
 
 import warnings
 warnings.filterwarnings('ignore')
 
 import os
+
+
+
+def find_rho_tab(sigma2):
+  alpha = 1 / (2.0 * sigma2)
+  rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
+  if (rho>1).any():
+      print('some of the rho values are above 1. Mehler formula does not hold')
+  return rho
+
+
+def phi_recursion_tab_coord(phi_k, phi_k_minus_1, rho, degree, x_in):
+  # x_in : n_data by input_dim
+  # rho : length of input_dim
+  # every phi has to be the size of (n_data by input_dim)
+  if degree == 0:
+    phi_0 = (1 - rho) ** (0.25) * (1 + rho) ** (0.25) * torch.exp(-rho / (1 + rho) * x_in ** 2)
+    return phi_0
+  elif degree == 1:
+    phi_1 = torch.sqrt(2 * rho) * x_in * phi_k
+    return phi_1
+  else:  # from degree ==2 (k=1 in the recursion formula)
+    k = degree - 1
+    first_term = torch.sqrt(rho) / np.sqrt(2 * (k + 1)) * 2 * x_in * phi_k
+    second_term = rho / np.sqrt(k * (k + 1)) * k * phi_k_minus_1
+    phi_k_plus_one = first_term - second_term
+    return phi_k_plus_one
+
+
+def compute_phi_tab_coord(x_in, n_degrees, rho, device):
+  n_data, input_dim = x_in.shape # n_data by input_dim
+  # rho : length of input_dim
+  rho = rho[None,:] # rho : 1 by input_dim
+  rho = torch.tensor(rho).to(device)
+
+  batch_embedding = torch.empty(n_data, input_dim, n_degrees, dtype=torch.float32, device=device)
+  phi_i_minus_one, phi_i_minus_two = None, None
+  for degree in range(n_degrees):
+    # print('degree:', degree)
+    phi_i = phi_recursion_tab_coord(phi_i_minus_one, phi_i_minus_two, rho, degree, x_in)
+    batch_embedding[:, :, degree] = phi_i
+
+    phi_i_minus_two = phi_i_minus_one
+    phi_i_minus_one = phi_i
+
+  return batch_embedding
+
+
+def ME_with_HP_tab(x, order, rho, device, n_training_data):
+
+  phi_x = compute_phi_tab_coord(x, order+1, rho, device)
+  sum_val = torch.sum(phi_x, axis=0)
+  phi_x = sum_val / n_training_data
+
+  phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
+
+  return phi_x
+
 
 def Feature_labels(labels, weights, device):
 
@@ -84,7 +145,13 @@ class Generative_Model_homogeneous_data(nn.Module):
             output = self.fc2(relu)
             output = self.relu(self.bn2(output))
             output = self.fc3(output)
-            output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
+            # output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
+
+
+            # if str(self.dataset) == 'epileptic':
+            #     output = self.sigmoid(output) # because we preprocess data such that each feature is [0,1]
+            # elif str(self.dataset) == 'isolet':
+            #     output = self.sigmoid(output)
 
             return output
 
@@ -117,7 +184,7 @@ class Generative_Model_heterogeneous_data(nn.Module):
                 output = self.fc3(output)
 
                 output_numerical = self.relu(output[:, 0:self.num_numerical_inputs])  # these numerical values are non-negative
-                output_numerical = self.sigmoid(output_numerical) # because we preprocess data such that each feature is [0,1]
+                # output_numerical = self.sigmoid(output_numerical) # because we preprocess data such that each feature is [0,1]
                 output_categorical = self.sigmoid(output[:, self.num_numerical_inputs:])
                 output_combined = torch.cat((output_numerical, output_categorical), 1)
 
@@ -367,20 +434,47 @@ def data_loading(dataset, undersampled_rate, seed_number):
    elif dataset=='adult':
 
         print("dataset is", dataset) # this is heterogenous
-        data, categorical_columns, ordinal_columns = load_dataset('adult')
+
+        # metadata = load_dataset('adult')
+        # from sdgym.datasets import load_tables
+        # tables = load_tables(metadata)
+
+        # data, categorical_columns, ordinal_columns = load_dataset('adult')
+
+        # adult_data = pd.read_csv("../data/adult/adult.csv")
+
+        filename = '../data/adult/adult.p'
+        with open(filename, 'rb') as f:
+            u = pickle._Unpickler(f)
+            u.encoding = 'latin1'
+            data = u.load()
+            y_tot, x_tot = data
+
+        # [0:'age', 1:'workclass', 2:'fnlwgt', 3:'education', 4:'education_num',
+        #  5:'marital_status', 6:'occupation', 7:'relationship', 8:'race', 9:'sex',
+        #  10:'capital_gain', 11:'capital_loss', 12:'hours_per_week', 13:'country']
+
+        # categorical_columns = ['workclass', 'race', 'education', 'marital-status', 'occupation',
+        #                  'relationship', 'gender', 'native-country']
+        categorical_columns = [1, 3, 5, 6, 7, 8, 9, 13]
+        ordinal_columns = []
+
 
         """ some specifics on this dataset """
-        numerical_columns = list(set(np.arange(data[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
+        numerical_columns = list(set(np.arange(x_tot[:, :-1].shape[1])) - set(categorical_columns + ordinal_columns))
         n_classes = 2
 
-        data = data[:, numerical_columns + ordinal_columns + categorical_columns]
+        x_tot = x_tot[:, numerical_columns + ordinal_columns + categorical_columns]
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:, :-1]
-        target = data[:, -1]
+        # inputs = data[:, :-1]
+        # target = data[:, -1]
 
-        inputs, target=undersample(inputs, target, undersampled_rate)
+        inputs = x_tot
+        target = y_tot
+
+        inputs, target = undersample(inputs, target, undersampled_rate)
 
         X_train, X_test, y_train, y_test = train_test_split(inputs, target, train_size=0.90, test_size=0.10,
                                                             random_state=seed_number)
@@ -439,10 +533,15 @@ def data_loading(dataset, undersampled_rate, seed_number):
    elif dataset=='intrusion':
 
         print("dataset is", dataset)
-        data, categorical_columns, ordinal_columns = load_dataset('intrusion')
+
+        original_train_data = np.load("../data/real/intrusion/train.npy")
+        original_test_data = np.load("../data/real/intrusion/test.npy")
+
+        # we put them together and make a new train/test split in the following
+        data = np.concatenate((original_train_data, original_test_data))
 
         """ some specifics on this dataset """
-        n_classes = 5
+        n_classes = 5 # removed to 5
 
         """ some changes we make in the type of features for applying to our model """
         categorical_columns_binary = [6, 11, 13, 20]  # these are binary categorical columns
@@ -482,10 +581,14 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         print("dataset is", dataset)
 
-        train_data = np.load("../data/real/covtype/train.npy")
-        test_data = np.load("../data/real/covtype/test.npy")
-        # we put them together and make a new train/test split in the following
-        data = np.concatenate((train_data, test_data))
+        # train_data = np.load("../data/real/covtype/train.npy")
+        # test_data = np.load("../data/real/covtype/test.npy")
+        # # we put them together and make a new train/test split in the following
+        # data = np.concatenate((train_data, test_data))
+
+        covtype_dataset = datasets.fetch_covtype()
+        data = covtype_dataset.data
+        target = covtype_dataset.target
 
         """ some specifics on this dataset """
         numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -505,13 +608,13 @@ def data_loading(dataset, undersampled_rate, seed_number):
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:20000, :-1]
-        target = data[:20000, -1]
+        # inputs = data[:20000, :-1]
+        # target = data[:20000, -1]
 
         ##################3
 
-        raw_labels=target
-        raw_input_features=inputs
+        raw_labels = target
+        raw_input_features = data
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
@@ -536,7 +639,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
         ###############3
 
         X_train, X_test, y_train, y_test = train_test_split(feature_selected, label_selected, train_size=0.70, test_size=0.30,
-                                                            random_state=seed_number)  # 60% training and 40% test
+                                                            random_state=seed_number)
 
    return X_train, X_test, y_train, y_test, n_classes, num_numerical_inputs, num_categorical_inputs
 
@@ -550,44 +653,563 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
     f1_arr = []
 
     models = np.array(
-        [LogisticRegression(solver='lbfgs', max_iter=50000),
+        [
+         LogisticRegression(),
          GaussianNB(),
-         BernoulliNB(alpha=0.02),
-         LinearSVC(max_iter=10000, tol=1e-8, loss='hinge'),
+         BernoulliNB(),
+         LinearSVC(),
          DecisionTreeClassifier(),
-         LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto'), # can't really improve this
-         AdaBoostClassifier(n_estimators=100, learning_rate=0.5), # improved
-         BaggingClassifier(), # better in the default setting
-         RandomForestClassifier(), # better in the default setting
+         LinearDiscriminantAnalysis(),
+         AdaBoostClassifier(),
+         BaggingClassifier(),
+         RandomForestClassifier(),
          GradientBoostingClassifier(subsample=0.1, n_estimators=50),
-         MLPClassifier(learning_rate='adaptive'), # improved
-         xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.4)])
+         MLPClassifier(),
+        xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.5)
+        ])
 
 
     models_to_test = models[np.array(args)]
 
-    for model in models_to_test:
-        print('\n', type(model))
-        model.fit(X_tr, y_tr)
-        pred = model.predict(X_te)  # test on real data
+    if n_classes == 2:
+        for model in models_to_test:
 
-        if n_classes > 2:
-
-            f1score = f1_score(y_te, pred, average='weighted')
-
-            print("F1-score on test %s data is %.3f" % (datasettype, f1score))
-            f1_arr.append(f1score)
-
-        else:
-
+            print('\n', type(model))
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
             roc = roc_auc_score(y_te, pred)
             prc = average_precision_score(y_te, pred)
+
+            if str(model)[0:11] == 'BernoulliNB':
+                print('training again')
+
+                model = BernoulliNB(alpha=0.02)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0, binarize=0.4)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp4 = roc_auc_score(y_te, pred)
+                prc_temp4 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0, binarize=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp5 = roc_auc_score(y_te, pred)
+                prc_temp5 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4, roc_temp5)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4, prc_temp5)
+
+
+            elif str(model)[0:10] == 'GaussianNB':
+                print('training again')
+
+                model = GaussianNB(var_smoothing=1e-3, priors=(sum(y_tr)/len(y_tr),1-sum(y_tr)/len(y_tr)))
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1)
+                prc = max(prc, prc_temp1)
+
+            elif str(model)[0:12] == 'RandomForest':
+                print('training again')
+
+                model = RandomForestClassifier(n_estimators=200)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=70)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=30)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=10)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp4 = roc_auc_score(y_te, pred)
+                prc_temp4 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+
+            elif str(model)[0:18] == 'LogisticRegression':
+
+                print('logistic regression with balanced class weight')
+                model = LogisticRegression(solver='lbfgs', max_iter=50000, tol=1e-12)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                print('logistic regression with saga solver')
+                model = LogisticRegression(solver='saga', penalty='l1', tol=1e-12)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                print('logistic regression with liblinear solver')
+                model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced',tol=1e-8, C=0.1)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                print('logistic regression with liblinear solver')
+                model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced',tol=1e-8, C=0.05)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp4 = roc_auc_score(y_te, pred)
+                prc_temp4 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3, roc_temp4)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3, prc_temp4)
+                # roc = max(roc, roc_temp1, roc_temp2)
+                # prc = max(prc, prc_temp1, prc_temp2)
+
+
+            elif str(model)[0:9] == 'LinearSVC':
+                print('training again')
+
+                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge', class_weight='balanced')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = LinearSVC(max_iter=10000, tol=1e-12, loss='hinge', C=0.01)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+
+            elif str(model)[0:12] == 'DecisionTree':
+                print('training again')
+
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='log2')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='auto')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                print('training again')
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='sqrt')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+            elif str(model)[0:26] == 'LinearDiscriminantAnalysis':
+
+                print('test LDA with different hyperparameters')
+                model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.6)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.75)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+
+            elif str(model)[0:8] == 'AdaBoost':
+
+                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.8)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                model = AdaBoostClassifier(n_estimators=200, learning_rate=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.5, algorithm='SAMME')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+            elif str(model)[0:7] == 'Bagging':
+
+                print('test Bagging with different hyperparameters')
+                model = BaggingClassifier(max_samples=0.1, n_estimators=20)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1)
+                prc = max(prc, prc_temp1)
+
+
+            elif str(model)[0:3] == 'MLP':
+
+                model = MLPClassifier(learning_rate='adaptive', alpha=0.01, tol=1e-10)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                model = MLPClassifier(solver='lbfgs', alpha=0.001, tol=1e-8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                model = MLPClassifier(solver='sgd', alpha=0.001, tol=1e-8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+            elif str(model)[0:13] == 'XGBClassifier':
+
+                print('test XGB with different hyperparameters')
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.7)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp1 = roc_auc_score(y_te, pred)
+                prc_temp1 = average_precision_score(y_te, pred)
+
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp2 = roc_auc_score(y_te, pred)
+                prc_temp2 = average_precision_score(y_te, pred)
+
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=1.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                roc_temp3 = roc_auc_score(y_te, pred)
+                prc_temp3 = average_precision_score(y_te, pred)
+
+                roc = max(roc, roc_temp1, roc_temp2, roc_temp3)
+                prc = max(prc, prc_temp1, prc_temp2, prc_temp3)
+
+            roc_arr.append(roc)
+            prc_arr.append(prc)
 
             print("ROC on test %s data is %.3f" % (datasettype, roc))
             print("PRC on test %s data is %.3f" % (datasettype, prc))
 
-            roc_arr.append(roc)
-            prc_arr.append(prc)
+    else: # multiclass classification datasets
+
+        for model in models_to_test:
+
+            print('\n', type(model))
+            model.fit(X_tr, y_tr)
+            pred = model.predict(X_te)  # test on real data
+            f1score = f1_score(y_te, pred, average='weighted')
+
+
+            if str(model)[0:11] == 'BernoulliNB':
+                print('training again')
+
+                model = BernoulliNB(alpha=0.02)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = BernoulliNB(alpha=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+
+                print('training again')
+                model = BernoulliNB(alpha=1.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+
+            elif str(model)[0:10] == 'GaussianNB':
+                print('training again')
+
+                model = GaussianNB(var_smoothing=1e-3)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1)
+
+            elif str(model)[0:12] == 'RandomForest':
+                print('training again')
+
+                model = RandomForestClassifier(n_estimators=200)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=70)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=30)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = RandomForestClassifier(n_estimators=10)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4)
+
+            elif str(model)[0:18] == 'LogisticRegression':
+
+                print('logistic regression with balanced class weight')
+                model = LogisticRegression(solver='lbfgs', max_iter=50000, tol=1e-12)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                print('logistic regression with saga solver')
+                model = LogisticRegression(solver='saga', penalty='l1', tol=1e-12)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                print('logistic regression with liblinear solver')
+                model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced', tol=1e-8, C=0.1)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                print('logistic regression with liblinear solver')
+                model = LogisticRegression(solver='liblinear', penalty='l1', class_weight='balanced', tol=1e-8, C=0.05)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4)
+
+
+            elif str(model)[0:9] == 'LinearSVC':
+                print('training again')
+
+                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge', class_weight='balanced')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = LinearSVC(max_iter=10000, tol=1e-12, loss='hinge', C=0.01)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+
+            elif str(model)[0:12] == 'DecisionTree':
+                print('training again')
+
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='log2')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='auto')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                print('training again')
+                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_features='sqrt')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+            elif str(model)[0:26] == 'LinearDiscriminantAnalysis':
+
+                print('test LDA with different hyperparameters')
+                model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.6)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.75)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+
+            elif str(model)[0:8] == 'AdaBoost':
+
+                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.8)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                model = AdaBoostClassifier(n_estimators=200, learning_rate=0.5)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.5, algorithm='SAMME')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+            elif str(model)[0:7] == 'Bagging':
+
+                print('test Bagging with different hyperparameters')
+                model = BaggingClassifier(max_samples=0.1, n_estimators=20)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1)
+
+
+            elif str(model)[0:3] == 'MLP':
+
+                model = MLPClassifier(learning_rate='adaptive', alpha=0.01, tol=1e-10)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                model = MLPClassifier(solver='lbfgs', alpha=0.001, tol=1e-8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = MLPClassifier(solver='sgd', alpha=0.001, tol=1e-8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+            elif str(model)[0:13] == 'XGBClassifier':
+
+                print('test XGB with different hyperparameters')
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.7)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.8)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=1.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
+
+
+            print("F1-score on test %s data is %.3f" % (datasettype, f1score))
+            f1_arr.append(f1score)
 
     if n_classes > 2:
 
@@ -627,31 +1249,6 @@ def heuristic_for_length_scale(dataset, X_train, num_numerical_inputs, input_dim
     for i in np.arange(0, input_dim):
         med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=500)
         sigma_array[i] = med
-
-    #     print('we will use separate frequencies for each column of numerical features')
-    #     sigma2 = sigma_array ** 2
-    #     sigma2[sigma2 == 0] = 1.0
-    #
-    # elif dataset == 'credit':
-    #
-    #     # large value at the last column
-    #     med = meddistance(X_train[:, 0:-1], subsample=5000)
-    #     med_last = meddistance(np.expand_dims(X_train[:, -1], 1), subsample=5000)
-    #     sigma_array = np.concatenate((med * np.ones(input_dim - 1), [med_last]))
-    #
-    #     sigma2 = sigma_array ** 2
-    #     sigma2[sigma2 == 0] = 1.0
-    #
-    # else:
-    #
-    #     if dataset in heterogeneous_datasets:
-    #         med = meddistance(X_train[:, 0:num_numerical_inputs], subsample=5000)
-    #     elif dataset == 'cervical':
-    #         med = meddistance(X_train, subsample=500)
-    #     else:
-    #         med = meddistance(X_train, subsample=5000)
-    #
-    #     sigma2 = med ** 2
 
     return sigma_array
 
