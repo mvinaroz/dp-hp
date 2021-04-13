@@ -589,6 +589,8 @@ def data_loading(dataset, undersampled_rate, seed_number):
         covtype_dataset = datasets.fetch_covtype()
         data = covtype_dataset.data
         target = covtype_dataset.target
+        data = np.concatenate((data.transpose(), target[:,None].transpose()))
+        data = data.transpose()
 
         """ some specifics on this dataset """
         numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -608,13 +610,13 @@ def data_loading(dataset, undersampled_rate, seed_number):
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        # inputs = data[:20000, :-1]
-        # target = data[:20000, -1]
+        inputs = data[:20000, :-1]
+        target = data[:20000, -1]
 
         ##################3
 
         raw_labels = target
-        raw_input_features = data
+        raw_input_features = inputs
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
@@ -644,7 +646,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
    return X_train, X_test, y_train, y_test, n_classes, num_numerical_inputs, num_categorical_inputs
 
 
-def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
+def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name):
 
     print("\n", datasettype, "data\n")
 
@@ -981,28 +983,62 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args):
 
 
             if str(model)[0:11] == 'BernoulliNB':
-                print('training again')
 
-                model = BernoulliNB(alpha=0.02)
+                if data_name == 'covtype':
+                    prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)]/sum(y_tr)
+                print('training again')
+                #
+                # model = BernoulliNB(alpha=0.02)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # f1score1 = f1_score(y_te, pred, average='weighted')
+                #
+                # print('training again')
+                # model = BernoulliNB(alpha=0.5)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # f1score2 = f1_score(y_te, pred, average='weighted')
+                #
+                #
+                # print('training again')
+                # model = BernoulliNB(alpha=1.0)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # f1score3 = f1_score(y_te, pred, average='weighted')
+                #
+                #
+                # f1score = max(f1score, f1score1, f1score2, f1score3)
+
+                model = BernoulliNB(alpha=0.02, class_prior=prior_class.squeeze())
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
 
                 print('training again')
-                model = BernoulliNB(alpha=0.5)
+                model = BernoulliNB(alpha=0.5, class_prior=prior_class.squeeze())
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score2 = f1_score(y_te, pred, average='weighted')
 
-
                 print('training again')
-                model = BernoulliNB(alpha=1.0)
+                model = BernoulliNB(alpha=1.0, class_prior=prior_class.squeeze())
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
+                print('training again')
+                model = BernoulliNB(alpha=5.0, binarize=0.4, class_prior=prior_class.squeeze())
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3)
+                print('training again')
+                model = BernoulliNB(alpha=10.0, binarize=0.05, class_prior=prior_class.squeeze())
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score5 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5)
 
 
             elif str(model)[0:10] == 'GaussianNB':

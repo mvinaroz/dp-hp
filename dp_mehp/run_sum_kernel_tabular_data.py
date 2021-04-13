@@ -28,7 +28,7 @@ def get_args():
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
     # parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-    parser.add_argument('--lr', type=float, default=0.05, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.5, help='learning rate') # for covtype data
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
@@ -311,7 +311,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         generated_input_features_final = output_combined.cpu().detach().numpy()
         generated_labels_final = label_input.cpu().detach().numpy()
 
-        roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, n_classes, "generated", ar.classifiers)
+        roc, prc = test_models(generated_input_features_final, generated_labels_final, X_test, y_test, n_classes, "generated", ar.classifiers, ar.data_name)
 
 
     else:  # homogeneous datasets
@@ -339,7 +339,7 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         generated_labels_final = samp_labels.cpu().detach().numpy()
         generated_labels = np.argmax(generated_labels_final, axis=1)
 
-        roc, prc = test_models(generated_input_features_final, generated_labels, X_test, y_test, n_classes, "generated", ar.classifiers)
+        roc, prc = test_models(generated_input_features_final, generated_labels, X_test, y_test, n_classes, "generated", ar.classifiers, ar.data_name)
 
 
     ####################################################
@@ -423,9 +423,9 @@ if __name__ == '__main__':
         elif dataset=='covtype':
             how_many_epochs_arg = [50]
             n_features_arg = [100]
-            mini_batch_arg = [0.01]
+            mini_batch_arg = [0.05]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.03]
+            subsampled_rate = [1.0]
         elif dataset == 'intrusion':
             how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
             n_features_arg = [100]
