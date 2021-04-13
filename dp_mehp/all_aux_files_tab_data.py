@@ -586,11 +586,14 @@ def data_loading(dataset, undersampled_rate, seed_number):
         # # we put them together and make a new train/test split in the following
         # data = np.concatenate((train_data, test_data))
 
-        covtype_dataset = datasets.fetch_covtype()
-        data = covtype_dataset.data
-        target = covtype_dataset.target
-        data = np.concatenate((data.transpose(), target[:,None].transpose()))
-        data = data.transpose()
+        data = pd.read_csv('../data/real/covtype/covtype.data', sep=",")
+        data = pd.DataFrame(data).to_numpy() # (581011, 55)
+
+        # covtype_dataset = datasets.fetch_covtype()
+        # data = covtype_dataset.data
+        # target = covtype_dataset.target
+        # data = np.concatenate((data.transpose(), target[:,None].transpose()))
+        # data = data.transpose()
 
         """ some specifics on this dataset """
         numerical_columns = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
@@ -613,9 +616,12 @@ def data_loading(dataset, undersampled_rate, seed_number):
         inputs = data[:20000, :-1]
         target = data[:20000, -1]
 
+        # inputs = data[:,:-1]
+        # target = data[:,-1]
+
         ##################3
 
-        raw_labels = target
+        raw_labels = target - 1 # because the targets are between 1 and 7
         raw_input_features = inputs
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """

@@ -28,7 +28,7 @@ def get_args():
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
     # parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-    parser.add_argument('--lr', type=float, default=0.5, help='learning rate') # for covtype data
+    parser.add_argument('--lr', type=float, default=0.1, help='learning rate') # for covtype data
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
@@ -421,11 +421,11 @@ if __name__ == '__main__':
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
-            how_many_epochs_arg = [50]
+            how_many_epochs_arg = [100]
             n_features_arg = [100]
             mini_batch_arg = [0.05]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [1.0]
+            subsampled_rate = [0.5, 0.75, 1.0]
         elif dataset == 'intrusion':
             how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
             n_features_arg = [100]
