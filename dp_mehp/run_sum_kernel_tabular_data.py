@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
@@ -366,7 +366,7 @@ if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
-    for dataset in ['intrusion']:
+    for dataset in ['covtype']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -425,7 +425,7 @@ if __name__ == '__main__':
             n_features_arg = [100]
             mini_batch_arg = [0.05]
             length_scale = [0.005]  # dummy
-            subsampled_rate = [0.5, 0.75, 1.0]
+            subsampled_rate = [0.02]
         elif dataset == 'intrusion':
             # how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
             # n_features_arg = [100]
