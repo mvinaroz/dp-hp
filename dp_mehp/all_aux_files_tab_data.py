@@ -581,13 +581,13 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         print("dataset is", dataset)
 
-        # train_data = np.load("../data/real/covtype/train.npy")
-        # test_data = np.load("../data/real/covtype/test.npy")
-        # # we put them together and make a new train/test split in the following
-        # data = np.concatenate((train_data, test_data))
+        train_data = np.load("../data/real/covtype/train_new.npy")
+        test_data = np.load("../data/real/covtype/test_new.npy")
+        # we put them together and make a new train/test split in the following
+        data = np.concatenate((train_data, test_data))
 
-        data = pd.read_csv('../data/real/covtype/covtype.data', sep=",")
-        data = pd.DataFrame(data).to_numpy() # (581011, 55)
+        #data = pd.read_csv('../data/real/covtype/covtype.data', sep=",")
+        #data = pd.DataFrame(data).to_numpy() # (581011, 55)
 
         # covtype_dataset = datasets.fetch_covtype()
         # data = covtype_dataset.data
@@ -621,7 +621,7 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         ##################3
 
-        raw_labels = target - 1 # because the targets are between 1 and 7
+        raw_labels = target
         raw_input_features = inputs
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
@@ -988,10 +988,15 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             f1score = f1_score(y_te, pred, average='weighted')
 
 
+            if data_name == 'covtype':
+                prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)]/len(y_tr)
+            elif data_name == 'intrusion':
+                prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4)]/len(y_tr)
+
+
+
             if str(model)[0:11] == 'BernoulliNB':
 
-                if data_name == 'covtype':
-                    prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)]/sum(y_tr)
                 print('training again')
                 #
                 # model = BernoulliNB(alpha=0.02)
@@ -1050,7 +1055,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             elif str(model)[0:10] == 'GaussianNB':
                 print('training again')
 
-                model = GaussianNB(var_smoothing=1e-3)
+                model = GaussianNB(var_smoothing=1e-3, priors=prior_class)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
