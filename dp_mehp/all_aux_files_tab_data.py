@@ -586,9 +586,6 @@ def data_loading(dataset, undersampled_rate, seed_number):
         # we put them together and make a new train/test split in the following
         data = np.concatenate((train_data, test_data))
 
-        #data = pd.read_csv('../data/real/covtype/covtype.data', sep=",")
-        #data = pd.DataFrame(data).to_numpy() # (581011, 55)
-
         # covtype_dataset = datasets.fetch_covtype()
         # data = covtype_dataset.data
         # target = covtype_dataset.target
@@ -613,11 +610,11 @@ def data_loading(dataset, undersampled_rate, seed_number):
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        inputs = data[:20000, :-1]
-        target = data[:20000, -1]
+        # inputs = data[:20000, :-1]
+        # target = data[:20000, -1]
 
-        # inputs = data[:,:-1]
-        # target = data[:,-1]
+        inputs = data[:,:-1]
+        target = data[:,-1]
 
         ##################3
 
@@ -626,10 +623,18 @@ def data_loading(dataset, undersampled_rate, seed_number):
 
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
+        # idx_negative_label0 = raw_labels == 0
         idx_positive_label = raw_labels != 1
+        # idx_positive_label3 = raw_labels == 3
+        # idx_positive_label4 = raw_labels == 4
+        # idx_positive_label5 = raw_labels == 5
+        # idx_positive_label6 = raw_labels == 6
 
         pos_samps_input = raw_input_features[idx_positive_label, :]
         pos_samps_label = raw_labels[idx_positive_label]
+
+        # neg_samps_input0 = raw_input_features[idx_negative_label0, :]
+        # neg_samps_label0 = raw_labels[idx_negative_label0]
         neg_samps_input = raw_input_features[idx_negative_label, :]
         neg_samps_label = raw_labels[idx_negative_label]
 
@@ -987,13 +992,10 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             pred = model.predict(X_te)  # test on real data
             f1score = f1_score(y_te, pred, average='weighted')
 
-
             if data_name == 'covtype':
                 prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)]/len(y_tr)
             elif data_name == 'intrusion':
                 prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4)]/len(y_tr)
-
-
 
             if str(model)[0:11] == 'BernoulliNB':
 
@@ -1093,7 +1095,8 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             elif str(model)[0:18] == 'LogisticRegression':
 
                 print('logistic regression with balanced class weight')
-                model = LogisticRegression(solver='lbfgs', max_iter=50000, tol=1e-12)
+                model = LogisticRegression(solver='lbfgs', max_iter=50000, tol=1e-12, multi_class='multinomial')
+                # model = LogisticRegression(solver='lbfgs', multi_class='multinomial')
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')

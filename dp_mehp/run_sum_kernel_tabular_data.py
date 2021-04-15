@@ -27,8 +27,8 @@ def get_args():
     # OPTIMIZATION
     parser.add_argument("--batch-rate", type=float, default=0.1)
     parser.add_argument('--epochs', type=int, default=100)
-    parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
-    # parser.add_argument('--lr', type=float, default=0.1, help='learning rate') # for covtype data
+    # parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
+    parser.add_argument('--lr', type=float, default=0.01, help='learning rate') # for covtype data
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
