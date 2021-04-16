@@ -322,9 +322,9 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
   model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
-  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
-  # model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}  best so far
-  #  (not used for consistency with old results. change too small to warrant redoing everything)
+  #model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
+  model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}  
+  #best so far (not used for consistency with old results. change too small to warrant redoing everything)
   model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
   model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
@@ -459,7 +459,7 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downst
   #   plot_data_1d(data_tuple.x_real_test, data_tuple.y_real_test.flatten(), os.path.join(log_dir, 'plot_data'))
 
 
-def test_results_subsampling_rate(data_key, log_name, log_dir, data_tuple, eval_func, skip_downstream_model, subsampling_rate):
+def test_results_subsampling_rate(data_key, log_name, log_dir, skip_downstream_model, subsampling_rate):
   if data_key in {'digits', 'fashion'}:
     if not skip_downstream_model:
       final_score = test_gen_data(log_name, data_key, subsample=subsampling_rate, custom_keys='logistic_reg,random_forest,gaussian_nb,bernoulli_nb,linear_svc,decision_tree,lda,adaboost,mlp,bagging,gbm,xgboost')

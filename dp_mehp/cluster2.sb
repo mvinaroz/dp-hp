@@ -1,0 +1,23 @@
+executable = cluster2.sh
+
+arguments = $(Process)
+
+error = joblogs/cluster2_$(Process).err.txt
+
+output = joblogs/cluster2_$(Process).out.txt
+
+log = joblogs/cluster2_$(Process).log.txt
+
+getenv = True
+
+request_cpus = 2
+
+request_gpus = 1
+
+request_memory = 8GB
+
++MaxRunningPrice = 500
+
++RunningPriceExceededAction = "restart"
+
+queue 200

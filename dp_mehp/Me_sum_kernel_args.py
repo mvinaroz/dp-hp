@@ -209,10 +209,10 @@ def main():
 
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
 #    final_score = test_gen_data(ar.log_name + '/' +  ar.data, ar.data, subsample=ar.sampling_rate_synth, custom_keys='logistic_reg')
-    data_tuple = datasets_colletion_def(syn_data, syn_labels,
-                                        data_pkg.train_data.data, data_pkg.train_data.targets,
-                                        data_pkg.test_data.data, data_pkg.test_data.targets)
-    test_results_subsampling_rate(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, data_tuple, data_pkg.eval_func, ar.skip_downstream_model, ar.sampling_rate_synth)
+#    data_tuple = datasets_colletion_def(syn_data, syn_labels,
+#                                        data_pkg.train_data.data, data_pkg.train_data.targets,
+#                                        data_pkg.test_data.data, data_pkg.test_data.targets)
+    test_results_subsampling_rate(ar.data, ar.log_name + '/' + ar.data, ar.log_dir, ar.skip_downstream_model, ar.sampling_rate_synth)
     
     
 #    dir_score = ar.log_dir + '/' + ar.data + '/score_60k'
