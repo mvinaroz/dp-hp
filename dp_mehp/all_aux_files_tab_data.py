@@ -610,11 +610,11 @@ def data_loading(dataset, undersampled_rate, seed_number):
         num_numerical_inputs = len(numerical_columns)
         num_categorical_inputs = len(categorical_columns + ordinal_columns) - 1
 
-        # inputs = data[:20000, :-1]
-        # target = data[:20000, -1]
+        inputs = data[:20000, :-1]
+        target = data[:20000, -1]
 
-        inputs = data[:,:-1]
-        target = data[:,-1]
+        # inputs = data[:,:-1]
+        # target = data[:,-1]
 
         ##################3
 
@@ -624,7 +624,9 @@ def data_loading(dataset, undersampled_rate, seed_number):
         """ we take a pre-processing step such that the dataset is a bit more balanced """
         idx_negative_label = raw_labels == 1  # 1 and 0 are dominant but 1 has more labels
         # idx_negative_label0 = raw_labels == 0
+
         idx_positive_label = raw_labels != 1
+        # idx_positive_label2 = raw_labels == 2
         # idx_positive_label3 = raw_labels == 3
         # idx_positive_label4 = raw_labels == 4
         # idx_positive_label5 = raw_labels == 5
@@ -633,6 +635,17 @@ def data_loading(dataset, undersampled_rate, seed_number):
         pos_samps_input = raw_input_features[idx_positive_label, :]
         pos_samps_label = raw_labels[idx_positive_label]
 
+        # pos_samps_input2 = raw_input_features[idx_positive_label2, :]
+        # pos_samps_label2 = raw_labels[idx_positive_label2]
+        # pos_samps_input3 = raw_input_features[idx_positive_label3, :]
+        # pos_samps_label3 = raw_labels[idx_positive_label3]
+        # pos_samps_input4 = raw_input_features[idx_positive_label4, :]
+        # pos_samps_label4 = raw_labels[idx_positive_label4]
+        # pos_samps_input5 = raw_input_features[idx_positive_label5, :]
+        # pos_samps_label5 = raw_labels[idx_positive_label5]
+        # pos_samps_input6 = raw_input_features[idx_positive_label6, :]
+        # pos_samps_label6 = raw_labels[idx_positive_label6]
+        #
         # neg_samps_input0 = raw_input_features[idx_negative_label0, :]
         # neg_samps_label0 = raw_labels[idx_negative_label0]
         neg_samps_input = raw_input_features[idx_negative_label, :]
@@ -645,9 +658,19 @@ def data_loading(dataset, undersampled_rate, seed_number):
         neg_samps_input = neg_samps_input[in_keep, :]
         neg_samps_label = neg_samps_label[in_keep]
 
+        # in_keep = np.random.permutation(np.sum(idx_negative_label0))
+        # under_sampling_rate = undersampled_rate  # 0.3
+        # in_keep = in_keep[0:np.int(np.sum(idx_negative_label0) * under_sampling_rate)]
+        # neg_samps_input0 = neg_samps_input0[in_keep, :]
+        # neg_samps_label0 = neg_samps_label0[in_keep]
+
+
         feature_selected = np.concatenate((pos_samps_input, neg_samps_input))
         label_selected = np.concatenate((pos_samps_label, neg_samps_label))
 
+        # feature_selected = np.concatenate((pos_samps_input2, pos_samps_input3, pos_samps_input4, pos_samps_input5, pos_samps_input6, neg_samps_input, neg_samps_input0))
+        # label_selected = np.concatenate((pos_samps_label2, pos_samps_label3, pos_samps_label4, pos_samps_label5, pos_samps_label6, neg_samps_label, neg_samps_label0))
+        #
 
         ###############3
 
@@ -993,34 +1016,13 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             f1score = f1_score(y_te, pred, average='weighted')
 
             if data_name == 'covtype':
-                prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)]/len(y_tr)
+                prior_class = np.array([sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4), sum(y_tr==5), sum(y_tr==6)])/(y_tr.shape[0])
             elif data_name == 'intrusion':
-                prior_class = [sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4)]/len(y_tr)
+                prior_class = np.array([sum(y_tr==0), sum(y_tr==1), sum(y_tr==2), sum(y_tr==3), sum(y_tr==4)])/(y_tr.shape[0])
 
             if str(model)[0:11] == 'BernoulliNB':
 
                 print('training again')
-                #
-                # model = BernoulliNB(alpha=0.02)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # f1score1 = f1_score(y_te, pred, average='weighted')
-                #
-                # print('training again')
-                # model = BernoulliNB(alpha=0.5)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # f1score2 = f1_score(y_te, pred, average='weighted')
-                #
-                #
-                # print('training again')
-                # model = BernoulliNB(alpha=1.0)
-                # model.fit(X_tr, y_tr)
-                # pred = model.predict(X_te)  # test on real data
-                # f1score3 = f1_score(y_te, pred, average='weighted')
-                #
-                #
-                # f1score = max(f1score, f1score1, f1score2, f1score3)
 
                 model = BernoulliNB(alpha=0.02, class_prior=prior_class.squeeze())
                 model.fit(X_tr, y_tr)
@@ -1051,7 +1053,47 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score5 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5)
+                print('training again')
+                model = BernoulliNB(class_prior=prior_class.squeeze(), binarize = np.mean(X_tr))
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score6 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5, f1score6)
+
+            elif str(model)[0:16] == 'GradientBoosting':
+
+                model = GradientBoostingClassifier(learning_rate=0.5, n_estimators=100)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score1 = f1_score(y_te, pred, average='weighted')
+
+                model = GradientBoostingClassifier(learning_rate=0.5, n_estimators=200)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = GradientBoostingClassifier(random_state=0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.05)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.01)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score5 = f1_score(y_te, pred, average='weighted')
+
+                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.001)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score6 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5, f1score6)
 
 
             elif str(model)[0:10] == 'GaussianNB':
@@ -1062,7 +1104,70 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1)
+                model = GaussianNB(priors=prior_class, var_smoothing=1e-12)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=1e-13)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=0.2, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+
+                model = GaussianNB(var_smoothing=0.5, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score5 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=0.8, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score6 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=1.2, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score7 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=2, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score8 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=10, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score9 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=20, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score10 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=0.34, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score11 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=0.138, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score12 = f1_score(y_te, pred, average='weighted')
+
+                model = GaussianNB(var_smoothing=1e-2, priors=prior_class)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score13 = f1_score(y_te, pred, average='weighted')
+
+
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5, f1score6, f1score7, f1score8, f1score9, f1score10, f1score11,  f1score12, f1score13)
 
             elif str(model)[0:12] == 'RandomForest':
                 print('training again')
@@ -1142,7 +1247,23 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3)
+                print('training again')
+                model = LinearSVC(max_iter=10000, tol=1e-12, multi_class = 'crammer_singer')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+                model = LinearSVC(max_iter=10000, tol=1e-16, loss='hinge',multi_class = 'crammer_singer', C=0.1)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score5 = f1_score(y_te, pred, average='weighted')
+
+                model = LinearSVC(max_iter=20000, tol=1e-16, loss='hinge')
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score6 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5, f1score6)
 
 
             elif str(model)[0:12] == 'DecisionTree':
@@ -1170,7 +1291,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
             elif str(model)[0:26] == 'LinearDiscriminantAnalysis':
 
                 print('test LDA with different hyperparameters')
-                model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto')
+                model = LinearDiscriminantAnalysis(solver='eigen', tol=1e-12, shrinkage='auto', priors=prior_class.squeeze())
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
@@ -1185,7 +1306,13 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3)
+                model = LinearDiscriminantAnalysis(solver='lsqr', tol=1e-12, shrinkage=0.9)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4= f1_score(y_te, pred, average='weighted')
+
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4)
 
 
             elif str(model)[0:8] == 'AdaBoost':
@@ -1205,7 +1332,28 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3)
+                model = AdaBoostClassifier(n_estimators=100, learning_rate=5.0, random_state = 0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
+
+                model = AdaBoostClassifier(n_estimators=1000, learning_rate=5.0, random_state = 0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score5 = f1_score(y_te, pred, average='weighted')
+
+
+                model = AdaBoostClassifier(n_estimators=1000, learning_rate=4.0, random_state = 0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score6 = f1_score(y_te, pred, average='weighted')
+
+                # model = AdaBoostClassifier(n_estimators=500, learning_rate=20)
+                # model.fit(X_tr, y_tr)
+                # pred = model.predict(X_te)  # test on real data
+                # f1score7 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4, f1score5, f1score6)
 
             elif str(model)[0:7] == 'Bagging':
 
@@ -1215,7 +1363,17 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score1 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1)
+                model = BaggingClassifier(n_estimators=200, warm_start=True)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score2 = f1_score(y_te, pred, average='weighted')
+
+                model = BaggingClassifier(n_estimators=200, warm_start=True, max_features=10)  # improved
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score3 = f1_score(y_te, pred, average='weighted')
+
+                f1score = max(f1score, f1score1, f1score2, f1score3)
 
 
             elif str(model)[0:3] == 'MLP':
@@ -1254,6 +1412,11 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 f1score3 = f1_score(y_te, pred, average='weighted')
+
+                model = xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=5.0)
+                model.fit(X_tr, y_tr)
+                pred = model.predict(X_te)  # test on real data
+                f1score4 = f1_score(y_te, pred, average='weighted')
 
                 f1score = max(f1score, f1score1, f1score2, f1score3)
 

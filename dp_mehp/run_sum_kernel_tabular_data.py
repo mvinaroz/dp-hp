@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
@@ -366,7 +366,7 @@ if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
-    for dataset in ['covtype']:
+    for dataset in ['intrusion']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -422,18 +422,20 @@ if __name__ == '__main__':
             subsampled_rate = [0.2, 0.4, 0.6]#[0.2, 0.3, 0.4]
         elif dataset=='covtype':
             how_many_epochs_arg = [100]
-            n_features_arg = [100]
+            n_features_arg = [10]
             mini_batch_arg = [0.05]
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.02]
+            # subsampled_rate = [0.2] # 0.34
+            # subsampled_rate = [0.1]  # 0.34
         elif dataset == 'intrusion':
             # how_many_epochs_arg = [50, 100, 200, 400, 600, 800, 1000]
             # n_features_arg = [100]
             # mini_batch_arg = [0.01, 0.03, 0.05]
             # length_scale = [0.005]  # dummy
             # subsampled_rate = [0.25, 0.3, 0.35]#[0.1, 0.2, 0.3]
-            how_many_epochs_arg = [400]
-            n_features_arg = [10, 20, 50, 100]
+            how_many_epochs_arg = [100]
+            n_features_arg = [7]
             mini_batch_arg = [0.01]
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.3]  # [0.1, 0.2, 0.3]
@@ -466,6 +468,7 @@ if __name__ == '__main__':
                 print(elem, "\n")
                 prc_arr_all = []; roc_arr_all = []
 
+                # for ii in range(repetitions):
                 for ii in range(repetitions):
                     # ii = ii + 4
                     print("\nRepetition: ",ii)
@@ -534,6 +537,8 @@ if __name__ == '__main__':
                 print(elem, "\n")
                 f1score_arr_all = []
                 for ii in range(repetitions):
+                    # ii = 4
+
                     print("\nRepetition: ",ii)
 
                     # f1scr = main(dataset, elem["undersampling_rates"], elem["n_features_arg"], elem["mini_batch_arg"], elem["how_many_epochs_arg"], is_priv_arg, seed_number=ii)
