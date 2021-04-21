@@ -61,12 +61,12 @@ def get_args():
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
   parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
-  parser.add_argument('--order-hermite', type=int, default=50, help='')
+  parser.add_argument('--order-hermite', type=int, default=100, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=False)
   parser.add_argument('--kernel-length', type=float, default=0.001, help='')
 
   # DP SPEC
-  parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
+  parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
   parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
   parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
   
@@ -131,13 +131,16 @@ def main():
         
     print('sigma2 is', sigma2)
     rho = find_rho(sigma2)
+    order = ar.order_hermite
 
-    ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
-    order = find_order(rho, ev_thr)
-    or_thr = ar.order_hermite
-    if order>or_thr:
-        order = or_thr
-        print('chosen order is', order)
+    # ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
+    # order = find_order(rho, ev_thr)
+    # or_thr = ar.order_hermite
+    # if order>or_thr:
+    #     order = or_thr
+    #     print('chosen order is', order)
+
+
     if ar.single_release:
         print('single release is', ar.single_release)
         print('computing mean embedding of data')
@@ -168,6 +171,8 @@ def main():
         print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
         data_embedding = data_embedding + noise
         print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+    else:
+        print('we do not add noise to the mean embedding as is_private is set to False.')
 
       
     """ Training """
@@ -209,9 +214,9 @@ def main():
             optimizer.step()
         # end for
         
-        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(ar.epochs, batch_idx * len(data), data_pkg.n_data, loss.item()))
+        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), data_pkg.n_data, loss.item()))
 
-        log_gen_data(model, device, ar.epochs, data_pkg.n_labels, ar.log_dir)
+        log_gen_data(model, device, epochs, data_pkg.n_labels, ar.log_dir)
         scheduler.step()
 
     #     end if
