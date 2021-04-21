@@ -1418,7 +1418,7 @@ def test_models(X_tr, y_tr, X_te, y_te, n_classes, datasettype, args, data_name)
                 pred = model.predict(X_te)  # test on real data
                 f1score4 = f1_score(y_te, pred, average='weighted')
 
-                f1score = max(f1score, f1score1, f1score2, f1score3)
+                f1score = max(f1score, f1score1, f1score2, f1score3, f1score4)
 
 
             print("F1-score on test %s data is %.3f" % (datasettype, f1score))

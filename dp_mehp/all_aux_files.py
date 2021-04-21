@@ -436,27 +436,27 @@ def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downst
     if not skip_downstream_model:
       final_score = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg')
       log_final_score(log_dir, final_score)
-  # elif data_key == '2d':
-  #   if not skip_downstream_model:
-  #     final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
-  #                                        subsample=.1, custom_keys='mlp', compute_real_to_real=True)
-  #     log_final_score(log_dir, final_score)
-  #   eval_score = eval_func(data_tuple.x_gen, data_tuple.y_gen.flatten())
-  #   print(f'Score of evaluation function: {eval_score}')
-  #   with open(os.path.join(log_dir, 'eval_score'), 'w') as f:
-  #     f.writelines([f'{eval_score}'])
-  #
-  #   plot_data(data_tuple.x_real_train, data_tuple.y_real_train.flatten(), os.path.join(log_dir, 'plot_train'),
-  #             center_frame=True)
-  #   plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
-  #   plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_sub0.2'), subsample=0.2)
-  #   plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_centered'),
-  #             center_frame=True)
-  #
-  #   plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_norms_hist'))
-  # elif data_key == '1d':
-  #   plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
-  #   plot_data_1d(data_tuple.x_real_test, data_tuple.y_real_test.flatten(), os.path.join(log_dir, 'plot_data'))
+  elif data_key == '2d':
+    if not skip_downstream_model:
+      final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
+                                         subsample=.1, custom_keys='mlp', compute_real_to_real=True)
+      log_final_score(log_dir, final_score)
+    eval_score = eval_func(data_tuple.x_gen, data_tuple.y_gen.flatten())
+    print(f'Score of evaluation function: {eval_score}')
+    with open(os.path.join(log_dir, 'eval_score'), 'w') as f:
+      f.writelines([f'{eval_score}'])
+
+    plot_data(data_tuple.x_real_train, data_tuple.y_real_train.flatten(), os.path.join(log_dir, 'plot_train'),
+              center_frame=True)
+    plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
+    plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_sub0.2'), subsample=0.2)
+    plot_data(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_centered'),
+              center_frame=True)
+
+    plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen_norms_hist'))
+  elif data_key == '1d':
+    plot_data_1d(data_tuple.x_gen, data_tuple.y_gen.flatten(), os.path.join(log_dir, 'plot_gen'))
+    plot_data_1d(data_tuple.x_real_test, data_tuple.y_real_test.flatten(), os.path.join(log_dir, 'plot_data'))
 
 
 def test_results_subsampling_rate(data_key, log_name, log_dir, skip_downstream_model, subsampling_rate):
@@ -630,6 +630,70 @@ class ConvCondGen(nn.Module):
       return code
 
 
+class FCCondGen_2d(nn.Module):
+  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=False, spectral_norm=True):
+    super(FCCondGen_2d, self).__init__()
+    d_hid = [int(k) for k in d_hid.split(',')]
+    assert len(d_hid) < 5
+
+    if spectral_norm:
+      self.fc1 = torch.nn.utils.spectral_norm(nn.Linear(d_code + n_labels, d_hid[0]))
+      self.fc2 = torch.nn.utils.spectral_norm(nn.Linear(d_hid[0], d_hid[1]))
+
+      if len(d_hid) == 2:
+        self.fc3 = (nn.Linear(d_hid[1], d_out))
+      elif len(d_hid) == 3:
+        self.fc3 = torch.nn.utils.spectral_norm(nn.Linear(d_hid[1], d_hid[2]))
+        self.fc4 = (nn.Linear(d_hid[2], d_out))
+        # self.bn3 = nn.utils.spectral_norm(d_hid[2]) if spectral_norm else None
+      elif len(d_hid) == 4:
+        self.fc3 = torch.nn.utils.spectral_norm(nn.Linear(d_hid[1], d_hid[2]))
+        self.fc4 = torch.nn.utils.spectral_norm(nn.Linear(d_hid[2], d_hid[3]))
+        self.fc5 = nn.Linear(d_hid[3], d_out)
+        # self.bn3 = nn.utils.spectral_norm(d_hid[2]) if spectral_norm else None
+        # self.bn4 = nn.utils.spectral_norm(d_hid[3]) if spectral_norm else None
+    else:
+      print("probably it is a good idea to use the spectral norm?")
+
+
+    # self.use_bn = spectral_norm
+    self.n_layers = len(d_hid)
+    self.relu = nn.ReLU()
+    self.sigmoid = nn.Sigmoid()
+    self.use_sigmoid = use_sigmoid
+    self.d_code = d_code
+    self.n_labels = n_labels
+
+  def forward(self, x):
+    x = self.fc1(x)
+    # x = self.bn1(x) if self.use_bn else x
+    x = self.fc2(self.relu(x))
+    # x = self.bn2(x) if self.use_bn else x
+    x = self.fc3(self.relu(x))
+    if self.n_layers > 2:
+      # x = self.bn3(x) if self.use_bn else x
+      x = self.fc4(self.relu(x))
+      if self.n_layers > 3:
+        # x = self.bn4(x) if self.use_bn else x
+        x = self.fc5(self.relu(x))
+
+    if self.use_sigmoid:
+      x = self.sigmoid(x)
+    return x
+
+  def get_code(self, batch_size, device, return_labels=True, labels=None):
+    if labels is None:  # sample labels
+      labels = pt.randint(self.n_labels, (batch_size, 1), device=device)
+    code = pt.randn(batch_size, self.d_code, device=device)
+    gen_one_hots = pt.zeros(batch_size, self.n_labels, device=device)
+    gen_one_hots.scatter_(1, labels, 1)
+    code = pt.cat([code, gen_one_hots.to(pt.float32)], dim=1)
+    # print(code.shape)
+    if return_labels:
+      return code, gen_one_hots
+    else:
+      return code
+
 
 def meddistance(x, subsample=None, mean_on_fail=True):
   """
@@ -760,4 +824,3 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     return train_loader, test_loader, trn_data, tst_data
   else:
     return train_loader, test_loader
-
