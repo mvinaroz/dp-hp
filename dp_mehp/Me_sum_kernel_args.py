@@ -216,7 +216,7 @@ def main():
         
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), data_pkg.n_data, loss.item()))
 
-        log_gen_data(model, device, epochs, data_pkg.n_labels, ar.log_dir)
+        log_gen_data(model, device, epoch, data_pkg.n_labels, ar.log_dir)
         scheduler.step()
 
     #     end if
