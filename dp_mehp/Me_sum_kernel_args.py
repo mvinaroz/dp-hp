@@ -19,6 +19,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
 from torch.autograd import grad
+from autodp import privacy_calibrator
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -46,7 +47,6 @@ def get_args():
   parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
   
   # MODEL DEFINITION
-
   parser.add_argument('--model_name', type=str, default='CNN', help='you can use CNN of FC')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
@@ -61,9 +61,14 @@ def get_args():
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
   parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
-  parser.add_argument('--order-hermite', type=int, default=50, help='')
+  parser.add_argument('--order-hermite', type=int, default=100, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=False)
   parser.add_argument('--kernel-length', type=float, default=0.001, help='')
+
+  # DP SPEC
+  parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
+  parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
+  parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
   
   ar = parser.parse_args()
 
@@ -97,9 +102,21 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
     """Load data"""  
+<<<<<<< HEAD
 
     data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
 
+=======
+    # data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=True, synth_spec_string=None, test_split=None)
+    if ar.data == 'fashion':
+        data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, True, False, [], [])
+    else:
+        data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=True,
+                                   synth_spec_string=None, test_split=None)
+
+    print(data_pkg)
+  
+>>>>>>> a1466dc3bbe0b6e76c3452309dd62556a1c108d4
     """ Define a generator """
     if ar.model_name == 'FC':
         model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
@@ -120,13 +137,16 @@ def main():
         
     print('sigma2 is', sigma2)
     rho = find_rho(sigma2)
-  
-    ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
-    order = find_order(rho, ev_thr)
-    or_thr = ar.order_hermite
-    if order>or_thr:
-        order = or_thr
-        print('chosen order is', order)
+    order = ar.order_hermite
+
+    # ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
+    # order = find_order(rho, ev_thr)
+    # or_thr = ar.order_hermite
+    # if order>or_thr:
+    #     order = or_thr
+    #     print('chosen order is', order)
+
+
     if ar.single_release:
         print('single release is', ar.single_release)
         print('computing mean embedding of data')
@@ -142,6 +162,24 @@ def main():
                 data_embedding[:,idx, batch_idx] = phi_data
         data_embedding = torch.sum(data_embedding, axis=2)
         print('done with computing mean embedding of data')
+
+
+    if ar.is_private:
+        k = 1
+        epsilon = ar.epsilon
+        delta = ar.delta
+        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
+        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+        # print('we add noise to the data mean embedding as the private flag is true')
+        std = (2 * privacy_param['sigma'] * np.sqrt(data_pkg.n_features) / data_pkg.n_data)
+        noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+
+        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+        data_embedding = data_embedding + noise
+        print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+    else:
+        print('we do not add noise to the mean embedding as is_private is set to False.')
+
       
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
@@ -184,7 +222,7 @@ def main():
         
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), data_pkg.n_data, loss.item()))
 
-        log_gen_data(model, device, ar.epochs, data_pkg.n_labels, ar.log_dir)
+        log_gen_data(model, device, epoch, data_pkg.n_labels, ar.log_dir)
         scheduler.step()
 
     #     end if
