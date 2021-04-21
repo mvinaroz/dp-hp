@@ -42,7 +42,7 @@ def get_args():
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--gen-batch-size', '-gbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=100)
-  parser.add_argument('--lr', '-lr', type=float, default=0.001, help='learning rate')
+  parser.add_argument('--lr', '-lr', type=float, default=0.01, help='learning rate')
   parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
   
   # MODEL DEFINITION
@@ -55,7 +55,7 @@ def get_args():
   
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only')
+  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
   parser.add_argument('--report_intermediate', action='store_true', default=False, help='')
   parser.add_argument('--loss-type', type=str, default='MEHP', help='how to approx mmd')
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
@@ -97,9 +97,9 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
     """Load data"""  
-    data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=True, synth_spec_string=None, test_split=None)
-    print(data_pkg)
-  
+
+    data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
+
     """ Define a generator """
     if ar.model_name == 'FC':
         model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
@@ -182,7 +182,7 @@ def main():
             optimizer.step()
         # end for
         
-        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(ar.epochs, batch_idx * len(data), data_pkg.n_data, loss.item()))
+        print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), data_pkg.n_data, loss.item()))
 
         log_gen_data(model, device, ar.epochs, data_pkg.n_labels, ar.log_dir)
         scheduler.step()

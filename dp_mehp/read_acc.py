@@ -4,17 +4,18 @@ import os
 import numpy as np
 
 
-seed=1
-ep=10
+seed=0
+ep=20
 hp=100
 bs=200
 lr=0.01
-kernel=0.0003
+kernel=0.0007
 data='digits'
 
 log_dir='/Users/margaritavinaroz/Desktop/DPDR/dp_mehp/logs/gen/digits/gen/'
-folder='digits_FC_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
 #folder='digits_FC_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
+folder='digits_FC_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
+
 path_folder=log_dir + folder
 
 extra_dir= '/' + data + '/synth_eval'

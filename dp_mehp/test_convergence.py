@@ -1,17 +1,18 @@
 from all_aux_files import test_results_subsampling_rate, test_gen_data, datasets_colletion_def
 import os
 
-seed=4
-ep=10
+seed=1
+ep=20
 hp=100
 bs=200
 lr=0.01
-kernel=0.15
+kernel=0.0004
 
-data='fashion'
+data='digits'
 
 log_dir='/Users/margaritavinaroz/Desktop/DPDR/dp_mehp/logs/gen/'
-log_name='fashion_CNN_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
+#log_name='fashion_CNN_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
+log_name='digits_FC_lr' + str(lr) + '_kernel' + str(kernel)+'-bs-' + str(bs)+'-seed-'+str(seed)+'-epochs-'+ str(ep)+ '-hp-' + str(hp)
 
 
 skip_downstream_model=False

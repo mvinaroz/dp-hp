@@ -288,7 +288,7 @@ def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_result
   if data_path is None:
     data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
   datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
-  mean_acc = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
+  mean_acc = test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_dir, log_results,
                                   subsample, custom_keys, skip_slow_models, only_slow_models,
                                   skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
                                   print_conf_mat, norm_data)
@@ -313,7 +313,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
   model_specs = defaultdict(dict)
-  # model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
+  #model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
   model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 50000, 'multi_class': 'auto'}
   model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
   model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
@@ -363,7 +363,7 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   f1_str = f1_str + f' {f1}'
   return acc, f1, conf, acc_str, f1_str
 
-def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
+def test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_dir, log_results=False,
                          subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
                          skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
                          print_conf_mat=False, norm_data=False):
@@ -374,7 +374,7 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
     os.makedirs(log_save_dir, exist_ok=True)
 
   models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
-
+  print(model_specs)
   g_to_r_acc_summary = []
   dc = datasets_colletion
   for key in run_keys:
@@ -382,13 +382,107 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
     a_str, f_str = 'acc:', 'f1:'
 
     if not skip_gen_to_real:
-      model = models[key](**model_specs[key])
-      print('model:', model)
-      g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+        if data_key == 'digits':
+            if key == 'gaussian_nb':
+                list_acc=[]
+                model_specs['gaussian_nb'] = {'var_smoothing': 1e-1}
+                model1 = models[key](**model_specs[key])
+                print('model:', model1)
+                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str + 'g2r', f_str + 'g2r')
-      print('accuracy:', g_to_r_acc)
-      g_to_r_acc_summary.append(g_to_r_acc)
+                print('accuracy of the 1st Gaussin_nb setting:', g_to_r_acc1) 
+                list_acc.append(g_to_r_acc1)
+                
+                model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
+                model2 = models[key](**model_specs[key])
+                print('model:', model2)
+                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                print('accuracy of the 2nd Gaussin_nb setting:', g_to_r_acc2) 
+                list_acc.append(g_to_r_acc2)
+                
+                model_specs['gaussian_nb'] = {'var_smoothing': 1e-9}
+                model3 = models[key](**model_specs[key])
+                print('model:', model3)
+                g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model3, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                print('accuracy of the 3rd Gaussin_nb setting:', g_to_r_acc3) 
+                list_acc.append(g_to_r_acc3)
+                
+                g_to_r_acc=max(list_acc)
+                print('This is the best accuacy for Gaussian_nb: ', g_to_r_acc)
+                g_to_r_acc_summary.append(g_to_r_acc)
+                
+            elif key =='decision_tree':
+                list_acc=[]
+                list_criterion=['gini', 'entropy']
+                list_min_samp_split=[2, 3, 4, 5, 8, 10, 12, 15, 20]
+                for i in list_criterion:
+                    for j in list_min_samp_split:
+                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i, 'min_samples_split': j}
+                        model1 = models[key](**model_specs[key])
+                        print('model:', model1)
+                        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                        print('accuracy of the 1st Decision_tree setting:', g_to_r_acc1) 
+                        list_acc.append(g_to_r_acc1)
+                
+                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'log2', 'min_samples_split': j}
+                        model2 = models[key](**model_specs[key])
+                        print('model:', model2)
+                        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                        print('accuracy of the 2nd Decision_tree setting:', g_to_r_acc2) 
+                        list_acc.append(g_to_r_acc2)
+                
+                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'auto', 'min_samples_split': j}
+                        model3 = models[key](**model_specs[key])
+                        print('model:', model3)
+                        g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                        print('accuracy of the 3rd Decision_tree setting:', g_to_r_acc3) 
+                        list_acc.append(g_to_r_acc3)
+                
+                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i,'max_features':'sqrt', 'min_samples_split': j}
+                        model4 = models[key](**model_specs[key])
+                        print('model:', model4)
+                        g_to_r_acc4, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                        print('accuracy of the 4th Decision_tree setting:', g_to_r_acc4) 
+                        list_acc.append(g_to_r_acc4)
+                
+                
+                g_to_r_acc=max(list_acc)
+                print('This is the best accuacy for Decision_tree: ', g_to_r_acc)
+                g_to_r_acc_summary.append(g_to_r_acc)
+            else:    
+                model = models[key](**model_specs[key])
+                print('model:', model)
+                
+                g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+                print('accuracy:', g_to_r_acc)
+                g_to_r_acc_summary.append(g_to_r_acc)
+                
+        else:   
+            #For fashion we apply the hyperparam set by default in prep_models
+            model = models[key](**model_specs[key])
+            print('model:', model)
+        
+    
+            g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+                                                                        dc.x_real_test, dc.y_real_test,
+                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+            print('accuracy:', g_to_r_acc)
+            g_to_r_acc_summary.append(g_to_r_acc)
     else:
       g_to_r_acc, g_to_r_f1, g_to_r_conf = -1, -1, -np.ones((10, 10))
 

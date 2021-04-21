@@ -21,7 +21,8 @@ from torchvision import datasets
 def get_args():
 
     parser = argparse.ArgumentParser()
-
+    
+    
     parser.add_argument('--seed', type=int, default=0, help='sets random seed')
     parser.add_argument('--data-name', type=str, default='digits', help='options are digits or fashion')
 
@@ -43,8 +44,8 @@ def get_args():
     # OTHERS
     parser.add_argument('--single-release', action='store_true', default=True, help='produce a single data mean embedding')  # Here usually we have action and default be True
     parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
-    parser.add_argument('--heuristic-sigma', action='store_true', default=True)
-    parser.add_argument("--separate-kernel-length", action='store_true', default=True)  # heuristic-sigma has to be "True", to enable separate-kernel-length
+    parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+    parser.add_argument("--separate-kernel-length", action='store_true', default=False)  # heuristic-sigma has to be "True", to enable separate-kernel-length
     parser.add_argument('--kernel-length', type=float, default=0.001, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
@@ -65,7 +66,7 @@ def preprocess_args(ar):
                + 'epsilon=' + str(ar.epsilon) + '_' + 'delta=' + str(ar.delta) + '_' \
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'bs=' + str(ar.batch_size) + '_' + 'lr=' + str(ar.lr) + '_' \
-               + 'nepoch=' + str(ar.epochs)
+               + 'nepoch=' + str(ar.epochs) + '_MIJUNG'
 
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
