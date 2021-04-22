@@ -312,7 +312,7 @@ def main():
 
     elif data_name == 'digits':
 
-        # """ load synthetic data for training """
+        """ load synthetic data for training """
         # file_name = 'logs/gen/digits_FC_single_release=True_order=200_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.0005_bs=200_lr=0.01_nepoch=10/digits/synthetic_mnist.npz'
         # td = np.load(file_name)
         # X_tr = td['data']
@@ -360,75 +360,22 @@ def main():
                 pred = model.predict(X_te)  # test on real data
                 acc1 = accuracy_score(pred, y_te)
 
-                model = GaussianNB(var_smoothing=0.34, priors=prior_class)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-
-                model = GaussianNB(var_smoothing=0.12, priors=prior_class)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-
-                model = GaussianNB(var_smoothing=1e-2, priors=prior_class)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc4 = accuracy_score(pred, y_te)
-
-                acc = max(acc, acc1, acc2, acc3, acc4)
+                acc = max(acc, acc1)
 
 
             elif str(model)[0:12] == 'DecisionTree':
 
                 print('training again')
-                model = DecisionTreeClassifier(criterion='gini', class_weight='balanced', min_samples_split=10)
+                model = DecisionTreeClassifier(criterion='gini', class_weight='balanced', max_depth=100, max_leaf_nodes=100)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 acc1 = accuracy_score(pred, y_te)
                 print('DT acc1', acc1)
 
-                print('training again')
-                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_leaf_nodes=3)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-                print('DT acc2', acc2)
-
-                print('training again')
-                model = DecisionTreeClassifier(criterion='entropy', class_weight='balanced', max_leaf_nodes=10)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-                print('DT acc3', acc3)
-
-                acc = max(acc, acc1, acc2, acc3)
+                acc = max(acc, acc1)
 
 
             elif str(model)[0:8] == 'AdaBoost':
-
-                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.8)  # improved
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-                print('adaboost acc1', acc1)
-
-                model = AdaBoostClassifier(n_estimators=200, learning_rate=0.5)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-                print('adaboost acc2', acc2)
-
-                model = AdaBoostClassifier(n_estimators=100, learning_rate=0.5, algorithm='SAMME')
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-                print('adaboost acc3', acc3)
-
-                model = AdaBoostClassifier(n_estimators=100, learning_rate=5.0, random_state=0)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc4 = accuracy_score(pred, y_te)
-                print('adaboost acc4', acc4)
 
                 model = AdaBoostClassifier(n_estimators=1000, learning_rate=5.0, random_state=0)
                 model.fit(X_tr, y_tr)
@@ -436,100 +383,35 @@ def main():
                 acc5 = accuracy_score(pred, y_te)
                 print('adaboost acc5', acc5)
 
-                model = AdaBoostClassifier(n_estimators=1000, learning_rate=4.0, random_state=0)
+                model = AdaBoostClassifier(n_estimators=1000, learning_rate=0.7, random_state=0, algorithm='SAMME.R')
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 acc6 = accuracy_score(pred, y_te)
                 print('adaboost acc6', acc6)
 
-                acc = max(acc, acc1, acc2, acc3, acc4, acc5, acc6)
+                acc = max(acc, acc5, acc6)
 
             elif str(model)[0:7] == 'Bagging':
 
-                print('test Bagging with different hyperparameters')
-                model = BaggingClassifier(max_samples=0.1, n_estimators=20)  # improved
+                model = BaggingClassifier(n_estimators=200, warm_start=True, max_features=40)  # improved
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 acc1 = accuracy_score(pred, y_te)
                 print('bagging acc1', acc1)
 
-                model = BaggingClassifier(n_estimators=200, warm_start=True)  # improved
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-                print('bagging acc2', acc2)
-
-                model = BaggingClassifier(n_estimators=200, warm_start=True, max_features=10)  # improved
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-                print('bagging acc1', acc3)
-
-                acc = max(acc, acc1, acc2, acc3)
+                acc = max(acc, acc1)
 
             elif str(model)[0:9] == 'LinearSVC':
-                print('training again')
 
-                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge')
+                model = LinearSVC(max_iter=10000, tol=1e-16, loss='hinge',multi_class = 'crammer_singer', C=0.0001)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 acc1 = accuracy_score(pred, y_te)
                 print('linearSVC acc1', acc1)
 
-                print('training again')
-                model = LinearSVC(max_iter=10000, tol=1e-8, loss='hinge', class_weight='balanced')
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-                print('linearSVC acc2', acc2)
-
-                print('training again')
-                model = LinearSVC(max_iter=10000, tol=1e-12, loss='hinge', C=0.01)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-                print('linearSVC acc3', acc3)
-
-                print('training again')
-                model = LinearSVC(max_iter=10000, tol=1e-12, multi_class = 'crammer_singer')
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc4 = accuracy_score(pred, y_te)
-                print('linearSVC acc4', acc4)
-
-                model = LinearSVC(max_iter=10000, tol=1e-16, loss='hinge',multi_class = 'crammer_singer', C=0.1)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc5 = accuracy_score(pred, y_te)
-                print('linearSVC acc5', acc5)
-
-                model = LinearSVC(max_iter=20000, tol=1e-16, loss='hinge')
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc6 = accuracy_score(pred, y_te)
-                print('linearSVC acc6', acc6)
-
-                acc = max(acc, acc1, acc2, acc3, acc4, acc5, acc6)
+                acc = max(acc, acc1)
 
             elif str(model)[0:16] == 'GradientBoosting':
-
-                model = GradientBoostingClassifier(learning_rate=0.5, n_estimators=100)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc1', acc1)
-
-                model = GradientBoostingClassifier(learning_rate=0.5, n_estimators=200)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc2 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc2', acc2)
-
-                model = GradientBoostingClassifier(random_state=0)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc3 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc3', acc3)
 
                 model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.05)
                 model.fit(X_tr, y_tr)
@@ -537,23 +419,17 @@ def main():
                 acc4 = accuracy_score(pred, y_te)
                 print('GradientBoosting acc4', acc4)
 
-                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.01)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc5 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc5', acc5)
-
                 model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.001)
                 model.fit(X_tr, y_tr)
                 pred = model.predict(X_te)  # test on real data
                 acc6 = accuracy_score(pred, y_te)
                 print('GradientBoosting acc6', acc6)
 
-                acc = max(acc, acc1, acc2, acc3, acc4, acc5, acc6)
+                acc = max(acc, acc4, acc6)
 
 
 
-            print("F1-score on test data is %.3f" % (acc))
+            print("accuracy on test data is %.3f" % (acc))
             acc_arr.append(acc)
 
 
