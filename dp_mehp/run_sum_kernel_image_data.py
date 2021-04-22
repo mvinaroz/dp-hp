@@ -63,13 +63,8 @@ def get_args():
     parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument("--separate-kernel-length", action='store_true', default=False)  # heuristic-sigma has to be "True", to enable separate-kernel-length
-<<<<<<< HEAD
-    parser.add_argument('--kernel-length', type=float, default=0.001, help='')
-    parser.add_argument('--order-hermite', type=int, default=100, help='')
-=======
     parser.add_argument('--kernel-length', type=float, default=0.0005, help='')
     parser.add_argument('--order-hermite', type=int, default=200, help='')
->>>>>>> a1466dc3bbe0b6e76c3452309dd62556a1c108d4
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
     parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
@@ -329,7 +324,7 @@ def main():
         """ test classifiers """
         models_to_test = np.array(
             [
-             LogisticRegression(),
+             LogisticRegression(solver='lbfgs', max_iter=50000, multi_class='auto'),
              GaussianNB(),
              BernoulliNB(),
              LinearSVC(),
