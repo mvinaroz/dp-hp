@@ -1,12 +1,12 @@
 from all_aux_files import test_results_subsampling_rate, test_gen_data, datasets_colletion_def
 import os
 
-seed=1
-ep=20
-hp=100
+seed=0
+ep=10
+hp=150
 bs=200
 lr=0.01
-kernel=0.0004
+kernel=0.0001
 
 data='digits'
 

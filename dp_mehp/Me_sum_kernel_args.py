@@ -102,21 +102,11 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
     """Load data"""  
-<<<<<<< HEAD
+
 
     data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
 
-=======
-    # data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=True, synth_spec_string=None, test_split=None)
-    if ar.data == 'fashion':
-        data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, True, False, [], [])
-    else:
-        data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=True,
-                                   synth_spec_string=None, test_split=None)
 
-    print(data_pkg)
-  
->>>>>>> a1466dc3bbe0b6e76c3452309dd62556a1c108d4
     """ Define a generator """
     if ar.model_name == 'FC':
         model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
