@@ -63,8 +63,8 @@ def get_args():
     parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument("--separate-kernel-length", action='store_true', default=False)  # heuristic-sigma has to be "True", to enable separate-kernel-length
-    parser.add_argument('--kernel-length', type=float, default=0.0005, help='')
-    parser.add_argument('--order-hermite', type=int, default=200, help='')
+    parser.add_argument('--kernel-length', type=float, default=0.0001, help='')
+    parser.add_argument('--order-hermite', type=int, default=500, help='')
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
     parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
@@ -83,7 +83,7 @@ def preprocess_args(ar):
                + 'epsilon=' + str(ar.epsilon) + '_' + 'delta=' + str(ar.delta) + '_' \
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'bs=' + str(ar.batch_size) + '_' + 'lr=' + str(ar.lr) + '_' \
-               + 'nepoch=' + str(ar.epochs) + '_MIJUNG'
+               + 'nepoch=' + str(ar.epochs)
 
     ar.log_name = log_name
     ar.log_dir = base_dir + log_name + '/'
@@ -140,7 +140,11 @@ def main():
     if model_name == 'FC':
         model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=True, batch_norm=True).to(device)
     elif model_name == 'CNN':
+        # if data_name=='fashion':
         model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
+        # else: # digits with smaller kernel size
+        #     model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '3,3', use_sigmoid=True, batch_norm=True).to(
+        #     device)
 
 
     """ set the scale length """
@@ -302,135 +306,135 @@ def main():
 
     np.savez(dir_syn_data, data=syn_data, labels=syn_labels)
 
-    if data_name == 'fashion':
-        test_results_subsampling_rate(ar.data_name, ar.log_name + '/' + ar.data_name, ar.log_dir, ar.skip_downstream_model, ar.sampling_rate_synth)
+    # if data_name == 'fashion':
+    test_results_subsampling_rate(ar.data_name, ar.log_name + '/' + ar.data_name, ar.log_dir, ar.skip_downstream_model, ar.sampling_rate_synth)
 
-    elif data_name == 'digits':
-
-        """ load synthetic data for training """
-        # file_name = 'logs/gen/digits_FC_single_release=True_order=200_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.0005_bs=200_lr=0.01_nepoch=10/digits/synthetic_mnist.npz'
-        # td = np.load(file_name)
-        # X_tr = td['data']
-        # y_tr = td['labels'].squeeze()
-        X_tr = syn_data
-        y_tr = syn_labels.squeeze()
-
-        """ load real data for testing """
-        d = np.load('data/MNIST/numpy_dmnist.npz')
-        X_te = d['x_test'].reshape(10000, 784)
-        y_te = d['y_test']
-
-        acc_arr = []
-        """ test classifiers """
-        models_to_test = np.array(
-            [
-             LogisticRegression(solver='lbfgs', max_iter=50000, multi_class='auto'),
-             GaussianNB(),
-             BernoulliNB(),
-             LinearSVC(),
-             DecisionTreeClassifier(),
-             LinearDiscriminantAnalysis(),
-             AdaBoostClassifier(),
-             BaggingClassifier(),
-             RandomForestClassifier(),
-             GradientBoostingClassifier(subsample=0.1, n_estimators=50),
-             MLPClassifier(),
-            xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.5)
-            ])
-
-        for model in models_to_test:
-
-            print('\n', type(model))
-            model.fit(X_tr, y_tr)
-            pred = model.predict(X_te)  # test on real data
-            acc = accuracy_score(pred, y_te)
-
-            prior_class = 1/n_classes*np.ones(n_classes)
-
-            if str(model)[0:10] == 'GaussianNB':
-                print('training again')
-
-                model = GaussianNB(var_smoothing=0.2, priors=prior_class)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-
-                acc = max(acc, acc1)
-
-
-            elif str(model)[0:12] == 'DecisionTree':
-
-                print('training again')
-                model = DecisionTreeClassifier(criterion='gini', class_weight='balanced', max_depth=100, max_leaf_nodes=100)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-                print('DT acc1', acc1)
-
-                acc = max(acc, acc1)
-
-
-            elif str(model)[0:8] == 'AdaBoost':
-
-                model = AdaBoostClassifier(n_estimators=1000, learning_rate=5.0, random_state=0)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc5 = accuracy_score(pred, y_te)
-                print('adaboost acc5', acc5)
-
-                model = AdaBoostClassifier(n_estimators=1000, learning_rate=0.7, random_state=0, algorithm='SAMME.R')
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc6 = accuracy_score(pred, y_te)
-                print('adaboost acc6', acc6)
-
-                acc = max(acc, acc5, acc6)
-
-            elif str(model)[0:7] == 'Bagging':
-
-                model = BaggingClassifier(n_estimators=200, warm_start=True, max_features=40)  # improved
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-                print('bagging acc1', acc1)
-
-                acc = max(acc, acc1)
-
-            elif str(model)[0:9] == 'LinearSVC':
-
-                model = LinearSVC(max_iter=10000, tol=1e-16, loss='hinge',multi_class = 'crammer_singer', C=0.0001)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc1 = accuracy_score(pred, y_te)
-                print('linearSVC acc1', acc1)
-
-                acc = max(acc, acc1)
-
-            elif str(model)[0:16] == 'GradientBoosting':
-
-                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.05)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc4 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc4', acc4)
-
-                model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.001)
-                model.fit(X_tr, y_tr)
-                pred = model.predict(X_te)  # test on real data
-                acc6 = accuracy_score(pred, y_te)
-                print('GradientBoosting acc6', acc6)
-
-                acc = max(acc, acc4, acc6)
-
-
-
-            print("accuracy on test data is %.3f" % (acc))
-            acc_arr.append(acc)
-
-
-        acc_avg = np.mean(acc_arr)
-        print("------\n mean acc across classifiers is %.3f\n" % acc_avg)
-
+    # elif data_name == 'digits':
+    #
+    #     """ load synthetic data for training """
+    #     # file_name = 'logs/gen/digits_FC_single_release=True_order=200_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.0005_bs=200_lr=0.01_nepoch=10/digits/synthetic_mnist.npz'
+    #     # td = np.load(file_name)
+    #     # X_tr = td['data']
+    #     # y_tr = td['labels'].squeeze()
+    #     X_tr = syn_data
+    #     y_tr = syn_labels.squeeze()
+    #
+    #     """ load real data for testing """
+    #     d = np.load('data/MNIST/numpy_dmnist.npz')
+    #     X_te = d['x_test'].reshape(10000, 784)
+    #     y_te = d['y_test']
+    #
+    #     acc_arr = []
+    #     """ test classifiers """
+    #     models_to_test = np.array(
+    #         [
+    #          LogisticRegression(solver='lbfgs', max_iter=50000, multi_class='auto'),
+    #          GaussianNB(),
+    #          BernoulliNB(binarize=0.5),
+    #          LinearSVC(),
+    #          DecisionTreeClassifier(),
+    #          LinearDiscriminantAnalysis(),
+    #          AdaBoostClassifier(),
+    #          BaggingClassifier(),
+    #          RandomForestClassifier(),
+    #          GradientBoostingClassifier(subsample=0.1, n_estimators=50),
+    #          MLPClassifier(),
+    #         xgboost.XGBClassifier(disable_default_eval_metric=True, learning_rate=0.5)
+    #         ])
+    #
+    #     for model in models_to_test:
+    #
+    #         print('\n', type(model))
+    #         model.fit(X_tr, y_tr)
+    #         pred = model.predict(X_te)  # test on real data
+    #         acc = accuracy_score(pred, y_te)
+    #
+    #         prior_class = 1/n_classes*np.ones(n_classes)
+    #
+    #         if str(model)[0:10] == 'GaussianNB':
+    #             print('training again')
+    #
+    #             model = GaussianNB(var_smoothing=0.2, priors=prior_class)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc1 = accuracy_score(pred, y_te)
+    #
+    #             acc = max(acc, acc1)
+    #
+    #
+    #         elif str(model)[0:12] == 'DecisionTree':
+    #
+    #             print('training again')
+    #             model = DecisionTreeClassifier(criterion='gini', class_weight='balanced', max_depth=100, max_leaf_nodes=100)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc1 = accuracy_score(pred, y_te)
+    #             print('DT acc1', acc1)
+    #
+    #             acc = max(acc, acc1)
+    #
+    #
+    #         elif str(model)[0:8] == 'AdaBoost':
+    #
+    #             model = AdaBoostClassifier(n_estimators=1000, learning_rate=5.0, random_state=0)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc5 = accuracy_score(pred, y_te)
+    #             print('adaboost acc5', acc5)
+    #
+    #             model = AdaBoostClassifier(n_estimators=1000, learning_rate=0.7, random_state=0, algorithm='SAMME.R')
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc6 = accuracy_score(pred, y_te)
+    #             print('adaboost acc6', acc6)
+    #
+    #             acc = max(acc, acc5, acc6)
+    #
+    #         elif str(model)[0:7] == 'Bagging':
+    #
+    #             model = BaggingClassifier(n_estimators=200, warm_start=True, max_features=40)  # improved
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc1 = accuracy_score(pred, y_te)
+    #             print('bagging acc1', acc1)
+    #
+    #             acc = max(acc, acc1)
+    #
+    #         elif str(model)[0:9] == 'LinearSVC':
+    #
+    #             model = LinearSVC(max_iter=10000, tol=1e-16, loss='hinge',multi_class = 'crammer_singer', C=0.0001)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc1 = accuracy_score(pred, y_te)
+    #             print('linearSVC acc1', acc1)
+    #
+    #             acc = max(acc, acc1)
+    #
+    #         elif str(model)[0:16] == 'GradientBoosting':
+    #
+    #             model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.05)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc4 = accuracy_score(pred, y_te)
+    #             print('GradientBoosting acc4', acc4)
+    #
+    #             model = GradientBoostingClassifier(subsample=0.5, n_estimators=100, learning_rate=0.001)
+    #             model.fit(X_tr, y_tr)
+    #             pred = model.predict(X_te)  # test on real data
+    #             acc6 = accuracy_score(pred, y_te)
+    #             print('GradientBoosting acc6', acc6)
+    #
+    #             acc = max(acc, acc4, acc6)
+    #
+    #
+    #
+    #         print("accuracy on test data is %.3f" % (acc))
+    #         acc_arr.append(acc)
+    #
+    #
+    #     acc_avg = np.mean(acc_arr)
+    #     print("------\n mean acc across classifiers is %.3f\n" % acc_avg)
+    #
 
 
 

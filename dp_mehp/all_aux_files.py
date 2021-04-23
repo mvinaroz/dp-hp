@@ -104,6 +104,7 @@ def feature_map_HP(k, x, rho, device):
   # x: where to evaluate the function at
 
   eigen_vals = (1 - rho) * (rho ** torch.arange(0, k + 1))
+  # print("eigenvalues", eigen_vals)
   eigen_vals = eigen_vals.to(device)
   phi_x = compute_phi(x, k + 1, rho, device)
 
@@ -323,7 +324,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
                                   'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
                                   'min_impurity_decrease': 0.0}
   #model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
-  model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}  
+  model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}
   #best so far (not used for consistency with old results. change too small to warrant redoing everything)
   model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
   model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
