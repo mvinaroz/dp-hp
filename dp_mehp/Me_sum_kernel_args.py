@@ -109,7 +109,7 @@ def main():
 
     """ Define a generator """
     if ar.model_name == 'FC':
-        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True, use_clamp=True).to(device)
+        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True, use_clamp=False).to(device)
     elif ar.model_name == 'CNN':
         model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True, batch_norm=True).to(device)
       
