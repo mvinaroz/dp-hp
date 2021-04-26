@@ -2,9 +2,10 @@ from all_aux_files import test_gen_data, log_final_score
 import argparse
 import numpy as np
 
-parser = argparse.ArgumentParser()
 
 if __name__ == '__main__':
+
+  parser = argparse.ArgumentParser()
   parser.add_argument('--seed', type=int, default=None, help='sets random seed')
   parser.add_argument('--base-log-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--log-name', type=str, default=None, help='subdirectory for this run')
@@ -24,5 +25,6 @@ if __name__ == '__main__':
 
   np.random.seed(ar.seed)
   # test_results_subsampling_rate(ar.data, ar.log_name, ar.log_dir, False, ar.subsampling_rate)
-  final_score = test_gen_data(data_log_name=convoluted_log_name, data_key=ar.data, subsample=ar.subsampling_rate)
+  final_score = test_gen_data(data_log_name=convoluted_log_name, data_key=ar.data, subsample=ar.subsampling_rate,
+                              skip_slow_models=ar.skip_slow_models, only_slow_models=ar.only_slow_models)
   log_final_score(ar.log_dir, final_score)

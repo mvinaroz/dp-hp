@@ -54,13 +54,13 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
                    f'output = joblogs/{experiment_name}_$(Process).out.txt',
                    f'log = joblogs/{experiment_name}_$(Process).log.txt',
                    'getenv = True',
-                   'request_cpus = 1',
-                   'request_gpus = 2',
+                   'request_cpus = 2',
+                   # 'request_gpus = 2',
                    'request_memory = 8GB',
                    '+MaxRunningPrice = 500',
                    '+RunningPriceExceededAction = "restart"',
                    # 'requirements = CUDAGlobalMemoryMb > 5000',
-                   'requirements = CUDACapability >= 3.7',
+                   # 'requirements = CUDACapability >= 3.7',
                    f'queue {jobs_count}']
 
   with open(os.path.join(save_dir, f'{experiment_name}.sh'), 'w') as f:
@@ -77,7 +77,7 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
 
 
 if __name__ == '__main__':
-  experiment_name = 'apr26_me_eval_small_models_fashion'
+  experiment_name = 'apr26_me_eval_big_models_fashion'
   save_dir = 'cluster_scripts'
   base_string = 'python3.6 downstream_test.py'
   params = [('--data', ['fashion']),
@@ -87,10 +87,11 @@ if __name__ == '__main__':
             # ('', ['--skip-downstream-model']),
             # ('--kernel-length', [0.15]),
             # ('--is-private', ['True', 'False']),
+            ('', ['--skip-slow-models', '--only-slow-models']),
             ('--log-name {} --seed {}',
              list(zip([f'apr23_me_training_{k}' for k in range(10)],
                   [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]))),
-            ('-rate', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.2])
+            ('-rate', [0.5, 1.0])
             ]
   exp_id_flag = None
-  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=2)
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1)

@@ -37,7 +37,6 @@ def get_args():
   parser.add_argument('--data', type=str, default='digits', help='options are digits, fashion and 2d')
   parser.add_argument('--create-dataset', action='store_true', default=True, help='if true, make 60k synthetic code_balanced')
 
-  
   # OPTIMIZATION
   parser.add_argument('--batch-size', '-bs', type=int, default=1000)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
@@ -52,7 +51,6 @@ def get_args():
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
   parser.add_argument('--gen-spec', type=str, default='500,500', help='specifies hidden layers of generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
-  
 
   # ALTERNATE MODES
   parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
@@ -101,18 +99,14 @@ def main():
     torch.manual_seed(ar.seed)
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
-    """Load data"""  
-
-
-    data_pkg=get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
-
+    """Load data"""
+    data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
 
     """ Define a generator """
     if ar.model_name == 'FC':
         model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
     elif ar.model_name == 'CNN':
         model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True, batch_norm=True).to(device)
-      
 
     """ set the scale length """
     num_iter = np.int(data_pkg.n_data / ar.batch_size)
@@ -183,10 +177,10 @@ def main():
             data = flatten_features(data)
 
             gen_code, gen_labels = model.get_code(ar.batch_size, device)
-            gen_samples = model(gen_code) # batch_size by 784
+            gen_samples = model(gen_code)  # batch_size by 784
 
             if ar.single_release:
-                synth_data_embedding = torch.zeros((data_pkg.n_features* (order+1), data_pkg.n_labels), device=device)
+                synth_data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(data_pkg.n_labels):
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
