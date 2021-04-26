@@ -22,5 +22,5 @@ if __name__ == '__main__':
 
   np.random.seed(ar.seed)
   # test_results_subsampling_rate(ar.data, ar.log_name, ar.log_dir, False, ar.subsampling_rate)
-  final_score = test_gen_data(ar.log_name, ar.data, ar.subsampling_rate)
+  final_score = test_gen_data(data_log_name=ar.log_name, data_key=ar.data, subsample=ar.subsampling_rate)
   log_final_score(ar.log_dir, final_score)
