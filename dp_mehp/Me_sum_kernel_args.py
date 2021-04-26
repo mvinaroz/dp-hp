@@ -153,7 +153,6 @@ def main():
         data_embedding = torch.sum(data_embedding, axis=2)
         print('done with computing mean embedding of data')
 
-
     if ar.is_private:
         k = 1
         epsilon = ar.epsilon

@@ -20,6 +20,8 @@ if __name__ == '__main__':
     assert ar.log_name is not None
     ar.log_dir = ar.base_log_dir + ar.log_name + '/'
 
+  convoluted_log_name = f'{ar.log_name}/{ar.data}'
+
   np.random.seed(ar.seed)
   # test_results_subsampling_rate(ar.data, ar.log_name, ar.log_dir, False, ar.subsampling_rate)
   final_score = test_gen_data(data_log_name=ar.log_name, data_key=ar.data, subsample=ar.subsampling_rate)
