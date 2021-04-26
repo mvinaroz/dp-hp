@@ -62,6 +62,7 @@ def find_rho(sigma2):
 
     return rho
 
+
 def find_order(rho,eigen_val_threshold):
     k = 100
     eigen_vals = (1 - rho) * (rho ** np.arange(0, k + 1))
@@ -87,6 +88,7 @@ def phi_recursion(phi_k, phi_k_minus_1, rho, degree, x_in):
     second_term = rho/np.sqrt(k*(k+1))*k*phi_k_minus_1
     phi_k_plus_one = first_term - second_term
     return phi_k_plus_one
+
 
 def compute_phi(x_in, n_degrees, rho, device):
   first_dim = x_in.shape[0]
