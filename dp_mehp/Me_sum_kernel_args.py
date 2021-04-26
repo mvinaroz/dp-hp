@@ -88,8 +88,6 @@ def preprocess_args(ar):
     if ar.seed is None:
         ar.seed = np.random.randint(0, 1000)
         assert ar.data in {'digits', 'fashion'}
-        
-
 
     
 def main():
@@ -130,22 +128,30 @@ def main():
     #     order = or_thr
     #     print('chosen order is', order)
 
+    print('computing mean embedding of data')
+    # old_data_embedding = torch.zeros(data_pkg.n_features*(order+1), data_pkg.n_labels, num_iter, device=device)
+    #
+    # for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
+    #     # print(batch_idx)
+    #     data, labels = data.to(device), labels.to(device)
+    #     data = flatten_features(data)
+    #     for idx in range(data_pkg.n_labels):
+    #         idx_data = data[labels == idx]
+    #         phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
+    #         old_data_embedding[:, idx, batch_idx] = phi_data
+    # old_data_embedding = torch.sum(old_data_embedding, axis=2)
 
-    if ar.single_release:
-        print('single release is', ar.single_release)
-        print('computing mean embedding of data')
-        data_embedding = torch.zeros( data_pkg.n_features*(order+1), data_pkg.n_labels, num_iter, device=device)
-      
-        for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
-            # print(batch_idx)
-            data, labels = data.to(device), labels.to(device)
-            data = flatten_features(data)
-            for idx in range(data_pkg.n_labels):
-                idx_data = data[labels == idx]
-                phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data )
-                data_embedding[:,idx, batch_idx] = phi_data
-        data_embedding = torch.sum(data_embedding, axis=2)
-        print('done with computing mean embedding of data')
+    # summing at the end uses unnecessary memory - leaving previous version in in case of errors with this one
+    data_embedding = torch.zeros(data_pkg.n_features * (order + 1), data_pkg.n_labels, device=device)
+    for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
+        data, labels = flatten_features(data.to(device)), labels.to(device)
+        for idx in range(data_pkg.n_labels):
+            idx_data = data[labels == idx]
+            phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
+            data_embedding[:, idx] += phi_data
+
+    # print('DEBUG embedding diff:', torch.norm(old_data_embedding - data_embedding))  # it's around 2e-6, so almost 0
+    print('done with computing mean embedding of data')
 
     if ar.is_private:
         k = 1
