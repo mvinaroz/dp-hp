@@ -215,7 +215,7 @@ def main():
     if ar.separate_kernel_length:
         rho = find_rho_tab(sigma2)
     else:
-        rho = find_rho(sigma2)
+        rho = find_rho(sigma2, False)
     # ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
     # order = find_order(rho, ev_thr)
     # or_thr = ar.order_hermite
