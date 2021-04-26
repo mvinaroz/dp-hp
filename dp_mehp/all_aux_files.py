@@ -766,7 +766,7 @@ def log_gen_data(gen, device, epoch, n_labels, log_dir):
   plot_mnist_batch(plot_samples, 10, n_labels, log_dir + f'samples_ep{epoch}', denorm=False)
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=True, batch_norm=True):
+  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=True, batch_norm=True, use_clamp=False):
     super(FCCondGen, self).__init__()
     d_hid = [int(k) for k in d_hid.split(',')]
     assert len(d_hid) < 5
@@ -796,6 +796,7 @@ class FCCondGen(nn.Module):
     self.use_sigmoid = use_sigmoid
     self.d_code = d_code
     self.n_labels = n_labels
+    self.use_clamp = use_clamp
 
   def forward(self, x):
     x = self.fc1(x)
@@ -812,6 +813,10 @@ class FCCondGen(nn.Module):
 
     if self.use_sigmoid:
       x = self.sigmoid(x)
+
+    if self.use_clamp:
+      x = torch.clamp(x, min=-0.5, max=3.0)
+
     return x
 
   def get_code(self, batch_size, device, return_labels=True, labels=None):
