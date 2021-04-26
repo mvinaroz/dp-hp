@@ -63,8 +63,8 @@ def get_args():
     parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument("--separate-kernel-length", action='store_true', default=False)  # heuristic-sigma has to be "True", to enable separate-kernel-length
-    parser.add_argument('--kernel-length', type=float, default=0.0001, help='')
-    parser.add_argument('--order-hermite', type=int, default=500, help='')
+    parser.add_argument('--kernel-length', type=float, default=0.8, help='')
+    parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
     parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
 
@@ -129,7 +129,43 @@ def main():
 
     """ Load data to test """
     # train_loader = load_data(data_name, batch_size)
-    data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    if data_name == 'fashion':
+        data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
+    elif data_name == 'digits':
+        normalize = 1
+        data_dir = 'data'
+        use_cuda = 1 if torch.cuda.is_available() else 0
+        kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+        transforms_list = [transforms.ToTensor()]
+        if normalize:
+          mnist_mean = 0.1307
+          mnist_sdev = 0.3081
+          transforms_list.append(transforms.Normalize((mnist_mean,), (mnist_sdev,)))
+        prep_transforms = transforms.Compose(transforms_list)
+        trn_data = datasets.MNIST(data_dir, train=True, download=True, transform=prep_transforms)
+        tst_data = datasets.MNIST(data_dir, train=False, transform=prep_transforms)
+        train_loader = torch.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+        test_loader = torch.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
+
+        train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
+                                                               'train_data', 'test_data',
+                                                               'n_features', 'n_data', 'n_labels', 'eval_func'])
+        n_features = 784
+        n_data = 60_000
+        n_labels = 10
+        eval_func = None
+
+        data_pkg = train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
+
+        def prep_data(dataset):
+            x, y = dataset.data.numpy(), dataset.targets.numpy()
+            x = np.reshape(x, (-1, 784)) / 255
+            return x, y
+
+        x_trn, y_trn = prep_data(trn_data)
+        x_tst, y_tst = prep_data(tst_data)
+        np.savez('data/MNIST/numpy_dmnist.npz', x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst)
+
     train_loader = data_pkg.train_loader
     n_train_data = 60000
 
