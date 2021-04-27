@@ -638,9 +638,7 @@ def test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_d
             #For fashion we apply the hyperparam set by default in prep_models
             model = models[key](**model_specs[key])
             print('model:', model)
-        
-            if key == 'linear_svc':
-              assert 1 % 1 == 1  # DEBUG
+
             g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str + 'g2r', f_str + 'g2r')
