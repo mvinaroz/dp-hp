@@ -103,107 +103,180 @@ def main():
     D2 = (X - Y)**2
     K = np.exp(-D2 / (2.0 * sigma2))
 
-    plt.figure(1)
-    plt.subplot(431)
-    plt.contourf(X, Y, K, 50, cmap='RdGy')
-    plt.xlabel('x')
-    plt.ylabel('x_prime')
-    plt.colorbar()
-    plt.title('k(x,x_prime)')
+    """ first we plot the features evaluated at x """
 
-    ### (1) Random Fourier features
-    n_features = 4
+    font = {'family': 'normal',
+            'weight': 'bold',
+            'size': 22}
+
+    matplotlib.rc('font', **font)
+
+    sigma2 = 0.5
+    length_scale = np.sqrt(sigma2)
+    plt.figure(4)
+    plt.subplot(221)
+    plt.title('length scale = %.2f'%length_scale)
+    n_features = 40
     draws = n_features // 2
     W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
     emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
-    emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
-    RF = torch.matmul(emb2, emb1.transpose(1,0))
-    plt.subplot(433)
-    plt.contourf(X, Y, RF, 50, cmap='RdGy')
-    plt.title('RF (D=4)')
-    plt.colorbar()
-
-    n_features = 10
-    draws = n_features // 2
-    W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
-    emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
-    RF = torch.matmul(emb2, emb1.transpose(1,0))
-    plt.subplot(436)
-    plt.contourf(X, Y, RF, 50, cmap='RdGy')
-    plt.title('RF (D=10)')
-    plt.colorbar()
-
-    n_features = 100
-    draws = n_features // 2
-    W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
-    emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
-    RF = torch.matmul(emb2, emb1.transpose(1,0))
-    plt.subplot(439)
-    plt.contourf(X, Y, RF, 50, cmap='RdGy')
-    plt.title('RF (D=100)')
-    plt.colorbar()
-
-    n_features = 500
-    draws = n_features // 2
-    W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
-    emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
-    emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
-    RF = torch.matmul(emb2, emb1.transpose(1,0))
-    plt.subplot(4,3,12)
-    plt.contourf(X, Y, RF, 50, cmap='RdGy')
-    plt.title('RF (D=500)')
-    plt.colorbar()
-
-
-    ### (2) Hermite Polynomials
-    rho = find_rho(sigma2)
-    order = 4
+    plt.plot(emb1[0,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[10,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[299,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[1400,:], 'o-', linewidth=3.0)
+    plt.xlabel('number of random features')
+    plt.ylabel('random features')
+    plt.subplot(223)
+    rho = find_rho(sigma2, False)
+    order = n_features
     device = 'cpu'
     phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
-    phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
-    HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
-    plt.subplot(432)
-    plt.contourf(X, Y, HP, 50, cmap='RdGy')
-    plt.colorbar()
-    plt.title('HP (order=4)')
+    phi_1 = phi_1.squeeze(1)
+    plt.plot(phi_1[0,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[10,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[299,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[1400,:], 'o-', linewidth=3.0)
+    plt.xlabel('hermite polynomial orders')
+    plt.ylabel('hermite polynomial features')
 
-    order = 10
+    sigma2 = 50.0
+    length_scale = np.sqrt(sigma2)
+    # plt.figure(4)
+    plt.subplot(222)
+    plt.title('length scale = %.2f'%length_scale)
+    n_features = 40
+    draws = n_features // 2
+    W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
+    plt.plot(emb1[0,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[10,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[299,:], 'o-', linewidth=3.0)
+    plt.plot(emb1[1400,:], 'o-', linewidth=3.0)
+    plt.xlabel('number of random features')
+    plt.ylabel('random features')
+    plt.subplot(224)
+    rho = find_rho(sigma2, False)
+    order = n_features
+    # device = 'cpu'
     phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
-    phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
-    HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
-    plt.subplot(435)
-    plt.contourf(X, Y, HP, 50, cmap='RdGy')
-    plt.colorbar()
-    plt.title('HP (order=10)')
+    phi_1 = phi_1.squeeze(1)
+    plt.plot(phi_1[0,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[10,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[299,:], 'o-', linewidth=3.0)
+    plt.plot(phi_1[1400,:], 'o-', linewidth=3.0)
+    plt.xlabel('hermite polynomial orders')
+    plt.ylabel('hermite polynomial features')
 
-    order = 100
-    phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
-    phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
-    HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
-    plt.subplot(438)
-    plt.contourf(X, Y, HP, 50, cmap='RdGy')
-    plt.colorbar()
-    plt.title('HP (order=100)')
+    # plt.show()
 
 
-    order = 500
-    phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
-    phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
-    HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
-    plt.subplot(4,3,11)
-    plt.contourf(X, Y, HP, 50, cmap='RdGy')
-    plt.colorbar()
-    plt.title('HP (order=500)')
-    plt.show()
+    # plt.figure(1)
+    # plt.subplot(431)
+    # plt.contourf(X, Y, K, 50, cmap='RdGy')
+    # plt.xlabel('x')
+    # plt.ylabel('x_prime')
+    # plt.colorbar()
+    # plt.title('k(x,x_prime)')
+    #
+    # ### (1) Random Fourier features
+    # n_features = 4
+    # draws = n_features // 2
+    # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    # emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
+    # emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
+    # RF = torch.matmul(emb2, emb1.transpose(1,0))
+    # plt.subplot(433)
+    # plt.contourf(X, Y, RF, 50, cmap='RdGy')
+    # plt.title('RF (D=4)')
+    # plt.colorbar()
+    #
+    # n_features = 10
+    # draws = n_features // 2
+    # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    # emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
+    # emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
+    # RF = torch.matmul(emb2, emb1.transpose(1,0))
+    # plt.subplot(436)
+    # plt.contourf(X, Y, RF, 50, cmap='RdGy')
+    # plt.title('RF (D=10)')
+    # plt.colorbar()
+    #
+    # n_features = 100
+    # draws = n_features // 2
+    # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    # emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
+    # emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
+    # RF = torch.matmul(emb2, emb1.transpose(1,0))
+    # plt.subplot(439)
+    # plt.contourf(X, Y, RF, 50, cmap='RdGy')
+    # plt.title('RF (D=100)')
+    # plt.colorbar()
+    #
+    # n_features = 500
+    # draws = n_features // 2
+    # W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
+    # emb1 = RFF_Gauss(n_features, torch.Tensor(x), W_freq)
+    # emb2 = RFF_Gauss(n_features, torch.Tensor(x_prime), W_freq)
+    # RF = torch.matmul(emb2, emb1.transpose(1,0))
+    # plt.subplot(4,3,12)
+    # plt.contourf(X, Y, RF, 50, cmap='RdGy')
+    # plt.title('RF (D=500)')
+    # plt.colorbar()
+    #
+    #
+    # ### (2) Hermite Polynomials
+    # rho = find_rho(sigma2, False)
+    # order = 4
+    # device = 'cpu'
+    # phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
+    # phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
+    # HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
+    # plt.subplot(432)
+    # plt.contourf(X, Y, HP, 50, cmap='RdGy')
+    # plt.colorbar()
+    # plt.title('HP (order=4)')
+    #
+    # order = 10
+    # phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
+    # phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
+    # HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
+    # plt.subplot(435)
+    # plt.contourf(X, Y, HP, 50, cmap='RdGy')
+    # plt.colorbar()
+    # plt.title('HP (order=10)')
+    #
+    # order = 100
+    # phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
+    # phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
+    # HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
+    # plt.subplot(438)
+    # plt.contourf(X, Y, HP, 50, cmap='RdGy')
+    # plt.colorbar()
+    # plt.title('HP (order=100)')
+    #
+    #
+    # order = 500
+    # phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
+    # phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
+    # HP = torch.matmul(phi_2.squeeze(1), phi_1.squeeze(1).transpose(1,0))
+    # plt.subplot(4,3,11)
+    # plt.contourf(X, Y, HP, 50, cmap='RdGy')
+    # plt.colorbar()
+    # plt.title('HP (order=500)')
+    # plt.show()
 
     ### error calculation ###
-    max_order = 1000
+
+
+    # evaluate the kernel function
+    med = meddistance(np.concatenate((x,x_prime),axis=0))
+    sigma2 = med**2
+    max_order = 5000
     err_RF = np.zeros(max_order)
     err_HP = np.zeros(max_order)
     device = 'cpu'
     for i in range(max_order):
+        print('# of features', i+1)
         n_features = i + 1  # so the order is from 0 to 1001
         draws = n_features // 2
         W_freq = np.random.randn(draws, input_dim) / np.sqrt(sigma2)
@@ -212,7 +285,7 @@ def main():
         RF = torch.matmul(emb2, emb1.transpose(1, 0))
         err_RF[i] = err(torch.Tensor(K), RF)
 
-        rho = find_rho(sigma2)
+        rho = find_rho(sigma2, False)
         order = i + 1
         phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
         phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
@@ -221,13 +294,17 @@ def main():
 
     plt.figure(2)
     plt.subplot(212)
-    plt.plot(np.arange(0, max_order), err_RF)
+    plt.plot(np.arange(0, max_order), err_RF, 'o-', linewidth=3.0)
+    plt.plot(np.arange(0, max_order), np.min(err_RF)*np.ones(max_order), 'k--')
     plt.title('error from RF approximation')
     plt.yscale('log')
+    plt.xscale('log')
     plt.xlabel('number of random features')
     plt.subplot(211)
-    plt.plot(np.arange(0, max_order), err_HP)
+    plt.plot(np.arange(0, max_order), err_HP, 'o-', linewidth=3.0)
+    plt.plot(np.arange(0, max_order), np.min(err_RF) * np.ones(max_order), 'k--')
     plt.yscale('log')
+    plt.xscale('log')
     plt.title('error from HP approximation')
     plt.xlabel('order of polynomials')
 
