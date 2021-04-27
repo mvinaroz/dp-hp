@@ -43,7 +43,7 @@ def get_args():
   parser.add_argument('--batch-size', '-bs', type=int, default=1000)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--gen-batch-size', '-gbs', type=int, default=1000)
-  parser.add_argument('--embed-batch-size', '-gbs', type=int, default=1000)
+  parser.add_argument('--embed-batch-size', '-ebs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=100)
   parser.add_argument('--lr', '-lr', type=float, default=0.01, help='learning rate')
   parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
