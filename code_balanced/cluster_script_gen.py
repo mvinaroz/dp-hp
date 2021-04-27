@@ -55,12 +55,12 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
                    f'log = joblogs/{experiment_name}_$(Process).log.txt',
                    'getenv = True',
                    'request_cpus = 2',
-                   # 'request_gpus = 2',
+                   'request_gpus = 2',
                    'request_memory = 8GB',
                    '+MaxRunningPrice = 500',
                    '+RunningPriceExceededAction = "restart"',
                    # 'requirements = CUDAGlobalMemoryMb > 5000',
-                   # 'requirements = CUDACapability >= 3.7',
+                   'requirements = CUDACapability >= 3.7',
                    f'queue {jobs_count}']
 
   with open(os.path.join(save_dir, f'{experiment_name}.sh'), 'w') as f:
@@ -99,14 +99,16 @@ def running_train_script():
   base_string = 'python3.6 Me_sum_kernel_args.py'
   params = [('--data', ['digits']),
             ('-bs', [200]),
+            ('-ebs', [2000]),
             ('-ep', [10]),
             ('-lr', [0.01]),
+            ('--is-private', ['True', 'False']),
+            ('--order-hermite', [20, 50, 100, 200, 500, 1000]),
             ('', ['--skip-downstream-model']),
             ('--kernel-length', [0.005]),
-            ('--is-private', ['True', 'False']),
             ]
-  exp_id_flag = None
-  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=15)
+  exp_id_flag = '--log-name apr27_mehp_dmnist_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1)
 
 
 if __name__ == '__main__':

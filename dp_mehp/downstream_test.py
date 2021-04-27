@@ -1,6 +1,8 @@
 from all_aux_files import test_gen_data, log_final_score
 import argparse
 import numpy as np
+import faulthandler
+faulthandler.enable()
 
 
 if __name__ == '__main__':

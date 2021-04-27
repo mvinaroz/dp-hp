@@ -121,8 +121,8 @@ def main():
         sigma = heuristic_for_length_scale(data_pkg.train_loader, data_pkg.n_features, ar.batch_size, data_pkg.n_data, device)
         if ar.separate_kernel_length:
             print('we use a separate length scale on each coordinate of the data')
-            sigma2=np.mean(sigma**2, axis=0)
-            sigma2[sigma2==0]=1e-6
+            sigma2 = np.mean(sigma**2, axis=0)
+            sigma2[sigma2 == 0] = 1e-6
 
         else:
             sigma2 = np.median(sigma**2)
@@ -169,6 +169,7 @@ def main():
                 phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data )
             data_embedding[:, idx] += phi_data
 
+    del embedding_train_loader
     # print('DEBUG embedding diff:', torch.norm(old_data_embedding - data_embedding))  # it's around 2e-6, so almost 0
     print('done with computing mean embedding of data')
 
