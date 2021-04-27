@@ -369,6 +369,7 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   f1_str = f1_str + f' {f1}'
   return acc, f1, conf, acc_str, f1_str
 
+
 def test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_dir, log_results=False,
                          subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
                          skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
@@ -638,7 +639,8 @@ def test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_d
             model = models[key](**model_specs[key])
             print('model:', model)
         
-    
+            if key == 'linear_svc':
+              assert 1 % 1 == 1  # DEBUG
             g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str + 'g2r', f_str + 'g2r')
