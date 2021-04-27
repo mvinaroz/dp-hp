@@ -38,21 +38,26 @@ def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normaliz
   return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
 
 
-def find_rho(sigma2):
+def find_rho(sigma2, kernel_separate):
   alpha = 1 / (2.0 * sigma2)
   rho = -1 / 2 / alpha + np.sqrt(1 / alpha ** 2 + 4) / 2
   rho_1 = -1 / 2 / alpha - np.sqrt(1 / alpha ** 2 + 4) / 2
 
-  if rho < 1:  # rho is always non-negative
-    print('rho is less than 1. so we take this value.')
-  elif rho > 1:
-    print('rho is larger than 1. Mehler formula does not hold')
-    if rho_1 > -1:  # rho_1 is always negative
-      print('rho_1 is larger than -1. so we take this value.')
-      rho = rho_1
-    else:  # if rho_1 <-1,
-      print('rho_1 is smaller than -1. Mehler formula does not hold')
-      sys.exit('no rho values satisfy the Mehler formulas. We have to stop the run')
+  if kernel_separate:
+      if (rho>1).any():
+          print('some of the rho values are above 1. Mehler formula does not hold')
+  else:
+      
+      if rho < 1:  # rho is always non-negative
+          print('rho is less than 1. so we take this value.')
+      elif rho > 1:
+          print('rho is larger than 1. Mehler formula does not hold')
+          if rho_1 > -1:  # rho_1 is always negative
+              print('rho_1 is larger than -1. so we take this value.')
+              rho = rho_1
+          else:  # if rho_1 <-1,
+              print('rho_1 is smaller than -1. Mehler formula does not hold')
+              sys.exit('no rho values satisfy the Mehler formulas. We have to stop the run')
 
   return rho
 
@@ -766,7 +771,7 @@ def log_gen_data(gen, device, epoch, n_labels, log_dir):
   plot_mnist_batch(plot_samples, 10, n_labels, log_dir + f'samples_ep{epoch}', denorm=False)
 
 class FCCondGen(nn.Module):
-  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=True, batch_norm=True):
+  def __init__(self, d_code, d_hid, d_out, n_labels, use_sigmoid=True, batch_norm=True, use_clamp=False):
     super(FCCondGen, self).__init__()
     d_hid = [int(k) for k in d_hid.split(',')]
     assert len(d_hid) < 5
@@ -796,6 +801,7 @@ class FCCondGen(nn.Module):
     self.use_sigmoid = use_sigmoid
     self.d_code = d_code
     self.n_labels = n_labels
+    self.use_clamp = use_clamp
 
   def forward(self, x):
     x = self.fc1(x)
@@ -812,6 +818,10 @@ class FCCondGen(nn.Module):
 
     if self.use_sigmoid:
       x = self.sigmoid(x)
+
+    if self.use_clamp:
+      x = torch.clamp(x, min=-0.5, max=3.0)
+
     return x
 
   def get_code(self, batch_size, device, return_labels=True, labels=None):
@@ -1074,3 +1084,25 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     return train_loader, test_loader, trn_data, tst_data
   else:
     return train_loader, test_loader
+
+
+def heuristic_for_length_scale(train_loader, input_dim, batch_size, n_train_data, device):
+    
+    num_iter = np.int(n_train_data / batch_size)
+    
+    sigma_array = np.zeros((np.int(num_iter), input_dim))
+    for batch_idx, (data, labels) in enumerate(train_loader):
+    #     # print('batch idx', batch_idx)
+         data, labels = data.to(device), labels.to(device)
+         data = flatten_features(data)  # minibatch by feature_dim
+         data_numpy = data.detach().cpu().numpy()
+         for dim in np.arange(0, input_dim):
+             med = meddistance(np.expand_dims(data_numpy[:, dim], axis=1))
+             sigma_array[batch_idx, dim] = med
+
+
+#    sigma_array = np.zeros(input_dim)
+#    for i in np.arange(0, input_dim):
+#        med = meddistance(np.expand_dims(X_train[:, i], 1), subsample=500)
+#        sigma_array[i] = med
+    return sigma_array

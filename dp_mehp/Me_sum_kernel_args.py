@@ -9,6 +9,8 @@ import torchvision.transforms as transforms
 from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP, get_mnist_dataloaders
 from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
+from all_aux_files import heuristic_for_length_scale
+from all_aux_files_tab_data import ME_with_HP_tab
 #from autodp import privacy_calibrator
 from collections import namedtuple
 from torch.autograd import grad
@@ -62,6 +64,7 @@ def get_args():
   parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=100, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=False)
+  parser.add_argument("--separate-kernel-length", action='store_true', default=False) # heuristic-sigma has to be "True", to enable separate-kernel-length
   parser.add_argument('--kernel-length', type=float, default=0.001, help='')
 
   # DP SPEC
@@ -104,25 +107,32 @@ def main():
 
     """ Define a generator """
     if ar.model_name == 'FC':
-        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels,
-                          use_sigmoid=True, batch_norm=True).to(device)
+        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True, use_clamp=False).to(device)
     elif ar.model_name == 'CNN':
         model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes,
                             use_sigmoid=True, batch_norm=True).to(device)
 
     """ set the scale length """
-    num_iter = np.int(data_pkg.n_data / ar.batch_size)
+    #num_iter = np.int(data_pkg.n_data / ar.batch_size)
 
     if ar.heuristic_sigma:
-        if ar.data == 'digits':
-            sigma2 = 0.05
-        elif ar.data == 'fashion':
-            sigma2 = 0.07
+
+        print('we use the median heuristic for length scale')
+        sigma = heuristic_for_length_scale(data_pkg.train_loader, data_pkg.n_features, ar.batch_size, data_pkg.n_data, device)
+        if ar.separate_kernel_length:
+            print('we use a separate length scale on each coordinate of the data')
+            sigma2=np.mean(sigma**2, axis=0)
+            sigma2[sigma2==0]=1e-6
+
+        else:
+            sigma2 = np.median(sigma**2)
+
     else:
         sigma2 = ar.kernel_length
-        
+
+
     print('sigma2 is', sigma2)
-    rho = find_rho(sigma2)
+    rho = find_rho(sigma2, ar.separate_kernel_length)
     order = ar.order_hermite
 
     # ev_thr = 1e-6  # eigen value threshold, below this, we wont consider for approximation
@@ -153,7 +163,10 @@ def main():
         data, labels = flatten_features(data.to(device)), labels.to(device)
         for idx in range(data_pkg.n_labels):
             idx_data = data[labels == idx]
-            phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
+            if ar.separate_kernel_length:
+                phi_data = ME_with_HP_tab(idx_data, order, rho, device, data_pkg.n_data )
+            else:
+                phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data )
             data_embedding[:, idx] += phi_data
 
     # print('DEBUG embedding diff:', torch.norm(old_data_embedding - data_embedding))  # it's around 2e-6, so almost 0
@@ -196,14 +209,22 @@ def main():
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(data_pkg.n_labels):
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
+                    if ar.separate_kernel_length:
+                        synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, ar.batch_size)
+                    else:
+                        synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
+                    
             else:
                 synth_data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
                 data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(data_pkg.n_labels):
                     idx_data = data[labels == idx]
-                    data_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, ar.batch_size)
+                    if ar.separate_kernel_length:
+                        synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, ar.batch_size)
+                    else:
+                        synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
+                    
                     idx_synth_data = gen_samples[gen_labels_numerical == idx]
                     synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
                     
