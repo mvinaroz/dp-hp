@@ -77,7 +77,7 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
 
 
 if __name__ == '__main__':
-  experiment_name = 'apr26_me_eval_big_models_fashion'
+  experiment_name = 'apr27_me_eval_small_models_fashion_completion'
   save_dir = 'cluster_scripts'
   base_string = 'python3.6 downstream_test.py'
   params = [('--data', ['fashion']),
@@ -87,11 +87,14 @@ if __name__ == '__main__':
             # ('', ['--skip-downstream-model']),
             # ('--kernel-length', [0.15]),
             # ('--is-private', ['True', 'False']),
-            ('', ['--skip-slow-models', '--only-slow-models']),
+            # ('', ['--skip-slow-models', '--only-slow-models']),
+            ('--custom-keys', [  # 'logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb',
+                               'linear_svc', 'decision_tree', 'lda', 'adaboost',
+                               'mlp', 'bagging', 'gbm', 'xgboost']),
             ('--log-name {} --seed {}',
              list(zip([f'apr23_me_training_{k}' for k in range(10)],
                   [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]))),
-            ('-rate', [0.5, 1.0])
+            ('-rate', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2])
             ]
   exp_id_flag = None
-  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1)
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=15)
