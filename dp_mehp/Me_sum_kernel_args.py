@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import StepLR
 from torchvision import datasets
 from torch.utils.data import DataLoader
 import torchvision.transforms as transforms
-from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP
+from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP, get_mnist_dataloaders
 from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
 #from autodp import privacy_calibrator
@@ -41,6 +41,7 @@ def get_args():
   parser.add_argument('--batch-size', '-bs', type=int, default=1000)
   parser.add_argument('--test-batch-size', '-tbs', type=int, default=1000)
   parser.add_argument('--gen-batch-size', '-gbs', type=int, default=1000)
+  parser.add_argument('--embed-batch-size', '-gbs', type=int, default=1000)
   parser.add_argument('--epochs', '-ep', type=int, default=100)
   parser.add_argument('--lr', '-lr', type=float, default=0.01, help='learning rate')
   parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
@@ -98,21 +99,24 @@ def main():
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
   
     """Load data"""
-    data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device, normalize=False, synth_spec_string=None, test_split=None)
+    data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device,
+                               normalize=False, synth_spec_string=None, test_split=None)
 
     """ Define a generator """
     if ar.model_name == 'FC':
-        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True).to(device)
+        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels,
+                          use_sigmoid=True, batch_norm=True).to(device)
     elif ar.model_name == 'CNN':
-        model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True, batch_norm=True).to(device)
+        model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes,
+                            use_sigmoid=True, batch_norm=True).to(device)
 
     """ set the scale length """
     num_iter = np.int(data_pkg.n_data / ar.batch_size)
 
     if ar.heuristic_sigma:
-        if ar.data=='digits':
+        if ar.data == 'digits':
             sigma2 = 0.05
-        elif ar.data=='fashion':
+        elif ar.data == 'fashion':
             sigma2 = 0.07
     else:
         sigma2 = ar.kernel_length
@@ -140,10 +144,12 @@ def main():
     #         phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
     #         old_data_embedding[:, idx, batch_idx] = phi_data
     # old_data_embedding = torch.sum(old_data_embedding, axis=2)
+    embedding_train_loader, _ = get_mnist_dataloaders(ar.embed_batch_size, ar.test_batch_size,
+                                                      use_cuda=device, dataset=ar.data)
 
     # summing at the end uses unnecessary memory - leaving previous version in in case of errors with this one
     data_embedding = torch.zeros(data_pkg.n_features * (order + 1), data_pkg.n_labels, device=device)
-    for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
+    for batch_idx, (data, labels) in enumerate(embedding_train_loader):
         data, labels = flatten_features(data.to(device)), labels.to(device)
         for idx in range(data_pkg.n_labels):
             idx_data = data[labels == idx]
