@@ -3,25 +3,19 @@ import numpy as np
 import os
 import argparse
 from torch.optim.lr_scheduler import StepLR
-from torchvision import datasets
-from torch.utils.data import DataLoader
-import torchvision.transforms as transforms
-from all_aux_files import FCCondGen, ConvCondGen, find_rho, find_order, ME_with_HP, get_mnist_dataloaders
-from all_aux_files import get_dataloaders, log_args, datasets_colletion_def, test_results_subsampling_rate
-from all_aux_files import synthesize_data_with_uniform_labels, test_gen_data, flatten_features, log_gen_data
+from all_aux_files import FCCondGen, ConvCondGen, find_rho,ME_with_HP, get_mnist_dataloaders
+from all_aux_files import get_dataloaders, log_args, test_results_subsampling_rate
+from all_aux_files import synthesize_data_with_uniform_labels, flatten_features, log_gen_data
 from all_aux_files import heuristic_for_length_scale
 from all_aux_files_tab_data import ME_with_HP_tab
 #from autodp import privacy_calibrator
 from collections import namedtuple
-from torch.autograd import grad
-import math
-from math import factorial
-import sys
-import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('Agg')
-from torch.autograd import grad
 from autodp import privacy_calibrator
+import faulthandler
+faulthandler.enable()  # prints stacktrace in case of segmentation fault
+
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
