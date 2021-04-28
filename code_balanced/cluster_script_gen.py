@@ -77,20 +77,23 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
 
 
 def running_eval_script():
-  experiment_name = 'apr27_me_eval_small_models_fashion_just_svc'
+  experiment_name = 'apr28_me_eval_dmnist_no_lin_svc'
   save_dir = 'cluster_scripts'
   base_string = 'python3.6 downstream_test.py'
-  params = [('--data', ['fashion']),
+  params = [('--data', ['digits']),
             # ('', ['--skip-slow-models', '--only-slow-models']),
-            ('--custom-keys', [  # 'logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb',
-              'linear_svc']),
+            ('--custom-keys', ['logistic_reg,random_forest,gaussian_nb,bernoulli_nb',
+                               # 'linear_svc',
+                               'decision_tree,lda,gbm',
+                               'adaboost,mlp,bagging,',
+                               'xgboost']),
             ('--log-name {} --seed {}',
-             list(zip([f'apr23_me_training_{k}' for k in range(10)],
-                      [0, 1, 2, 3, 4, 0, 1, 2, 3, 4]))),
-            ('-rate', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2])
+             list(zip([f'apr27_mehp_dmnist_{k}' for k in range(5 * 12)],
+                      [0, 1, 2, 3, 4]*12))),
+            ('-rate', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])
             ]
   exp_id_flag = None
-  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=15)
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=10)
 
 
 def running_train_script():
@@ -106,10 +109,12 @@ def running_train_script():
             ('--order-hermite', [20, 50, 100, 200, 500, 1000]),
             ('', ['--skip-downstream-model']),
             ('--kernel-length', [0.005]),
+            ('--seed', [0, 1, 2, 3, 4])
             ]
   exp_id_flag = '--log-name apr27_mehp_dmnist_{}'
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1)
 
 
 if __name__ == '__main__':
-  running_train_script()
+  # running_train_script()
+  running_eval_script()

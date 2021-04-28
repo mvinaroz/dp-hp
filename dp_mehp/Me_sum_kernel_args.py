@@ -3,17 +3,16 @@ import numpy as np
 import os
 import argparse
 from torch.optim.lr_scheduler import StepLR
-from all_aux_files import FCCondGen, ConvCondGen, find_rho,ME_with_HP, get_mnist_dataloaders
+from all_aux_files import FCCondGen, ConvCondGen, find_rho, ME_with_HP, get_mnist_dataloaders
 from all_aux_files import get_dataloaders, log_args, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, flatten_features, log_gen_data
 from all_aux_files import heuristic_for_length_scale
 from all_aux_files_tab_data import ME_with_HP_tab
-#from autodp import privacy_calibrator
 from collections import namedtuple
+import faulthandler
 import matplotlib
 matplotlib.use('Agg')
 from autodp import privacy_calibrator
-import faulthandler
 faulthandler.enable()  # prints stacktrace in case of segmentation fault
 
 
@@ -55,7 +54,7 @@ def get_args():
   parser.add_argument('--loss-type', type=str, default='MEHP', help='how to approx mmd')
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
   parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
-  parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
+  parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=100, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=False)
   parser.add_argument("--separate-kernel-length", action='store_true', default=False) # heuristic-sigma has to be "True", to enable separate-kernel-length

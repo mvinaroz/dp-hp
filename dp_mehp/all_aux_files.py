@@ -4,7 +4,6 @@ import torch as pt
 import torch
 import torch.nn as nn
 import numpy as np
-from collections import namedtuple
 from torchvision import transforms, datasets
 from torch.utils.data import Dataset
 import os
