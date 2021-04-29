@@ -101,8 +101,8 @@ for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
     data, labels = data.to(device), labels.to(device)
     data = flatten_features(data)
 
-x=data[0:2000, :].numpy() #Number of samples in x.
-x_prime=data[2000:4000, :].numpy() #number of samples in x_prime.
+x=data[0:200, :].numpy() #Number of samples in x.
+x_prime=data[200:400, :].numpy() #number of samples in x_prime.
    
  
 #We have to compare for all points in x and x_prime  
@@ -155,26 +155,32 @@ for i in range(max_order):
     order = i + 1
     phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_ME_data)
     phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_ME_data)
+    HP=np.zeros((x.shape[0], x_prime.shape[0]))
+    for h in range(x.shape[0]):
+        for j in range(x_prime.shape[0]):
+            prod=np.multiply(phi_1[h, :, :], phi_2[j, :, :]) #Compute the pairs phi_c(x_d)*phi_c(x_d')
+            k_HP=prod.sum() #Sum all the elements to get HP approx k(x, x')
+            #print(k_HP)
+            HP[h,j]=k_HP 
+            
 
-    k_pairs = torch.matmul(phi_2, phi_1.transpose(1, 2)) #Contains the pairs k(x_i, x_j') from eq 18 (the diagonal are the paris k(x_d, x_d')).
-    k_sum=torch.sum(torch.diagonal(k_pairs, dim1=1, dim2=2), dim=1) #Now I have to sum k(x_d, x_d') over the D=784 dimensions.
-#    err_HP[i] = err(torch.Tensor(K), HP)
+    err_HP[i] = err(torch.Tensor(K), HP)
 
 """Plot ans save the results"""
-#plt.figure()
-#plt.subplot(212)
-#plt.plot(np.arange(0, max_order), err_RF, 'o-', linewidth=3.0)
-#plt.plot(np.arange(0, max_order), np.min(err_RF)*np.ones(max_order), 'k--')
-#plt.title('error from RF approximation')
-#plt.yscale('log')
-#plt.xscale('log')
-#plt.xlabel('number of random features')
-#plt.subplot(211)
-#plt.plot(np.arange(0, max_order), err_HP, 'o-', linewidth=3.0)
-#plt.plot(np.arange(0, max_order), np.min(err_RF) * np.ones(max_order), 'k--')
-#plt.yscale('log')
-#plt.xscale('log')
-#plt.title('error from HP approximation')
-#plt.xlabel('order of polynomials')
+plt.figure()
+plt.subplot(212)
+plt.plot(np.arange(0, max_order), err_RF, 'o-', linewidth=3.0)
+plt.plot(np.arange(0, max_order), np.min(err_RF)*np.ones(max_order), 'k--')
+plt.title('error from RF approximation')
+plt.yscale('log')
+plt.xscale('log')
+plt.xlabel('number of random features')
+plt.subplot(211)
+plt.plot(np.arange(0, max_order), err_HP, 'o-', linewidth=3.0)
+plt.plot(np.arange(0, max_order), np.min(err_RF) * np.ones(max_order), 'k--')
+plt.yscale('log')
+plt.xscale('log')
+plt.title('error from HP approximation')
+plt.xlabel('order of polynomials')
 
-#plt.savefig("prueba1_error.png", format='png')
+plt.savefig("prueba1_error.png", format='png')
