@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import matplotlib
 matplotlib.use('TkAgg')
 from all_aux_files import find_rho
-
+import kernel as k
 
 from all_aux_files import get_dataloaders, flatten_features
 from scipy.spatial.distance import cdist
@@ -101,17 +101,23 @@ for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
     data, labels = data.to(device), labels.to(device)
     data = flatten_features(data)
 
-x=data[0:200, :].numpy() #Number of samples in x.
-x_prime=data[200:400, :].numpy() #number of samples in x_prime.
-   
+n = 100
+x=data[0:n, :].detach().cpu().numpy() #Number of samples in x.
+x_prime=data[n:2*n, :].detach().cpu().numpy() #number of samples in x_prime.
+input_dim = x.shape[1]
  
 #We have to compare for all points in x and x_prime  
 
 med = meddistance(np.concatenate((x,x_prime),axis=0))
 sigma2 = med**2
 
-D2=cdist(x, x_prime, 'sqeuclidean') #Computes de squared euclidian distance between each pair of the two collections of inputs
-K = np.exp(-D2 / (2.0 * sigma2))
+Gaussian_kernel = k.KGauss(sigma2=sigma2)
+K = Gaussian_kernel(x, x_prime)
+
+# rho = find_rho(sigma2, False)
+
+# D2=cdist(x, x_prime, 'sqeuclidean') #Computes de squared euclidian distance between each pair of the two collections of inputs
+# K = np.exp(-D2 / (2.0 * sigma2))
 
 
 #"""(1) Random Fourier features"""
@@ -141,6 +147,10 @@ n_ME_data=x.shape[0]
 #n_RF_data=data_pkg.n_data/2
 err_RF = np.zeros(max_order)
 err_HP = np.zeros(max_order)
+
+sigma2_for_HP = 0.05
+rho = find_rho(sigma2_for_HP, False)
+
 for i in range(max_order):
     print('# of features', i+1)
     n_features = i + 1  # so the order is from 0 to 1001
@@ -151,22 +161,39 @@ for i in range(max_order):
     RF = torch.matmul(emb2, emb1.transpose(1, 0))
     err_RF[i] = err(torch.Tensor(K), RF)
 
-    rho = find_rho(sigma2, False)
+
     order = i + 1
     phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_ME_data)
     phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_ME_data)
-    HP=np.zeros((x.shape[0], x_prime.shape[0]))
+
+    # HP1  = np.zeros((n, n))
+    # for i in np.arange(0, n):
+    #     for j in np.arange(0,n):
+    #         Kd = np.zeros(input_dim)
+    #         for d in np.arange(0,input_dim):
+    #             Kd[d] = torch.dot(phi_2[i,d,:], phi_1[j,d,:])
+    #         # end for over d
+    #         HP1[i,j] = np.sum(Kd)
+
+    HP = np.zeros((x.shape[0], x_prime.shape[0]))
     for h in range(x.shape[0]):
         for j in range(x_prime.shape[0]):
-            prod=np.multiply(phi_1[h, :, :], phi_2[j, :, :]) #Compute the pairs phi_c(x_d)*phi_c(x_d')
-            k_HP=prod.sum() #Sum all the elements to get HP approx k(x, x')
+            k_HP = torch.sum(torch.einsum('jk, jk-> jk', phi_1[h,:,:], phi_2[j,:,:]))
+            # prod=np.multiply(phi_1[h, :, :], phi_2[j, :, :]) #Compute the pairs phi_c(x_d)*phi_c(x_d')
+            # k_HP=prod.sum() #Sum all the elements to get HP approx k(x, x')
             #print(k_HP)
-            HP[h,j]=k_HP 
+            HP[h,j]=k_HP/input_dim
             
 
     err_HP[i] = err(torch.Tensor(K), HP)
 
 """Plot ans save the results"""
+font = {'family': 'normal',
+        'weight': 'bold',
+        'size': 22}
+
+matplotlib.rc('font', **font)
+
 plt.figure()
 plt.subplot(212)
 plt.plot(np.arange(0, max_order), err_RF, 'o-', linewidth=3.0)
@@ -182,5 +209,5 @@ plt.yscale('log')
 plt.xscale('log')
 plt.title('error from HP approximation')
 plt.xlabel('order of polynomials')
-
+# plt.show()
 plt.savefig("prueba1_error.png", format='png')

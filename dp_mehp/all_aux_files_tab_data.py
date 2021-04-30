@@ -93,10 +93,13 @@ def compute_phi_tab_coord(x_in, n_degrees, rho, device):
 
 
 def ME_with_HP_tab(x, order, rho, device, n_training_data):
+  input_dim = x.shape[1]
 
   phi_x = compute_phi_tab_coord(x, order+1, rho, device)
   sum_val = torch.sum(phi_x, axis=0)
   phi_x = sum_val / n_training_data
+
+  phi_x = phi_x / np.sqrt(input_dim) # because we approximate k(x,x') by \sum_d k_d(x_d, x'_d) / input_dim
 
   phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
 

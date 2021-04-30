@@ -41,17 +41,17 @@ def get_args():
     
     
     parser.add_argument('--seed', type=int, default=0, help='sets random seed')
-    parser.add_argument('--data-name', type=str, default='digits', help='options are digits or fashion')
+    parser.add_argument('--data-name', type=str, default='fashion', help='options are digits or fashion')
 
     # OPTIMIZATION
     parser.add_argument('--batch-size', type=int, default=200)
     parser.add_argument('--test-batch-size', type=int, default=1000)
-    parser.add_argument('--epochs', type=int, default=10)
+    parser.add_argument('--epochs', type=int, default=0)
     parser.add_argument('--lr', type=float, default=0.01, help='learning rate')
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # MODEL DEFINITION
-    parser.add_argument('--model-name', type=str, default='FC', help='either CNN or FC')
+    parser.add_argument('--model-name', type=str, default='CNN', help='either CNN or FC')
 
     # DP SPEC
     parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
@@ -63,7 +63,7 @@ def get_args():
     parser.add_argument('--report-intermediate-result', default=False, help='test synthetic data on logistic regression at every epoch')
     parser.add_argument('--heuristic-sigma', action='store_true', default=False)
     parser.add_argument("--separate-kernel-length", action='store_true', default=False)  # heuristic-sigma has to be "True", to enable separate-kernel-length
-    parser.add_argument('--kernel-length', type=float, default=0.01, help='')
+    parser.add_argument('--kernel-length', type=float, default=0.05, help='')
     parser.add_argument('--order-hermite', type=int, default=100, help='')
     parser.add_argument('--sampling_rate_synth', type=float, default=0.1, help='')
     parser.add_argument('--skip-downstream-model', action='store_false', default=False, help='')
@@ -132,7 +132,7 @@ def main():
     if data_name == 'fashion':
         data_pkg = get_dataloaders(data_name, batch_size, test_batch_size, True, False, [], [])
     elif data_name == 'digits':
-        normalize = 1
+        normalize = 0
         data_dir = 'data'
         use_cuda = 1 if torch.cuda.is_available() else 0
         kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
@@ -159,9 +159,9 @@ def main():
 
         def prep_data(dataset):
             x, y = dataset.data.numpy(), dataset.targets.numpy()
-            x = np.reshape(x, (-1, 784))
-            # x = np.reshape(x, (-1, 784)) / 255
-            x = (x-mnist_mean)/mnist_sdev
+            # x = np.reshape(x, (-1, 784))
+            x = np.reshape(x, (-1, 784)) / 255
+            # x = (x-mnist_mean)/mnist_sdev
             return x, y
 
         x_trn, y_trn = prep_data(trn_data)
@@ -176,7 +176,7 @@ def main():
     feature_dim = 784
     n_classes = 10
     if model_name == 'FC':
-        model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True, use_clamp=True).to(device)
+        model = FCCondGen(input_size, '500,500', feature_dim, n_classes, use_sigmoid=False, batch_norm=True, use_clamp=False).to(device)
     elif model_name == 'CNN':
         # if data_name=='fashion':
         model = ConvCondGen(input_size, '500,500', n_classes, '16,8', '5,5', use_sigmoid=True, batch_norm=True).to(device)
@@ -247,7 +247,8 @@ def main():
             privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
             privacy_param = privacy_param['sigma']
             print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param)
-            std = (2 * privacy_param * np.sqrt(feature_dim) / n_train_data)
+            # std = (2 * privacy_param * np.sqrt(feature_dim) / n_train_data)
+            std = (2 * privacy_param / n_train_data)
             noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
             print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
@@ -347,15 +348,23 @@ def main():
     # if data_name == 'fashion':
 
     # """ load synthetic data for training """
-    # file_name = 'logs/gen/digits_FC_single_release=True_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.02_bs=200_lr=0.01_nepoch=0/digits/synthetic_mnist.npz'
+    # file_name = 'logs/gen/fashion_CNN_single_release=True_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.05_bs=200_lr=0.01_nepoch=10/fashion/synthetic_mnist.npz'
+    # # file_name = 'logs/gen/digits_FC_single_release=True_order=100_private=False_epsilon=1.0_delta=1e-05_heuristic_sigma=False_kernel_length=0.02_bs=200_lr=0.01_nepoch=0/digits/synthetic_mnist.npz'
     # td = np.load(file_name)
     # X_tr = td['data']
     # y_tr = td['labels'].squeeze()
     #
-    # """ load real data for testing """
-    # d = np.load('data/MNIST/numpy_dmnist.npz')
+    # # """ load real data for testing """
+    # # d = np.load('data/MNIST/numpy_dmnist.npz')
+    # d = np.load('data/FashionMNIST/numpy_fmnist.npz')
     # X_te = d['x_test'].reshape(10000, 784)
     # y_te = d['y_test']
+    #
+    # model = AdaBoostClassifier(n_estimators=100, algorithm='SAMME.R')
+    # model.fit(X_tr, y_tr)
+    # pred = model.predict(X_te)
+    # acc6 = accuracy_score(pred, y_te)
+    # print('adaboost acc6', acc6)
 
     test_results_subsampling_rate(ar.data_name, ar.log_name + '/' + ar.data_name, ar.log_dir, ar.skip_downstream_model, ar.sampling_rate_synth)
 

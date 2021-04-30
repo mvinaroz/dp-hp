@@ -197,7 +197,8 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     if ar.is_private:
         # print('we add noise to the data mean embedding as the private flag is true')
-        std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
+        # std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
+        std = (2 * privacy_param['sigma'] / n)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
         print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
