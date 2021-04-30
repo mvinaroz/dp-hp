@@ -173,7 +173,8 @@ def main():
         privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
         print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
         # print('we add noise to the data mean embedding as the private flag is true')
-        std = (2 * privacy_param['sigma'] * np.sqrt(data_pkg.n_features) / data_pkg.n_data)
+        # std = (2 * privacy_param['sigma'] * np.sqrt(data_pkg.n_features) / data_pkg.n_data)
+        std = (2 * privacy_param['sigma'] / data_pkg.n_data)
         noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
         print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
