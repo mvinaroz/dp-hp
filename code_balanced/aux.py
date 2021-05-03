@@ -200,7 +200,8 @@ class NamedArray:
     assert isinstance(array, np.ndarray) and isinstance(idx_names, dict)
     assert len(dim_names) == len(idx_names.keys()) and len(dim_names) == len(array.shape)
     for idx, name in enumerate(dim_names):
-      assert len(idx_names[name]) == array.shape[idx] and name in idx_names
+      assert len(idx_names[name]) == array.shape[idx], f'len({idx_names[name]}) != {array.shape[idx]} at idx={idx}'
+      assert name in idx_names, f'{name} not in {idx_names}'
     self.array = array
     self.dim_names = dim_names  # list of dimension names in order
     self.idx_names = idx_names  # dict for the form dimension_name: [list of index names]
@@ -222,6 +223,15 @@ class NamedArray:
     if not keep_singleton_dims:
       ar = np.squeeze(ar)
     return ar
+
+  def single_val_sub_array(self, dim_name, idx_name):
+    assert dim_name in self.dim_names
+    assert idx_name in self.idx_names[dim_name]
+
+    sub_array = self.get({dim_name, [idx_name]})
+    new_idx_names = self.idx_names.copy()
+    new_idx_names[dim_name] = [idx_name]
+    return NamedArray(sub_array, self.dim_names.copy(), new_idx_names)
 
   def merge(self, other, merge_dim):
     """

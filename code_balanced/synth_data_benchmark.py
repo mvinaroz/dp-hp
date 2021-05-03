@@ -87,6 +87,31 @@ def normalize_data(x_train, x_test):
   return x_train_normed, x_test_normed
 
 
+def get_model_specs(new_specs):
+  model_specs = defaultdict(dict)
+  if new_specs:
+    model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 50000, 'multi_class': 'auto'}
+    model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}
+    model_specs['linear_svc'] = {'max_iter': 20000, 'tol': 1e-8, 'loss': 'hinge'}
+    model_specs['mlp'] = {'max_iter': 1000}
+  else:
+    # setting used in neurips2020 submission and AISTATS version
+    model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
+    model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
+    model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
+
+  model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
+  model_specs['bernoulli_nb'] = {'binarize': 0.5}
+  model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
+  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
+                                  'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
+                                  'min_impurity_decrease': 0.0}
+  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
+  model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
+  model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
+  return model_specs
+
+
 def parse():
   parser = argparse.ArgumentParser()
   parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
@@ -113,6 +138,8 @@ def parse():
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
 
   parser.add_argument('--norm-data', action='store_true', default=False, help='if true, normalize data (mostly debug)')
+
+  parser.add_argument('--new-model-specs', action='store_true', default=False, help='old: dp-merf AISTATS, new: experimental')
 
   ar = parser.parse_args()
   return ar
@@ -152,7 +179,7 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
   return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
 
 
-def prep_models(custom_keys, skip_slow_models, only_slow_models):
+def prep_models(custom_keys, skip_slow_models, only_slow_models, use_new_specs):
   assert not (skip_slow_models and only_slow_models)
 
   models = {'logistic_reg': linear_model.LogisticRegression,
@@ -170,21 +197,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
 
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
-  model_specs = defaultdict(dict)
-  model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
-  model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
-  model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
-  model_specs['bernoulli_nb'] = {'binarize': 0.5}
-  model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
-  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
-                                  'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
-                                  'min_impurity_decrease': 0.0}
-  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
-  # model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}  best so far
-  #  (not used for consistency with old results. change too small to warrant redoing everything)
-  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
-  model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
-  model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
+  model_specs = get_model_specs(use_new_specs)
 
   if custom_keys is not None:
     run_keys = custom_keys.split(',')
@@ -215,9 +228,13 @@ def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_result
                   data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
                   custom_keys=None, skip_slow_models=False, only_slow_models=False,
                   skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
-                  print_conf_mat=False, norm_data=False):
+                  print_conf_mat=False, norm_data=False, use_new_specs=False):
 
   gen_data_dir = os.path.join(data_base_dir, data_log_name)
+
+  if data_base_dir == '../dp_mehp/logs/gen/':  # account for naming inconsistency
+    gen_data_dir = os.path.join(gen_data_dir, f'{data_key}/')
+
   log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
   if data_path is None:
     data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
@@ -225,7 +242,7 @@ def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_result
   mean_acc, accs = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
                                   subsample, custom_keys, skip_slow_models, only_slow_models,
                                   skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
-                                  print_conf_mat, norm_data)
+                                  print_conf_mat, norm_data, use_new_specs)
   print(accs)
   return mean_acc, accs
 
@@ -233,14 +250,14 @@ def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_result
 def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
                          subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
                          skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
-                         print_conf_mat=False, norm_data=False):
+                         print_conf_mat=False, norm_data=False, use_new_specs=False):
   if data_log_name is not None:
     print(f'processing {data_log_name}')
 
   if log_results:
     os.makedirs(log_save_dir, exist_ok=True)
 
-  models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
+  models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models, use_new_specs)
 
   g_to_r_acc_summary = []
   dc = datasets_colletion
@@ -302,7 +319,7 @@ def main():
                 ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
                 ar.skip_slow_models, ar.only_slow_models,
                 ar.skip_gen_to_real, ar.compute_real_to_real, ar.compute_real_to_gen,
-                ar.print_conf_mat, ar.norm_data)
+                ar.print_conf_mat, ar.norm_data, ar.new_model_specs)
 
 
 if __name__ == '__main__':

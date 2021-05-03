@@ -656,6 +656,275 @@ def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
     plt.savefig(f'plots/jan7_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}_with_full_mmd.png')
 
 
+def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
+  queried_setups = ['real_data',
+                    'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                    'full_mmd',
+                    'mehp_nonDP', 'mehp_eps=1']
+  setup_names = ['real data',
+                 # 'DP-CGAN $\epsilon=9.6$',
+                 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
+                 'full MMD $\epsilon=\infty$',
+                 'DP-MEHP $\epsilon=\infty$', 'DP-MEHP $\epsilon=1$']
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  metric = 'accuracies'
+  data_ids = ['f']
+  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  ar_dict = collect_results()
+  sr_conv_array = ar_dict['sr_conv_apr6']
+  sb_array = ar_dict['sb']
+  full_mmd_array = ar_dict['full_mmd_jan7']
+  mehp_array = ar_dict['mehp_fmnist_apr23']
+  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
+  merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(mehp_array, merge_dim='setups')
+  print(merged_array.array.shape)
+
+  # digit plot
+  for d_id in data_ids:
+    plt.figure()
+    plt.xscale('log')
+    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    print('data', d_id)
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+
+      print(f'setup: {s}')
+      print(sub_mat.shape)
+      print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+      if plot_var:
+        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+      else:
+        sub_mat = np.median(sub_mat, axis=1)
+        plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+
+        print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+    if d_id == 'd':
+      pass
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.9))
+    else:
+      pass
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.8))
+    # plt.legend(loc='upper left')
+    plt.legend(loc='upper left')
+    plt.savefig(f'plots/apr23_{"var_" if plot_var else ""}fashion_merf_plus_full_mmd_and_mehp.png')
+
+    for m_idx, model in enumerate(models):
+      plt.figure()
+      plt.xscale('log')
+      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      for s_idx, s in enumerate(queried_setups):
+        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
+        print(sub_mat.shape)
+        print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+        if plot_var:
+          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        else:
+          sub_mat = np.median(sub_mat, axis=1)
+          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+          print(f'median values for setting {s}, data {d_id}:', sub_mat)
+
+      plt.xlabel('# samples generated')
+      plt.ylabel('accuracy')
+      plt.legend(loc='upper left')
+      plt.savefig(f'plots/apr23_{"var_" if plot_var else ""}fashion_plot_{model}.png')
+
+
+def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
+
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  metric = 'accuracies'
+  data_ids = ['d']
+  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  ar_dict = collect_results()
+  sr_conv_array = ar_dict['sr_conv_apr6']
+  sb_array = ar_dict['sb']
+  full_mmd_array = ar_dict['full_mmd_jan7']
+  mehp_array = ar_dict['mehp_dmnist_apr27']
+  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
+  merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(mehp_array, merge_dim='setups')
+  print(merged_array.array.shape)
+
+
+  orders = [20, 50, 100, 200, 500]
+  # digit plot
+  for d_id in data_ids:
+    for o_idx, order in enumerate(orders):
+      queried_setups = ['real_data',
+                        'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                        'full_mmd',
+                        f'mehp non-DP order{order}', f'mehp eps=1 order{order}']
+      setup_names = ['real data',
+                     'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
+                     'full MMD $\epsilon=\infty$',
+                     f'mehp $\epsilon=\infty$ order{order}', f'mehp $\epsilon=1$ order{order}']
+      plt.figure()
+      plt.xscale('log')
+      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      print('data', d_id)
+      for s_idx, s in enumerate(queried_setups):
+        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+
+        print(f'setup: {s}')
+        print(sub_mat.shape)
+        print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+        sub_mat = np.mean(sub_mat, axis=1)  # average over models
+        print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+        if plot_var:
+          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        else:
+          sub_mat = np.median(sub_mat, axis=1)
+          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+
+          print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+
+      plt.xlabel('# samples generated')
+      plt.ylabel('accuracy')
+
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.9))
+      plt.legend(loc='upper left')
+      plt.savefig(f'plots/apr27_order{order}_{"var_" if plot_var else ""}digit_merf_plus_full_mmd_and_mehp.png')
+
+      for m_idx, model in enumerate(models):
+        plt.figure()
+        plt.xscale('log')
+        plt.xticks(sub_ratios[::-1], data_used[::-1])
+        for s_idx, s in enumerate(queried_setups):
+          sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
+          print(sub_mat.shape)
+          print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+          if plot_var:
+            plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+          else:
+            sub_mat = np.median(sub_mat, axis=1)
+            plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+            print(f'median values for setting {s}, data {d_id}:', sub_mat)
+
+        plt.xlabel('# samples generated')
+        plt.ylabel('accuracy')
+        plt.legend(loc='upper left')
+        plt.savefig(f'plots/apr27_order{order}_{"var_" if plot_var else ""}digit_plot_{model}.png')
+
+
+def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
+  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  metric = 'accuracies'
+  data_ids = ['d']
+  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
+
+  ar_dict = collect_results()
+  sr_conv_array = ar_dict['sr_conv_apr6']
+  sb_array = ar_dict['sb']
+  full_mmd_array = ar_dict['full_mmd_jan7']
+  mehp_array = ar_dict['mehp_dmnist_apr27']
+  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
+  merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
+  print(merged_array.array.shape)
+  merged_array = merged_array.merge(mehp_array, merge_dim='setups')
+  print(merged_array.array.shape)
+
+  var_str = "var_" if plot_var else ""
+  dp_str = 'eps=1_' if private else 'nonDP_'
+
+  orders = [20, 50, 100, 200, 500]
+  if private:
+    queried_setups = [f'mehp eps=1 order{o}' for o in orders]
+    setup_names = [f'mehp $\epsilon=1$ order{o}' for o in orders]
+  else:
+    queried_setups = [f'mehp non-DP order{o}' for o in orders]
+    setup_names = [f'mehp $\epsilon=\infty$ order{o}' for o in orders]
+  # digit plot
+  for d_id in data_ids:
+
+
+      plt.figure()
+      plt.xscale('log')
+      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      print('data', d_id)
+      for s_idx, s in enumerate(queried_setups):
+        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+
+        print(f'setup: {s}')
+        print(sub_mat.shape)
+        print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+        sub_mat = np.mean(sub_mat, axis=1)  # average over models
+        print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+        if plot_var:
+          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        else:
+          sub_mat = np.median(sub_mat, axis=1)
+          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+
+          print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+      plt.xlabel('# samples generated')
+      plt.ylabel('accuracy')
+
+      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85],
+                 xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.ylim((0.45, 0.9))
+      plt.legend(loc='upper left')
+      plt.savefig(f'plots/apr27_order_comp_{dp_str}{var_str}digit_plot.png')
+
+      for m_idx, model in enumerate(models):
+        plt.figure()
+        plt.xscale('log')
+        plt.xticks(sub_ratios[::-1], data_used[::-1])
+        for s_idx, s in enumerate(queried_setups):
+          sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
+
+          if plot_var:
+            plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+          else:
+            sub_mat = np.median(sub_mat, axis=1)
+            plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+            print(f'median values for setting {s}, data {d_id}:', sub_mat)
+
+        plt.xlabel('# samples generated')
+        plt.ylabel('accuracy')
+        plt.legend(loc='upper left')
+        plt.savefig(f'plots/apr27_order_comp_{dp_str}{var_str}digit_plot_{model}.png')
+
 
 if __name__ == '__main__':
   # collect_synth_benchmark_results()
@@ -685,4 +954,9 @@ if __name__ == '__main__':
   # apr6_plot_overfit_conv(plot_var=False)
   # apr6_plot_overfit_conv(plot_var=True)
   # apr6_plot_better_conv(plot_var=True)
-  jan7_plot_better_conv_plus_full_mmd(plot_var=True)
+  # jan7_plot_better_conv_plus_full_mmd(plot_var=True)
+  # apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=True)
+  # apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False)
+  # apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=True)
+  apr27_dmnist_mehp_order_comp(plot_var=True, private=True)
+  apr27_dmnist_mehp_order_comp(plot_var=True, private=False)

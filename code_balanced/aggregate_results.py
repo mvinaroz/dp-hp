@@ -344,6 +344,29 @@ def collect_results():
   full_mmd_jan7_mat = np.expand_dims(full_mmd_jan7_mat, 1)
   full_mmd_jan7_array = NamedArray(full_mmd_jan7_mat, dim_names, full_mmd_jan7_idx_names)
 
+  mehp_fmnist_apr23_setups = ['mehp_nonDP', 'mehp_eps=1']
+  mehp_fmnist_apr23_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  mehp_fmnist_apr23_idx_names = {'setups': mehp_fmnist_apr23_setups,
+                                 'sub_ratios': mehp_fmnist_apr23_sub_ratios}
+  mehp_fmnist_apr23_idx_names.update(base_idx_names)
+  mehp_fmnist_apr23_idx_names['data_ids'] = ['f']
+  mehp_fmnist_apr23_idx_names['eval_metrics'] = ['accuracies']
+  mehp_fmnist_apr23_mat = np.load('results/results_full_apr23_fmnist_mehp.npy')
+  mehp_fmnist_apr23_array = NamedArray(mehp_fmnist_apr23_mat, dim_names, mehp_fmnist_apr23_idx_names)
+
+  mehp_dmnist_apr27_setups = ['mehp non-DP order20', 'mehp non-DP order50', 'mehp non-DP order100',
+                              'mehp non-DP order200', 'mehp non-DP order500',
+                              'mehp eps=1 order20', 'mehp eps=1 order50', 'mehp eps=1 order100',
+                              'mehp eps=1 order200', 'mehp eps=1 order500']
+  mehp_dmnist_apr27_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  mehp_dmnist_apr27_idx_names = {'setups': mehp_dmnist_apr27_setups,
+                                 'sub_ratios': mehp_dmnist_apr27_sub_ratios}
+  mehp_dmnist_apr27_idx_names.update(base_idx_names)
+  mehp_dmnist_apr27_idx_names['data_ids'] = ['d']
+  mehp_dmnist_apr27_idx_names['eval_metrics'] = ['accuracies']
+  mehp_dmnist_apr27_mat = np.load('results/results_full_apr27_dmnist_mehp.npy')
+  mehp_dmnist_apr27_array = NamedArray(mehp_dmnist_apr27_mat, dim_names, mehp_dmnist_apr27_idx_names)
+
   array_dict = {'sb': sb_array,
                 'np': np_array,
                 'sr': sr_array,
@@ -353,7 +376,9 @@ def collect_results():
                 'sr_f': sr_f_array,
                 'sr_conv_apr4': sr_conv_apr4_array,
                 'sr_conv_apr6': sr_conv_apr6_array,
-                'full_mmd_jan7': full_mmd_jan7_array}
+                'full_mmd_jan7': full_mmd_jan7_array,
+                'mehp_fmnist_apr23': mehp_fmnist_apr23_array,
+                'mehp_dmnist_apr27': mehp_dmnist_apr27_array}
 
   return array_dict
 
@@ -466,44 +491,91 @@ def aggregate_oct14_gs_wgan_eval(verbose):
         print(np.mean(accs))
 
 
-def aggregate_apr23_fmnist_mehp(verbose):
-  data_suffix = {'digits': 'd', 'fashion': 'f'}
-
-  epsilons = [0, 5, 25]
-  # sub_ratios = ['1.0']
+def aggregate_apr23_fmnist_mehp():
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  runs = [0, 1, 2, 3, 4]
-  eval_metrics = ['accuracies']
+  runs = range(10)
+  setups = ['mehp non-DP', 'mehp eps=1']
+  # eval_metrics = ['accuracies']
   # save_str = 'sep18_real_mmd_baseline'
+  save_str = 'apr23_fmnist_mehp'
 
-  for data in data_suffix:
-    print(data)
-    for eps in epsilons:
-      print(f'eps={eps}')
-      for m in models:
-        scores = {'accuracies': []}
-        for run in runs:
-          load_file = f'logs/gen/oct12_eps_{data_suffix[data]}{eps}_s{run}/synth_eval/sub1.0_{m}_log.npz'
-          if os.path.isfile(load_file):
-            mat = np.load(load_file)
-          else:
-            print('failed to load', load_file)
-            continue
-          for e_idx, e in enumerate(eval_metrics):
-            score = mat[e][1]
-            scores[e].append(score)
-        accs = np.asarray(scores["accuracies"])
-        if verbose:
-          print(f'model: {m}')
-          print(f'acc avg: {np.mean(accs)}')
-          print(f'accs: {accs}')
+  all_the_results = np.zeros((1, len(setups),
+                             len(sub_ratios),
+                             len(models),
+                             5,
+                             1))
+
+  for idx in runs:
+    print(f'run {idx}')
+    for r_idx, r in enumerate(sub_ratios):
+      print(f'sub_ratio {r}')
+      scores = []
+      for m_idx, m in enumerate(models):
+        load_file = f'../dp_mehp/logs/gen/apr23_me_training_{idx}/fashion/synth_eval/sub{r}_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
         else:
-          print(np.mean(accs))
+          print('failed to load', load_file)
+          continue
 
+        scores.append(mat['accuracies'][1])
+        seed_idx = idx % 5  # idx 0-4 is non-DP, idx 5-9 is eps=1
+        setup_idx = idx // 5
+        all_the_results[0, setup_idx, r_idx, m_idx, seed_idx, 0] = mat['accuracies'][1]
+      accs = np.asarray(scores)
+      print(f'accs: {accs}')
+      print(f'mean: {np.mean(accs)}')
+
+  np.save(f'results_full_{save_str}', all_the_results)
+  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
+  print(np.mean(all_the_results, axis=(3, 4)))
+
+
+def aggregate_apr27_dmnist_mehp():
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = list(range(25)) + list(range(30, 55))
+  # eval_metrics = ['accuracies']
+  save_str = 'apr27_dmnist_mehp'
+  setups = ['mehp non-DP order20', 'mehp non-DP order50', 'mehp non-DP order100',
+            'mehp non-DP order200', 'mehp non-DP order500',
+            'mehp eps=1 order20', 'mehp eps=1 order50', 'mehp eps=1 order100',
+            'mehp eps=1 order200', 'mehp eps=1 order500']
+
+  all_the_results = np.zeros((1, len(setups), len(sub_ratios), len(models), 5, 1))
+
+  for idx in runs:
+    # print(f'run {idx}')
+    for r_idx, r in enumerate(sub_ratios):
+      # print(f'sub_ratio {r}')
+      scores = []
+      for m_idx, m in enumerate(models):
+        load_file = f'../dp_mehp/logs/gen/apr27_mehp_dmnist_{idx}/digits/synth_eval/sub{r}_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          # if not 'linear_svc' in load_file:
+          print('failed to load', load_file)
+          continue
+
+        scores.append(mat['accuracies'][1])
+        seed_idx = idx % 5  # idx 0-4 is non-DP, idx 5-9 is eps=1
+        setup_idx = (idx // 5) if idx < 30 else (idx // 5 - 1)  # since 26-30 din't exist
+        all_the_results[0, setup_idx, r_idx, m_idx, seed_idx, 0] = mat['accuracies'][1]
+
+      # print(f'accs: {accs}')
+      # print(f'mean: {np.mean(accs)}')
+  np.save(f'results_full_{save_str}', all_the_results)
+  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
+  print(np.mean(all_the_results, axis=(3, 4)))
 
 if __name__ == '__main__':
-  aggregate_sep18_realmmd()
+  # aggregate_sep18_realmmd()
+  # aggregate_apr23_fmnist_mehp()
+  aggregate_apr27_dmnist_mehp()
   # aggregate_oct13_mnist_redo(True)
   # aggregate_oct13_mnist_redo(False)
   # aggregate_oct14_gs_wgan_eval(True)
