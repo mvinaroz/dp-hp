@@ -51,13 +51,15 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, data_num, smp_
         batch_num   =   int(batch_num)
         rchoice     =   np.zeros(shape=[batch_num, int(np.floor(dim_data*sampling_rate)) ])
         mean1   =   mean_embedding_proxy(data_tensor[:, 0:int(np.floor(dim_data*sampling_rate))], label_tensor, order, xi, device, n_labels, sr_me_division, False)
-        mean1   =   torch.zeros(size=tuple(np.hstack([batch_num, torch.tensor(mean1.shape).detach().cpu().numpy()])))
+        mean1   =   torch.zeros(size=tuple(np.hstack([batch_num, torch.tensor(mean1.shape).detach().cpu().numpy()])), device=device)
         for j in range(batch_num):
             rchoice[j, :]     =   np.random.choice(np.arange(dim_data), size=int(np.floor(dim_data*sampling_rate)))
             data_ten          =   data_tensor[:, rchoice[j, :]]
             mean1[j, :]       =   mean_embedding_proxy(data_ten, label_tensor, order, xi, device, n_labels, sr_me_division, False)
             print('Shape of Mean1 is ', mean1.shape)
-        
+        torch.save(mean1, 'mean1.pt') #remove this later. Just for decreasing the test time.
+        torch.save(rchoice, 'rchoice.pt') # remove this later
+
     # print(label_tensor.size)
         def hp_loss(gen_enc, gen_labels, batch_idx=-1):
             if (sample_dims):
@@ -70,9 +72,11 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, data_num, smp_
                 else:
                     gen_enc     =   gen_enc[:, rchoice[j, :]]
                     mm          =   mean1[j, :]
+                    print('Number of Batch is ', batch_idx)
+                    print('mean1 in hp_loss is ', mm)
             # print('loss')
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding([], [], gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
+                return mmd_mean_embedding([], [], gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division, known_mean1=True, mean1=mm)
             elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_ten, label_tensor, gen_enc, gen_labels, n_labels, order, xi, device, sr_me_division=sr_me_division)
         hp_loss_minibatch   =   None        
@@ -134,18 +138,19 @@ def get_hp_losses(train_loader, device, n_labels, order, rho, bs, data_num, smp_
             # print('Size is ', int(np.floor(dim_data*sampling_rate)))
             # print('Total Size is ', dim_data)
             if (mmd_computation=='mean_emb'):
-                return mmd_mean_embedding(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
+                return mmd_mean_embedding(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device, known_mean1=True, mean1=mean1)
             elif (mmd_computation=='cross'):
                 return mmd_loss_hp_approx(data_enc, labels, gen_enc, gen_labels, n_labels, order, xi, device)
         hp_loss     =   None
     return hp_loss, hp_loss_minibatch
           
 def mmd_mean_embedding(data_enc, data_labels, gen_enc, gen_labels, n_labels, order, rho, device, labels_to_one_hot=False, sr_me_division=1, known_mean1=False, mean1=[]):
-    data_enc 	= 	torch.as_tensor(data_enc, device)
+    data_enc 	= 	torch.as_tensor(data_enc, device=device)
+    print("Data Enc is ", data_enc, ' and mean1 is ', mean1)
     if (known_mean1==False):
         mean1   =   mean_embedding_proxy(data_enc, data_labels, order, rho, device, n_labels, sr_me_division, labels_to_one_hot)
     mean2   =   mean_embedding_proxy(gen_enc, gen_labels, order, rho, device, n_labels, 1, labels_to_one_hot) #Generated data are not that big. Hence, I set sr_me_division=1 for them.
-    
+    print('mean2 is ', mean2)
     return torch.norm(mean1-mean2)
     
     
@@ -193,10 +198,10 @@ def tensor_fmap_hp(data, order, rho, device):
     # print('Data shape is ', data.shape)
     # print('Data[0] shape is ', data[0].shape)
     
-    fmap   =   compute_phi(data[0].unsqueeze(0).unsqueeze(0), order-1, rho, device) #Here was feature_map_HP and two outputs, the first was fmap
+    fmap   =   compute_phi(data[0].unsqueeze(0).unsqueeze(0), order+1, rho, device) #Here was feature_map_HP and two outputs, the first was fmap
     fmap        =   fmap[0, :]
     for dim in range(data_dim-1):
-        fmap_dim    =   compute_phi(data[dim+1].unsqueeze(0).unsqueeze(0), order-1, rho, device) #Here was feature_map_HP and two outputs
+        fmap_dim    =   compute_phi(data[dim+1].unsqueeze(0).unsqueeze(0), order+1, rho, device) #Here was feature_map_HP and two outputs
         fmap_dim    =   fmap_dim[0, :]
         # print('Fmap_dim is ', fmap_dim)
         if (dim!=0):
@@ -306,12 +311,12 @@ def mmd_prod_kernel_across_dimension_wHP(x, x_prime, order, rho, device):
         # print(axis)
         x_axis = x[:, axis]
         x_axis = x_axis[:, np.newaxis]
-        phi_x_axis = compute_phi(x_axis, order-1, rho,device) #Here was  phi_x_axis, eigen_vals_axis = feature_map_HP(order, x_axis,rho,device)
+        phi_x_axis = compute_phi(x_axis, order+1, rho,device) #Here was  phi_x_axis, eigen_vals_axis = feature_map_HP(order, x_axis,rho,device)
         # phi_x_mat[:, :, axis] = phi_x_axis # number of datapoints by order
 
         x_prime_axis = x_prime[:, axis]
         x_prime_axis = x_prime_axis[:, np.newaxis]
-        phi_x_prime_axis = compute_phi(x_prime_axis, order-1, rho,device) #Here was  phi_x_prime_axis, eigen_vals_prime_axis = feature_map_HP(order, x_prime_axis,rho,device)
+        phi_x_prime_axis = compute_phi(x_prime_axis, order+1, rho,device) #Here was  phi_x_prime_axis, eigen_vals_prime_axis = feature_map_HP(order, x_prime_axis,rho,device)
         # print(phi_x_prime_axis.size())
         # phi_x_prime_mat[:, :, axis] = phi_x_prime_axis # number of datapoints by order
         # print('Size of Phi_x_axis:', phi_x_axis.size(), "and size of Phi_x_prime_axis: ", phi_x_prime_axis.size(), "and Size of matmat: ", matmat.size())

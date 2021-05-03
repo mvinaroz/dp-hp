@@ -127,6 +127,8 @@ def ME_with_HP(x, order, rho, device, n_training_data):
   sum_val = torch.sum(phi_x, axis=0)
   phi_x = sum_val / n_training_data
 
+  phi_x = phi_x / np.sqrt(input_dim) # because we approximate k(x,x') = \sum_d k_d(x_d, x_d') / input_dim
+
   phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
 
   return phi_x
