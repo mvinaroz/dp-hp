@@ -101,7 +101,7 @@ for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
     data, labels = data.to(device), labels.to(device)
     data = flatten_features(data)
 
-n = 100
+n = 200
 x=data[0:n, :].detach().cpu().numpy() #Number of samples in x.
 x_prime=data[n:2*n, :].detach().cpu().numpy() #number of samples in x_prime.
 input_dim = x.shape[1]
@@ -110,44 +110,22 @@ input_dim = x.shape[1]
 
 med = meddistance(np.concatenate((x,x_prime),axis=0))
 sigma2 = med**2
+print('median heuristic finds sigma2 as ', sigma2)
 
 Gaussian_kernel = k.KGauss(sigma2=sigma2)
 K = Gaussian_kernel(x, x_prime)
 
-# rho = find_rho(sigma2, False)
-
-# D2=cdist(x, x_prime, 'sqeuclidean') #Computes de squared euclidian distance between each pair of the two collections of inputs
-# K = np.exp(-D2 / (2.0 * sigma2))
-
-
-#"""(1) Random Fourier features"""
-#n_RF_features = 4
-#draws = n_RF_features // 2
-#W_freq = np.random.randn(draws, data_pkg.n_features) / np.sqrt(sigma2)
-#emb1 = RFF_Gauss(n_RF_features, torch.Tensor(x), W_freq)
-#emb2 = RFF_Gauss(n_RF_features, torch.Tensor(x_prime), W_freq)
-#RF = torch.matmul(emb2, emb1.transpose(1,0))
-
-
-#"""(2) Hermite Polynomials"""
-#rho = find_rho(sigma2, False )
-#order = 4
-#n_data=data_pkg.n_data / 2
-#phi_1 = ME_with_HP(torch.Tensor(x), order, rho, device, n_data)
-#phi_2 = ME_with_HP(torch.Tensor(x_prime), order, rho, device, n_data)
-#phi1_aux=torch.mean(phi_1, 1)
-#phi2_aux=torch.mean(phi_2, 1)
-#HP = torch.matmul(phi2_aux, phi1_aux.T)
-
-
 """Error plot"""
 # evaluate the kernel function
-max_order = 100
+max_order = 200
 n_ME_data=x.shape[0]
 #n_RF_data=data_pkg.n_data/2
 err_RF = np.zeros(max_order)
 err_HP = np.zeros(max_order)
 
+# sigma2_for_HP = 0.05 # this is for fashion
+
+### these are with unnormalized mnist
 sigma2_for_HP = 0.05
 rho = find_rho(sigma2_for_HP, False)
 
@@ -186,6 +164,7 @@ for i in range(max_order):
             
 
     err_HP[i] = err(torch.Tensor(K), HP)
+    print('error of RF:%f and error of HP:%f' %(err_RF[i], err_HP[i]))
 
 """Plot ans save the results"""
 font = {'family': 'normal',
@@ -209,5 +188,5 @@ plt.yscale('log')
 plt.xscale('log')
 plt.title('error from HP approximation')
 plt.xlabel('order of polynomials')
-# plt.show()
-plt.savefig("prueba1_error.png", format='png')
+plt.show()
+# plt.savefig("prueba1_error.png", format='png')
