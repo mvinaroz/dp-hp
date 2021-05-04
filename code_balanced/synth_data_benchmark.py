@@ -5,13 +5,12 @@ import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
-import time
 
 
 def load_mnist_data(data_key, data_from_torch, base_dir='data/'):
   if not data_from_torch:
     if data_key == 'digits':
-      d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
+      d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))
       
       return d['x_train'].reshape(60000, 784), d['y_train'], d['x_test'].reshape(10000, 784), d['y_test']
     elif data_key == 'fashion':
@@ -114,7 +113,7 @@ def get_model_specs(new_specs):
 
 def parse():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
+  parser.add_argument('--data-dir', type=str, default=None, help='this is computed. only set to override')
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--data-log-name', type=str, default=None, help='subdirectory for this run')
 
@@ -224,25 +223,26 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   return acc, f1, conf, acc_str, f1_str
 
 
-def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_path=None,
+def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_dir=None,
                   data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
                   custom_keys=None, skip_slow_models=False, only_slow_models=False,
                   skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
                   print_conf_mat=False, norm_data=False, use_new_specs=False):
 
-  gen_data_dir = os.path.join(data_base_dir, data_log_name)
+  if data_dir is None:
+    data_dir = os.path.join(data_base_dir, data_log_name)
 
   if data_base_dir == '../dp_mehp/logs/gen/':  # account for naming inconsistency
-    gen_data_dir = os.path.join(gen_data_dir, f'{data_key}/')
+    data_dir = os.path.join(data_dir, f'{data_key}/')
 
-  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
-  if data_path is None:
-    data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+  log_save_dir = os.path.join(data_dir, 'synth_eval/')
+
+  data_path = os.path.join(data_dir, 'synthetic_mnist.npz')
   datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
   mean_acc, accs = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
-                                  subsample, custom_keys, skip_slow_models, only_slow_models,
-                                  skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
-                                  print_conf_mat, norm_data, use_new_specs)
+                                        subsample, custom_keys, skip_slow_models, only_slow_models,
+                                        skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
+                                        print_conf_mat, norm_data, use_new_specs)
   print(accs)
   return mean_acc, accs
 
@@ -317,7 +317,7 @@ def main():
   ar = parse()
   if ar.seed is not None:
     np.random.seed(ar.seed)
-  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_path, ar.data_from_torch,
+  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_dir, ar.data_from_torch,
                 ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
                 ar.skip_slow_models, ar.only_slow_models,
                 ar.skip_gen_to_real, ar.compute_real_to_real, ar.compute_real_to_gen,
