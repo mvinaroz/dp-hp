@@ -71,6 +71,7 @@ def gs_wgan_eval():
   parser.add_argument('--custom-keys', type=str, default=None)
   parser.add_argument('--subsample', type=float, default=1.0)
   parser.add_argument('--run-slow-models', action='store_true', default=False)
+  parser.add_argument('--new-model-specs', action='store_true', default=False)
 
   ar = parser.parse_args()
 
@@ -99,7 +100,8 @@ def gs_wgan_eval():
 
   test_passed_gen_data(None, data_col, ar.save_dir, log_results=True, subsample=ar.subsample,
                        custom_keys=ar.custom_keys,
-                       skip_slow_models=not ar.run_slow_models, only_slow_models=ar.run_slow_models)
+                       skip_slow_models=not ar.run_slow_models, only_slow_models=ar.run_slow_models,
+                       use_new_specs=ar.new_model_specs)
 
 
 if __name__ == '__main__':
