@@ -134,7 +134,7 @@ def redo_old_adaboost():
                  [f'logs/gen/oct12_eps_f{d}_s{s}' for d in [0, 5, 25] for s in range(5)] + \
                  [f'../dpgan-alternative/synth_data/apr19_sig1.41_f{s}' for s in range(5)]
   params = [('--custom-keys', ['adaboost']),
-            ('--new-models-specs', None),
+            ('--new-model-specs', None),
             ('--data {} --data-path {} --seed {}',
              # list(zip([f'apr23_me_training_{k}' for k in range(60)],
             list(zip(['digits']*25 + ['fashion']*25, dmnist_names + fmnist_names,

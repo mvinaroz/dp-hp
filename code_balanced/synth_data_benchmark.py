@@ -123,7 +123,7 @@ def parse():
 
   parser.add_argument('--log-results', action='store_true', default=False, help='if true, save results')
   parser.add_argument('--print-conf-mat', action='store_true', default=False, help='print confusion matrix')
-
+  parser.add_argument('--seed', type=int, default=None, help='set random seed')
   parser.add_argument('--skip-slow-models', action='store_true', default=False, help='skip models that take longer')
   parser.add_argument('--only-slow-models', action='store_true', default=False, help='only do slower the models')
   parser.add_argument('--custom-keys', type=str, default=None, help='enter model keys to run as key1,key2,key3...')
@@ -315,6 +315,8 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
 
 def main():
   ar = parse()
+  if ar.seed is not None:
+    np.random.seed(ar.seed)
   test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_path, ar.data_from_torch,
                 ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
                 ar.skip_slow_models, ar.only_slow_models,
