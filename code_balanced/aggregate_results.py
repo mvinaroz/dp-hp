@@ -105,8 +105,7 @@ def aggregate_subsample_tests_paper_setups():
 
 def aggregate_subsample_tests_paper_setups_redo():
   data_ids = ['d', 'f']
-  setups = ['dpcgan-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-',
-            'dpmerf-nonprivate-']
+  setups = ['dpcgan-', 'dpmerf-low-eps-', 'dpmerf-med-eps-', 'dpmerf-high-eps-', 'dpmerf-nonprivate-']
   sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
   models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
             'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
@@ -501,11 +500,7 @@ def aggregate_apr23_fmnist_mehp():
   # save_str = 'sep18_real_mmd_baseline'
   save_str = 'apr23_fmnist_mehp'
 
-  all_the_results = np.zeros((1, len(setups),
-                             len(sub_ratios),
-                             len(models),
-                             5,
-                             1))
+  all_the_results = np.zeros((1, len(setups), len(sub_ratios), len(models), 5, 1))
 
   for idx in runs:
     print(f'run {idx}')
@@ -572,11 +567,25 @@ def aggregate_apr27_dmnist_mehp():
   np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
   print(np.mean(all_the_results, axis=(3, 4)))
 
+
+def aggregate_dpcgan():
+  data_ids = ['d', 'f']
+  setups = ['dpcgan-']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies', 'f1_scores']
+  setup_with_real_data = 'dpmerf-high-eps-'
+  save_str = 'mar25_subsampled'
+  aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str, load_real_nosub=True)
+
 if __name__ == '__main__':
-  # aggregate_sep18_realmmd()
+  aggregate_sep18_realmmd()
   # aggregate_apr23_fmnist_mehp()
-  aggregate_apr27_dmnist_mehp()
+  # aggregate_apr27_dmnist_mehp()
   # aggregate_oct13_mnist_redo(True)
-  # aggregate_oct13_mnist_redo(False)
+  aggregate_oct13_mnist_redo(False)
   # aggregate_oct14_gs_wgan_eval(True)
-  # aggregate_oct14_gs_wgan_eval(False)
+  aggregate_oct14_gs_wgan_eval(False)
+  # covered: dpmerf, gs-wgan, dp-cgan. not covered: dpgan

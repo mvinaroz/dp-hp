@@ -123,28 +123,30 @@ def running_train_script():
 def redo_old_adaboost():
   # make script to re-run all dp-merf, dpcgan and dpgan eval for adaboost using the new setting
   # gs-wgan must be run separately
-  experiment_name = 'may3_redo_adaboost'
+  experiment_name = 'may3_redo_adaboost_subsamples'
   save_dir = 'cluster_scripts'
   base_string = 'python3.6 synth_data_benchmark.py'
 
   dmnist_names = [f'logs/gen/dpcgan-d{s}' for s in range(5)] + \
                  [f'logs/gen/oct12_eps_d{d}_s{s}' for d in [0, 5, 25] for s in range(5)] + \
-                 [f'../dpgan-alternative/synth_data/apr19_sig1.41_d{s}' for s in range(5)]
+                 [f'../dpgan-alternative/synth_data/apr19_sig1.41_d{s}' for s in range(5)] + \
+                 [f'logs/gen/sep18_real_mmd_baseline_s{s}' for s in range(1, 6)]
   fmnist_names = [f'logs/gen/dpcgan-f{s}' for s in range(5)] + \
                  [f'logs/gen/oct12_eps_f{d}_s{s}' for d in [0, 5, 25] for s in range(5)] + \
-                 [f'../dpgan-alternative/synth_data/apr19_sig1.41_f{s}' for s in range(5)]
+                 [f'../dpgan-alternative/synth_data/apr19_sig1.41_f{s}' for s in range(5)] + \
+                 [f'logs/gen/sep18_real_mmd_baseline_s{s}_fashion' for s in range(1, 6)]
   params = [('--custom-keys', ['adaboost']),
             ('--new-model-specs', None),
             ('--log-results', None),
             ('--data {} --data-dir {} --seed {}',
              # list(zip([f'apr23_me_training_{k}' for k in range(60)],
-            list(zip(['digits']*25 + ['fashion']*25, dmnist_names + fmnist_names,
-                     [0, 1, 2, 3, 4]*10))),
-            # ('-rate', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+            list(zip(['digits']*30 + ['fashion']*30, dmnist_names + fmnist_names,
+                     [0, 1, 2, 3, 4]*12))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5])  # , 0.5, 1.0
             # ('-rate', [1.0])  # , 0.5, 1.0
             ]
   exp_id_flag = None
-  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1)
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=9)
 
 
 if __name__ == '__main__':
