@@ -472,7 +472,7 @@ def aggregate_oct14_gs_wgan_eval(verbose):
     for m in models:
       scores = {'accuracies': []}
       for run in runs:
-        load_file = f'../../gs-wgan/eval/{data}_s{run}/sub1.0_{m}_log.npz'
+        load_file = f'../gs-wgan/eval/{data}_s{run}/sub1.0_{m}_log.npz'
         if os.path.isfile(load_file):
           mat = np.load(load_file)
         else:
