@@ -15,29 +15,16 @@ import seaborn as sns
 sns.set()
 # %matplotlib inline
 from autodp import privacy_calibrator
-from all_aux_files_tab_data import  find_rho_tab, meddistance
+from all_aux_files_tab_data import  find_rho_tab, meddistance, heuristic_for_length_scale, ME_with_HP_tab
 from all_aux_files import ME_with_HP
 
 import warnings
 warnings.filterwarnings('ignore')
 import os
 from code_tab.marginals_eval import gen_data_alpha_way_marginal_eval
-#from code_tab.binarize_adult import binarize_data
+from code_tab.binarize_adult import binarize_data
 
 ############################### kernels to use ###############################
-""" we use the random fourier feature representation for Gaussian kernel """
-
-def RFF_Gauss(n_features, X, W, device):
-  """ this is a Pytorch version of Wittawat's code for RFFKGauss"""
-
-  W = torch.Tensor(W).to(device)
-  X = X.to(device)
-  XWT = torch.mm(X, torch.t(W)).to(device)
-  Z1 = torch.cos(XWT)
-  Z2 = torch.sin(XWT)
-  Z = torch.cat((Z1, Z2),1) * torch.sqrt(2.0/torch.Tensor([n_features])).to(device)
-  return Z
-
 
 """ we use a weighted polynomial kernel for labels """
 
@@ -108,7 +95,7 @@ def main():
   seed = np.random.randint(0, 1000)
   print('seed: ', seed)
 
-  print('number of features: ', args.n_features)
+  print('Hermite polynomial order: ', args.order_hermite)
 
   random.seed(seed)
   ############################### data loading ##################################
@@ -116,7 +103,11 @@ def main():
 
   data = np.load(f"../data/real/sdgym_{args.dataset}_adult.npy")
   print('data shape', data.shape)
-
+  
+  true_labels =np.ones(data.shape[0]) #We set al labels to the same class (as we don't have it).
+  true_labels = np.expand_dims(true_labels, 1)
+  
+  
   if args.kernel == 'linear':
     data, unbin_mapping_info = binarize_data(data)
     print('bin data shape', data.shape)
@@ -137,15 +128,12 @@ def main():
   # MODEL
 
   # model specifics
-  # mini_batch_size = np.int(np.round(batch_size * n))
-  print("minibatch: ", args.batch_size)
-  input_size = 10
-  if args.d_hid is not None:
-    hidden_size_1 = args.d_hid
-    hidden_size_2 = args.d_hid
-  else:
-    hidden_size_1 = 4 * input_dim
-    hidden_size_2 = 2 * input_dim
+  batch_size = np.int(np.round(args.batch_rate * n_samples))
+  print("minibatch: ", batch_size)
+  input_size = 10 + 1
+
+  hidden_size_1 = 4 * input_dim
+  hidden_size_2 = 2 * input_dim
 
   output_size = input_dim
   out_fun = 'relu' if args.kernel == 'gaussian' else 'sigmoid'
@@ -157,108 +145,167 @@ def main():
 
   # define details for training
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
-  training_loss_per_iteration = np.zeros(args.iterations)
+  #training_loss_per_iteration = np.zeros(args.iterations)
 
   ##########################################################################
-
-
+  heterogeneous_datasets=[]
+  num_numerical_inputs=[]
+  
   """ computing mean embedding of subsampled true data """
   if args.kernel == 'gaussian':
-    med = meddistance(data[:300])
-    print(f'heuristic suggests kernel length {med}')
-
-    if args.kernel_length is not None:
-      sigma2 = args.kernel_length
-
-
-    rho = find_rho_tab(sigma2)
-    order = args.n_features #order_hermite    
-
-    # aggregate embedding in chunks
-    #chunk_size = 250
-    #emb_sum = 0
-    #for idx in range(n_samples // chunk_size + 1):
-    #  data_chunk = data[idx * chunk_size:(idx + 1) * chunk_size].astype(np.float32)
-    #  chunk_emb = ME_with_HP(torch.tensor(data_chunk), order, rho, device, n_samples)
-    #  emb_sum += torch.sum(chunk_emb, 0)
-
-    #mean_emb1 = emb_sum / n_samples
-    mean_emb1 = ME_with_HP(torch.tensor(data), order, rho, device, n_samples)
-    #print("This is the shape of emb1_input_features: ", mean_emb1.shape)
-
+    """ set the scale length """
+    if args.heuristic_sigma:
+        print('we use the median heuristic for length scale')
+        sigma = heuristic_for_length_scale('adult', data, num_numerical_inputs, input_dim, heterogeneous_datasets)
+        if args.separate_kernel_length:
+            print('we use a separate length scale on each coordinate of the data')
+            sigma2 = sigma**2
+        else:
+            sigma2 = np.median(sigma**2)
+    else:
+        sigma2 = args.kernel_length
+    # print('sigma2 is', sigma2)
+    
   else:
     raise ValueError
-    
 
-  ####################################################
-  # Privatising quantities if necessary
 
-  """ privatizing weights """
+  rho = find_rho_tab(sigma2)
+  order = args.order_hermite
+
+  ########## data mean embedding ##########
+  """ compute the weights """
+  print('computing mean embedding of data: (1) compute the weights')
+  
+  unnormalized_weights = np.sum(true_labels, 0)
+  weights = unnormalized_weights / np.sum(unnormalized_weights) # weights = m_c / n
+  print('\n weights with no privatization are', weights, '\n')
+
+  
   print("private")
   delta = 1e-5
-  privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=1)
-  sensitivity = 2 / n_samples
-  noise_std_for_privacy = privacy_param['sigma'] * sensitivity
+  k = 2 # because we add noise to the weights and means separately.
+  privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=k)
+  sensitivity_for_weights = np.sqrt(2) / n_samples  # double check if this is sqrt(2) or 2
+  noise_std_for_weights = privacy_param['sigma'] * sensitivity_for_weights
+  weights = weights + np.random.randn(weights.shape[0]) * noise_std_for_weights
+  weights[weights < 0] = 1e-3  # post-processing so that we don't have negative weights.
+  weights = weights/sum(weights) # post-processing so the sum of weights equals 1.
   
-  noise = noise_std_for_privacy * torch.randn(mean_emb1.size())
-  noise = noise.to(device)
+  n_classes=1
 
-  mean_emb1 = mean_emb1 + noise
+  """ compute the means """
+  print('computing mean embedding of data: (2) compute the mean')
+  data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
+  for idx in range(n_classes):
+     #print(idx,'th-class')
+     #idx_data = X_train[y_train.squeeze()==idx,:]
+     if args.separate_kernel_length:
+         phi_data = ME_with_HP_tab(torch.Tensor(data).to(device), order, rho, device, n_samples)
+     else:
+         phi_data = ME_with_HP(torch.Tensor(data).to(device), order, rho, device, n_samples)
+     data_embedding[:,idx] = phi_data # this includes 1/n factor inside
+  print('done with computing mean embedding of data')
+  
+  if args.is_private:
+      # print('we add noise to the data mean embedding as the private flag is true')
+      # std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
+      std = (2 * privacy_param['sigma'] / n_samples)
+      noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+
+      print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
+      data_embedding = data_embedding + noise
+      print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+
+  # the final mean embedding of data is,
+  data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
+   
+  """ Training """
+  #optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
+
+  num_iter = np.int(n_samples / batch_size)
+
+  for epoch in range(args.epochs):  # loop over the dataset multiple times
+      model.train()
+
+      for i in range(num_iter):
+
+          #if data_name in homogeneous_datasets:  # In our case the features aren't the original ones (D all numerical features are discretized and D* features reduced to a max 15) )
+
+          label_input = torch.multinomial(torch.Tensor([weights]), batch_size, replacement=True).type(torch.FloatTensor)
+          label_input = label_input.transpose_(0, 1)
+          label_input = label_input.squeeze()
+          label_input = label_input.to(device)
+
+          feature_input = torch.randn((batch_size, input_size - 1)).to(device)
+          input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
+ 
+          outputs = model(input_to_model)
+          
+          weights_syn = torch.zeros(n_classes) # weights = m_c / n
+          syn_data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
+          for idx in range(n_classes):
+              weights_syn[idx] = torch.sum(label_input == idx)
+              idx_syn_data = outputs[label_input == idx]
+              if args.separate_kernel_length:
+                  phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
+              else:
+                  phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
+              syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
+
+          weights_syn = weights_syn / torch.sum(weights_syn)
+          syn_data_embedding = syn_data_embedding / torch.Tensor(weights_syn).to(device)
+
+          loss = torch.sum((data_embedding - syn_data_embedding)**2)
+
+          optimizer.zero_grad()
+          loss.backward()
+          optimizer.step()
+          
+      print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+      
+  """ draw final data samples """
+  
+  #label_input = (1 * (torch.rand((n_samples)) < weights[1])).type(torch.FloatTensor)
+  # label_input = torch.multinomial(1 / n_classes * torch.ones(n_classes), n, replacement=True).type(torch.FloatTensor)
+  #label_input = label_input.to(device)
+  
+  feature_input = torch.randn((n_samples, input_size)).to(device)
+  #feature_input = torch.randn((n_samples, input_size - 1)).to(device)
+  print(feature_input.shape)
+  #input_to_model = torch.cat((feature_input, label_input[:, None]), 1)
+  #outputs = model(input_to_model)
+  outputs = model(feature_input)
+
+  samp_input_features = outputs
+
+  #label_input_t = torch.zeros((n_samples, n_classes))
+  #idx_1 = (label_input == 1.).nonzero()[:, 0]
+  #idx_0 = (label_input == 0.).nonzero()[:, 0]
+  #label_input_t[idx_1, 1] = 1.
+  #label_input_t[idx_0, 0] = 1.
+
+  #samp_labels = label_input_t
+
+  generated_input_features_final = samp_input_features.cpu().detach().numpy()
+  print("The generated samples: ", generated_input_features_final)
+  print("The generated samples shape: ", generated_input_features_final.shape)
+  #generated_labels_final = samp_labels.cpu().detach().numpy()
+  #generated_labels = np.argmax(generated_labels_final, axis=1)
   
   ##################################################################################################################
-  # TRAINING THE GENERATOR
-
-  print('Starting Training')
-
-  for iteration in range(args.iterations):  # loop over the dataset multiple times
-
-    running_loss = 0.0
-
-    """ computing mean embedding of generated data """
-    optimizer.zero_grad()
-    feature_input = torch.randn((args.batch_size, input_size)).to(device)
-    outputs = model(feature_input)
-    #print("this is the output's shape: ", outputs.shape)
-
-    """ computing mean embedding of generated samples """
-    if args.kernel == 'gaussian':
-      emb2_input_features = ME_with_HP(outputs, order, rho, device, args.batch_size ) #n_samples
-      #print("This is the shape of emb2_input_features: ", emb2_input_features.shape)
-      #print("this is emb2_input_features: ", emb2_input_features)
-      pass
-    elif args.kernel == 'linear':
-      emb2_input_features = outputs / (torch.tensor(np.sqrt(data.shape[1], dtype=np.float32))).to(device)  # 8
-    else:
-      raise ValueError
-    mean_emb2 = torch.mean(emb2_input_features, 0)
-    loss = torch.norm(mean_emb1 - mean_emb2, p=2) ** 2
-
-    loss.backward()
-    optimizer.step()
-
-    running_loss += loss.item()
-
-    if iteration % 100 == 0:
-      print('iteration # and running loss are ', [iteration, running_loss])
-      training_loss_per_iteration[iteration] = running_loss
-
-  """ now generate samples from the trained network """
-
-  feature_input = torch.randn((n_samples, input_size)).to(device)
-  outputs = model(feature_input)
-  gen_data = outputs.detach().cpu().numpy()
 
   if args.norm_dims == 1:
-    gen_data = revert_scaling(gen_data, base_scale)
+    generated_input_features_final = revert_scaling(generated_input_features_final, base_scale)
 
   save_file = f"adult_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
-              f"it_{args.iterations}_features_{args.n_features}.npy"
+              f"batch_rate_{args.batch_rate}_hp_{args.order_hermite}.npy"
   if args.save_data:
     # save generated samples
     path_gen_data = f"../data/generated/rebuttal_exp"
     os.makedirs(path_gen_data, exist_ok=True)
     data_save_path = os.path.join(path_gen_data, save_file)
-    np.save(data_save_path, gen_data)
+    np.save(data_save_path, generated_input_features_final)
     print(f"Generated data saved to {path_gen_data}")
   else:
     data_save_path = save_file
@@ -274,7 +321,7 @@ def main():
                                    verbose=True,
                                    unbinarize=args.kernel == 'linear',
                                    unbin_mapping_info=unbin_mapping_info,
-                                   gen_data_direct=gen_data)
+                                   gen_data_direct=generated_input_features_final)
 
   alpha = 4
   # real_data = 'numpy_data/sdgym_bounded_adult.npy'
@@ -285,7 +332,7 @@ def main():
                                    verbose=True,
                                    unbinarize=args.kernel == 'linear',
                                    unbin_mapping_info=unbin_mapping_info,
-                                   gen_data_direct=gen_data)
+                                   gen_data_direct=generated_input_features_final)
 
 ###################################################################################################
 
@@ -294,22 +341,28 @@ def parse_arguments():
   device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
   args = argparse.ArgumentParser()
-  # args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--n_features", type=int, default=2000)
-  args.add_argument("--iterations", type=int, default=1000)
-  # args.add_argument("--batch_size", type=float, default=128)
-  args.add_argument("--batch_size", type=int, default=1000)
-  args.add_argument("--lr", type=float, default=1e-3)
 
-  args.add_argument("--epsilon", type=float, default=0.1)
-  args.add_argument("--dataset", type=str, default='bounded', choices=['bounded', 'simple'])
+  #args.add_argument("--n_features", type=int, default=2000)
+  args.add_argument('--order-hermite', type=int, default=100, help='')
+  args.add_argument('--heuristic-sigma', action='store_true', default=True)
+  args.add_argument("--separate-kernel-length", action='store_true', default=True)
+  args.add_argument("--kernel-length", type=float, default=0.1)  
+  #args.add_argument("--iterations", type=int, default=1000) 
+  #args.add_argument("--batch_size", type=int, default=1000)
+  args.add_argument('--epochs', type=int, default=1000)
+  args.add_argument("--batch-rate", type=float, default=0.1)
+  args.add_argument("--lr", type=float, default=0.01)
+  
+  args.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
+  args.add_argument("--epsilon", type=float, default=1.0)
+  args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
-  args.add_argument("--save_data", type=int, default=0, help='save data if 1')
+  args.add_argument("--save-data", type=int, default=0, help='save data if 1')
 
-  args.add_argument("--kernel_length", type=float, default=3)  # heuristic: 8 for simple, 17 for bounded
-  args.add_argument("--d_hid", type=int, default=200)
-  args.add_argument("--norm_dims", type=int, default=0, help='normalize dimensions to same range if 1')
+  
+  #args.add_argument("--d_hid", type=int, default=200)
+  args.add_argument("--norm-dims", type=int, default=0, help='normalize dimensions to same range if 1')
 
   arguments = args.parse_args()
   print("arg", arguments)
