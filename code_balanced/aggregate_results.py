@@ -580,12 +580,140 @@ def aggregate_dpcgan():
   save_str = 'mar25_subsampled'
   aggregate_subsample_tests(data_ids, setups, sub_ratios, models, runs, eval_metrics, setup_with_real_data, save_str, load_real_nosub=True)
 
+
+def adaboost_collection():
+  print('REAL MMD')
+  data_suffix = {'digits': '', 'fashion': '_fashion'}
+
+  setups = ['real_mmd']
+  models = ['adaboost']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  runs = [1, 2, 3, 4, 5]
+  eval_metrics = ['accuracies', 'f1_scores']
+  all_the_results = np.zeros((len(data_suffix.keys()), len(setups), len(sub_ratios), len(models), len(runs),
+                              len(eval_metrics)))
+  for d_idx, data in enumerate(data_suffix):
+    print(f'data: {data}')
+    for r_idx, r in enumerate(sub_ratios):
+      for m_idx, m in enumerate(models):
+        for run_idx, run in enumerate(runs):
+          load_file = f'logs/gen/sep18_real_mmd_baseline_s{run}{data_suffix[data]}/synth_eval/sub{r}_{m}_log.npz'
+
+          if os.path.isfile(load_file):
+            mat = np.load(load_file)
+          else:
+            print('failed to load', load_file)
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]
+            all_the_results[d_idx, 0, r_idx, m_idx, run_idx, e_idx] = score
+
+        accs = all_the_results[d_idx, 0, r_idx, m_idx, :, 0]
+        print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
+
+  print('DPMERF')
+  data_suffix = {'digits': 'd', 'fashion': 'f'}
+
+  epsilons = [0, 5, 25]
+  models = ['adaboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies']
+
+  for data in data_suffix:
+    print(data)
+    for eps in epsilons:
+      print(f'eps={eps}')
+      for m in models:
+        scores = {'accuracies': []}
+        for run in runs:
+          load_file = f'logs/gen/oct12_eps_{data_suffix[data]}{eps}_s{run}/synth_eval/sub1.0_{m}_log.npz'
+          if os.path.isfile(load_file):
+            mat = np.load(load_file)
+          else:
+            print('failed to load', load_file)
+            continue
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]
+            scores[e].append(score)
+        accs = np.asarray(scores["accuracies"])
+        print(np.mean(accs))
+
+  print('GS-WGAN')
+  data_suffix = ('digits', 'fashion')
+  models = ['adaboost']
+  runs = [1, 2, 3, 4, 5]
+  eval_metrics = ['accuracies']
+
+  for data in data_suffix:
+    print(data)
+    for m in models:
+      scores = {'accuracies': []}
+      for run in runs:
+        load_file = f'../gs-wgan/eval/{data}_s{run}/sub1.0_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          print('failed to load', load_file)
+          continue
+        for e_idx, e in enumerate(eval_metrics):
+          score = mat[e][1]
+          scores[e].append(score)
+      accs = np.asarray(scores["accuracies"])
+      print(np.mean(accs))
+
+  print('DP-GAN')
+  data_suffix = ('d', 'f')
+  models = ['adaboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies']
+
+  for data in data_suffix:
+    print(data)
+    for m in models:
+      scores = {'accuracies': []}
+      for run in runs:
+        load_file = f'../dpgan-alternative/synth_data/apr19_sig1.41_{data}{run}/synth_eval/sub1.0_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          print('failed to load', load_file)
+          continue
+        for e_idx, e in enumerate(eval_metrics):
+          score = mat[e][1]
+          scores[e].append(score)
+      accs = np.asarray(scores["accuracies"])
+      print(np.mean(accs))
+
+  print('DP-CGAN')
+  data_suffix = ('d', 'f')
+  models = ['adaboost']
+  runs = [0, 1, 2, 3, 4]
+  eval_metrics = ['accuracies']
+
+  for data in data_suffix:
+    print(data)
+    for m in models:
+      scores = {'accuracies': []}
+      for run in runs:
+        load_file = f'logs/gen/dpcgan-{data}{run}/sub1.0_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          print('failed to load', load_file)
+          continue
+        for e_idx, e in enumerate(eval_metrics):
+          score = mat[e][1]
+          scores[e].append(score)
+      accs = np.asarray(scores["accuracies"])
+      print(np.mean(accs))
+
+
 if __name__ == '__main__':
-  aggregate_sep18_realmmd()
+  # aggregate_sep18_realmmd()
   # aggregate_apr23_fmnist_mehp()
   # aggregate_apr27_dmnist_mehp()
   # aggregate_oct13_mnist_redo(True)
-  aggregate_oct13_mnist_redo(False)
+  # aggregate_oct13_mnist_redo(False)
   # aggregate_oct14_gs_wgan_eval(True)
-  aggregate_oct14_gs_wgan_eval(False)
+  # aggregate_oct14_gs_wgan_eval(False)
   # covered: dpmerf, gs-wgan, dp-cgan. not covered: dpgan
+  adaboost_collection()

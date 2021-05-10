@@ -38,7 +38,8 @@ def first_look():
   y_gen = np.concatenate([np.zeros(6000, dtype=np.int) + k for k in range(10)])
 
   data_key = 'fashion'
-  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, False, base_dir='../code_balanced/data')
+  x_real_train, y_real_train, x_real_test, y_real_test = load_mnist_data(data_key, False,
+                                                                         base_dir='../code_balanced/data')
 
   if len(y_gen.shape) == 2:  # remove onehot
     if y_gen.shape[1] == 1:
@@ -48,7 +49,6 @@ def first_look():
     else:
       raise ValueError
 
-
   rand_perm = np.random.permutation(y_gen.shape[0])
   x_gen, y_gen = x_gen[rand_perm], y_gen[rand_perm]
 
@@ -57,7 +57,6 @@ def first_look():
   if subsample < 1.:
     x_gen, y_gen = subsample_data(x_gen, y_gen, subsample, balance_classes=True)
     x_real_train, y_real_train = subsample_data(x_real_train, y_real_train, subsample, balance_classes=True)
-
 
   data_col = datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
   test_passed_gen_data('gs_first_look', data_col, '.', subsample=subsample, custom_keys='mlp')
