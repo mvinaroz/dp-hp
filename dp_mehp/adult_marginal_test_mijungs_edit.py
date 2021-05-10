@@ -11,6 +11,7 @@ sns.set()
 # %matplotlib inline
 from autodp import privacy_calibrator
 from all_aux_files_tab_data import  find_rho_tab, heuristic_for_length_scale, ME_with_HP_tab
+from torch.optim.lr_scheduler import StepLR
 
 import warnings
 warnings.filterwarnings('ignore')
@@ -27,6 +28,7 @@ class Generative_Model_homogeneous_data(nn.Module):
     self.input_size = input_size
     self.hidden_size_1 = hidden_size_1
     self.hidden_size_2 = hidden_size_2
+    # self.hidden_size_3 = hidden_size_3
     self.output_size = output_size
     assert out_fun in ('lin', 'sigmoid', 'relu')
 
@@ -36,6 +38,9 @@ class Generative_Model_homogeneous_data(nn.Module):
     self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
     self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
     self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
+    # self.bn3 = torch.nn.BatchNorm1d(self.hidden_size_3)
+    # self.fc4 = torch.nn.Linear(self.hidden_size_3, self.output_size)
+    # self.bn4 = torch.nn.BatchNorm1d(self.output_size)
     if out_fun == 'sigmoid':
       self.out_fun = nn.Sigmoid()
     elif out_fun == 'relu':
@@ -47,8 +52,10 @@ class Generative_Model_homogeneous_data(nn.Module):
     hidden = self.fc1(x)
     relu = self.relu(self.bn1(hidden))
     output = self.fc2(relu)
-    output = self.relu(self.bn2(output))
-    output = self.fc3(output)
+    relu = self.relu(self.bn2(output))
+    output = self.fc3(relu)
+    # relu = self.relu(self.bn3(output))
+    # output = self.fc4(relu)
     output = self.out_fun(output)
     # output = torch.round(output) # so that we make the output as categorical
     return output
@@ -140,7 +147,7 @@ def main():
   y = data[:, -1]
   print('statistics of raw input features', np.median(X, 0))
 
-  X, y = undersample(X, y, 0.3)
+  # X, y = undersample(X, y, 0.3)
 
   # binary_columns = [8,9,10,11,13]
   # categorical_columns = [0,1,2,3,4,5,6,7,12]
@@ -154,10 +161,11 @@ def main():
   # model specifics
   batch_size = np.int(np.round(args.batch_rate * n_samples))
   print("minibatch: ", batch_size)
-  input_size = 10 + 1
+  input_size = 4 + 1
 
-  hidden_size_1 = 4 * input_dim
-  hidden_size_2 = 2 * input_dim
+  hidden_size_1 = 400 * input_dim
+  hidden_size_2 = 100 * input_dim
+  # hidden_size_3 = 10 * input_dim
 
   output_size = input_dim
   out_fun = 'relu' if args.kernel == 'gaussian' else 'sigmoid'
@@ -232,6 +240,7 @@ def main():
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
   num_iter = np.int(n_samples / batch_size)
 
+  # scheduler = StepLR(optimizer, step_size=1, gamma=0.9)
   for epoch in range(args.epochs):  # loop over the dataset multiple times
       model.train()
 
@@ -269,7 +278,7 @@ def main():
           optimizer.step()
           
       print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-
+      # scheduler.step()
   # end for over epoch
 
   """ draw final data samples """
@@ -283,20 +292,21 @@ def main():
 
   samp_input_features = outputs
 
-  label_input_t = torch.zeros((n_samples, n_classes))
-  idx_1 = (label_input == 1.).nonzero()[:, 0]
-  idx_0 = (label_input == 0.).nonzero()[:, 0]
-  label_input_t[idx_1, 1] = 1.
-  label_input_t[idx_0, 0] = 1.
+  # label_input_t = torch.zeros((n_samples, n_classes))
+  # idx_1 = (label_input == 1.).nonzero()[:, 0]
+  # idx_0 = (label_input == 0.).nonzero()[:, 0]
+  # label_input_t[idx_1, 1] = 1.
+  # label_input_t[idx_0, 0] = 1.
 
-  samp_labels = label_input_t
+  # samp_labels = label_input_t
 
   generated_input_features_final = samp_input_features.cpu().detach().numpy()
-  generated_labels_final = samp_labels.cpu().detach().numpy()
-  generated_labels = np.argmax(generated_labels_final, axis=1)
+  generated_labels = label_input.cpu().detach().numpy()
+  # generated_labels_final = samp_labels.cpu().detach().numpy()
+  # generated_labels = np.argmax(generated_labels_final, axis=1)
 
   generated_input_features_final = np.concatenate((generated_input_features_final, np.expand_dims(generated_labels,1)), axis=1)
-  generated_input_features_final = np.round(generated_input_features_final)
+  # generated_input_features_final = np.round(generated_input_features_final)
 
   ##################################################################################################################
 
@@ -348,16 +358,16 @@ def parse_arguments():
   args = argparse.ArgumentParser()
 
   args.add_argument('--order-hermite', type=int, default=100, help='')
-  args.add_argument('--epochs', type=int, default=100)
+  args.add_argument('--epochs', type=int, default=200)
   args.add_argument("--batch-rate", type=float, default=0.1)
-  args.add_argument("--lr", type=float, default=0.01)
+  args.add_argument("--lr", type=float, default=0.0001)
   
   args.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
   args.add_argument("--epsilon", type=float, default=1.0)
   args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
-  args.add_argument("--save-data", type=int, default=0, help='save data if 1')
+  args.add_argument("--save-data", type=int, default=1, help='save data if 1')
 
   
   #args.add_argument("--d_hid", type=int, default=200)
