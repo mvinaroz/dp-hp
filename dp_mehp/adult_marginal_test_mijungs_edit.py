@@ -54,6 +54,42 @@ class Generative_Model_homogeneous_data(nn.Module):
     return output
 
 
+class Generative_Model_heterogeneous_data(nn.Module):
+
+    def __init__(self, input_size, hidden_size_1, hidden_size_2, output_size, categorical_columns,
+                 binary_columns):
+        super(Generative_Model_heterogeneous_data, self).__init__()
+
+        self.input_size = input_size
+        self.hidden_size_1 = hidden_size_1
+        self.hidden_size_2 = hidden_size_2
+        self.output_size = output_size
+        self.categorical_columns = categorical_columns
+        self.binary_columns = binary_columns
+
+        self.fc1 = torch.nn.Linear(self.input_size, self.hidden_size_1)
+        self.bn1 = torch.nn.BatchNorm1d(self.hidden_size_1)
+        self.relu = torch.nn.ReLU()
+        self.fc2 = torch.nn.Linear(self.hidden_size_1, self.hidden_size_2)
+        self.bn2 = torch.nn.BatchNorm1d(self.hidden_size_2)
+        self.fc3 = torch.nn.Linear(self.hidden_size_2, self.output_size)
+        self.sigmoid = torch.nn.Sigmoid()
+
+    def forward(self, x):
+        hidden = self.fc1(x)
+        relu = self.relu(self.bn1(hidden))
+        output = self.fc2(relu)
+        output = self.relu(self.bn2(output))
+        output = self.fc3(output)
+
+        output_binary = self.sigmoid(output[:, 0:len(self.binary_columns)])
+        output_categorical = self.relu(output[:, len(self.binary_columns):])
+        output_combined = torch.cat((output_binary, output_categorical), 1)
+        # X = X[:, binary_columns + categorical_columns]
+
+        return output_combined
+
+
 # ####################################### beginning of main script #######################################
 def rescale_dims(data):
   # assume min=0
@@ -106,6 +142,10 @@ def main():
 
   X, y = undersample(X, y, 0.3)
 
+  # binary_columns = [8,9,10,11,13]
+  # categorical_columns = [0,1,2,3,4,5,6,7,12]
+  # X = X[:, binary_columns + categorical_columns]
+
   n_samples, input_dim = X.shape
 
   ######################################
@@ -126,6 +166,9 @@ def main():
                                             hidden_size_2=hidden_size_2,
                                             output_size=output_size,
                                             out_fun=out_fun).to(device)
+  # model = Generative_Model_heterogeneous_data(input_size=input_size, hidden_size_1=hidden_size_1,
+  #                                             hidden_size_2=hidden_size_2, output_size=output_size,
+  #                                             categorical_columns = categorical_columns, binary_columns=binary_columns).to(device)
 
   ####################### estimating length scale for each dimensoin ##################
   heterogeneous_datasets=[]
@@ -253,6 +296,7 @@ def main():
   generated_labels = np.argmax(generated_labels_final, axis=1)
 
   generated_input_features_final = np.concatenate((generated_input_features_final, np.expand_dims(generated_labels,1)), axis=1)
+  generated_input_features_final = np.round(generated_input_features_final)
 
   ##################################################################################################################
 
@@ -303,14 +347,14 @@ def parse_arguments():
 
   args = argparse.ArgumentParser()
 
-  args.add_argument('--order-hermite', type=int, default=20, help='')
+  args.add_argument('--order-hermite', type=int, default=100, help='')
   args.add_argument('--epochs', type=int, default=100)
   args.add_argument("--batch-rate", type=float, default=0.1)
   args.add_argument("--lr", type=float, default=0.01)
   
   args.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
   args.add_argument("--epsilon", type=float, default=1.0)
-  args.add_argument("--dataset", type=str, default='bounded', choices=['bounded', 'simple'])
+  args.add_argument("--dataset", type=str, default='simple', choices=['bounded', 'simple'])
   args.add_argument('--kernel', type=str, default='gaussian', choices=['gaussian', 'linear'])
   # args.add_argument("--data_type", default='generated')  # both, real, generated
   args.add_argument("--save-data", type=int, default=0, help='save data if 1')
