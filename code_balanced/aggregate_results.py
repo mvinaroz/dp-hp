@@ -694,7 +694,7 @@ def adaboost_collection():
     for m in models:
       scores = {'accuracies': []}
       for run in runs:
-        load_file = f'logs/gen/dpcgan-{data}{run}/sub1.0_{m}_log.npz'
+        load_file = f'logs/gen/dpcgan-{data}{run}/synth_eval/sub1.0_{m}_log.npz'
         if os.path.isfile(load_file):
           mat = np.load(load_file)
         else:
