@@ -1,0 +1,12 @@
+executable=ME_gen_balanced.sh
+arguments=$(Process)
+error=joblogs/ME_gen_balanced_$(Process).err.txt
+output=joblogs/ME_gen_balanced_$(Process).out.txt
+log=joblogs/ME_gen_balanced_$(Process).log.txt
+getenv=True
+request_cpus=1
+request_gpus=1
+request_memory=8GB
++MaxRunningPrice = 500
++RunningPriceExceededAction = "restart"
+queue 1

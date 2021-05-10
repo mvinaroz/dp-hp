@@ -1,4 +1,4 @@
-executable = jan21_mnist_train.sh
+executable = feb22.sh
 arguments = $(Process)
 error = joblogs/jan21_mnist_train_$(Process).err.txt
 output = joblogs/jan21_mnist_train_$(Process).out.txt

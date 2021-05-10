@@ -16,11 +16,14 @@ from synth_data_2d import plot_data
 from synth_data_1d import plot_data_1d
 
 
-def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data):
+def train_single_release(gen, device, optimizer, epoch, rff_mmd_loss, log_interval, batch_size, n_data, smp_mult):
   n_iter = n_data // batch_size
   for batch_idx in range(n_iter):
     gen_code, gen_labels = gen.get_code(batch_size, device)
-    loss = rff_mmd_loss(gen(gen_code), gen_labels)
+    if (smp_mult):
+        loss = rff_mmd_loss(gen(gen_code), gen_labels, batch_idx=batch_idx)
+    else:
+        loss = rff_mmd_loss(gen(gen_code), gen_labels)
     optimizer.zero_grad()
     loss.backward()
     optimizer.step()
@@ -62,7 +65,7 @@ def log_gen_data(gen, device, epoch, n_labels, log_dir):
   plot_mnist_batch(plot_samples, 10, n_labels, log_dir + f'samples_ep{epoch}', denorm=False)
 
 
-def get_losses(ar, train_loader, device, n_feat, n_labels):
+def get_losses(ar, train_loader, device, n_feat, n_labels, data_num=0):
   if ar.loss_type == 'real_mmd':
     minibatch_loss = get_real_mmd_loss(ar.rff_sigma, n_labels, ar.batch_size)
     single_release_loss = None
@@ -83,9 +86,15 @@ def get_losses(ar, train_loader, device, n_feat, n_labels):
       # minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
-      print('Real Sampling Rate is ', ar.sampling_rate)
+# <<<<<<< HEAD
+      # print('Real Sampling Rate is ', ar.sampling_rate)
+      #print('Real Sampling Rate is ', ar.sampling_rate)
+# =======
+#       print('Real Sampling Rate is ', ar.sampling_rate)
 
-      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.sampling_rate, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
+# >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
+      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.batch_size, data_num, ar.sampling_multirelease, ar.mmd_computation
+                                                              , ar.sampling_rate, ar.sr_me_division, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
 
@@ -156,6 +165,9 @@ def get_args():
   
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=5, help='')
+  parser.add_argument('--mmd-computation', type=str, default='cross', help='Use cross or mean_emb')
+  parser.add_argument('--sr-me-division', type=int, default=1, help='The number of batches that mean embedding is found on them. Then we sum them up. This helps us to save memory.')
+  parser.add_argument('--sampling-multirelease', action='store_true', default=False, help='If you set this parameter, in each minibatch you will have a different subsampling of the data')
 
   ar = parser.parse_args()
 
@@ -209,8 +221,8 @@ def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data
 def test_results(data_key, log_name, log_dir, data_tuple, eval_func, skip_downstream_model):
   if data_key in {'digits', 'fashion'}:
     if not skip_downstream_model:
-      final_score = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg')
-      log_final_score(log_dir, final_score)
+      final_score, accs = test_gen_data(log_name, data_key, subsample=0.1, custom_keys='logistic_reg,random_forest,gaussian_nb,bernoulli_nb,linear_svc,decision_tree,lda,adaboost,mlp,bagging,gbm,xgboost')
+      log_final_score(log_dir, accs)
   elif data_key == '2d':
     if not skip_downstream_model:
       final_score = test_passed_gen_data(log_name, data_tuple, log_save_dir=None, log_results=False,
@@ -247,14 +259,14 @@ def main():
 
   # init model
   if ar.conv_gen:
-    gen = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes).to(device)
+    gen = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True).to(device)
   else:
     use_sigmoid = ar.data in {'digits', 'fashion'}
     gen = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=use_sigmoid,
                     batch_norm=True).to(device)
 
   minibatch_loss, single_release_loss = get_losses(ar, data_pkg.train_loader, device,
-                                                   data_pkg.n_features, data_pkg.n_labels)
+                                                   data_pkg.n_features, data_pkg.n_labels, data_pkg.n_data)
   # init optimizer
   optimizer = pt.optim.Adam(list(gen.parameters()), lr=ar.lr)
   scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
@@ -263,7 +275,7 @@ def main():
   for epoch in range(1, ar.epochs + 1):
     if ar.single_release:
       train_single_release(gen, device, optimizer, epoch, single_release_loss, ar.log_interval, ar.batch_size,
-                           data_pkg.n_data)
+                           data_pkg.n_data, ar.sampling_multirelease)
     else:
       train_multi_release(gen, device, data_pkg.train_loader, optimizer, epoch, minibatch_loss, ar.log_interval)
 

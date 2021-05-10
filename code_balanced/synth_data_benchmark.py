@@ -5,13 +5,12 @@ import argparse
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
-import time
 
 
 def load_mnist_data(data_key, data_from_torch, base_dir='data/'):
   if not data_from_torch:
     if data_key == 'digits':
-      d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))  # x_train=x_trn, y_train=y_trn, x_test=x_tst, y_test=y_tst
+      d = np.load(os.path.join(base_dir, 'MNIST/numpy_dmnist.npz'))
       
       return d['x_train'].reshape(60000, 784), d['y_train'], d['x_test'].reshape(10000, 784), d['y_test']
     elif data_key == 'fashion':
@@ -87,9 +86,34 @@ def normalize_data(x_train, x_test):
   return x_train_normed, x_test_normed
 
 
+def get_model_specs(new_specs):
+  model_specs = defaultdict(dict)
+  if new_specs:
+    model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 50000, 'multi_class': 'auto'}
+    model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}
+    model_specs['linear_svc'] = {'max_iter': 20000, 'tol': 1e-8, 'loss': 'hinge'}
+    model_specs['mlp'] = {'max_iter': 1000}
+  else:
+    # setting used in neurips2020 submission and AISTATS version
+    model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}
+    model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
+    model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
+
+  model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
+  model_specs['bernoulli_nb'] = {'binarize': 0.5}
+  model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
+  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
+                                  'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
+                                  'min_impurity_decrease': 0.0}
+  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
+  model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
+  model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
+  return model_specs
+
+
 def parse():
   parser = argparse.ArgumentParser()
-  parser.add_argument('--data-path', type=str, default=None, help='this is computed. only set to override')
+  parser.add_argument('--data-dir', type=str, default=None, help='this is computed. only set to override')
   parser.add_argument('--data-base-dir', type=str, default='logs/gen/', help='path where logs for all runs are stored')
   parser.add_argument('--data-log-name', type=str, default=None, help='subdirectory for this run')
 
@@ -98,7 +122,7 @@ def parse():
 
   parser.add_argument('--log-results', action='store_true', default=False, help='if true, save results')
   parser.add_argument('--print-conf-mat', action='store_true', default=False, help='print confusion matrix')
-
+  parser.add_argument('--seed', type=int, default=None, help='set random seed')
   parser.add_argument('--skip-slow-models', action='store_true', default=False, help='skip models that take longer')
   parser.add_argument('--only-slow-models', action='store_true', default=False, help='only do slower the models')
   parser.add_argument('--custom-keys', type=str, default=None, help='enter model keys to run as key1,key2,key3...')
@@ -113,6 +137,8 @@ def parse():
   parser.add_argument('--data-from-torch', action='store_true', default=False, help='if true, load data from pytorch')
 
   parser.add_argument('--norm-data', action='store_true', default=False, help='if true, normalize data (mostly debug)')
+
+  parser.add_argument('--new-model-specs', action='store_true', default=False, help='old: dp-merf AISTATS, new: experimental')
 
   ar = parser.parse_args()
   return ar
@@ -152,7 +178,7 @@ def prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub
   return datasets_colletion_def(x_gen, y_gen, x_real_train, y_real_train, x_real_test, y_real_test)
 
 
-def prep_models(custom_keys, skip_slow_models, only_slow_models):
+def prep_models(custom_keys, skip_slow_models, only_slow_models, use_new_specs):
   assert not (skip_slow_models and only_slow_models)
 
   models = {'logistic_reg': linear_model.LogisticRegression,
@@ -170,21 +196,7 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
 
   slow_models = {'bagging', 'gbm', 'xgboost'}
 
-  model_specs = defaultdict(dict)
-  model_specs['logistic_reg'] = {'solver': 'lbfgs', 'max_iter': 5000, 'multi_class': 'auto'}
-  model_specs['random_forest'] = {'n_estimators': 100, 'class_weight': 'balanced'}
-  model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
-  model_specs['bernoulli_nb'] = {'binarize': 0.5}
-  model_specs['lda'] = {'solver': 'eigen', 'n_components': 9, 'tol': 1e-8, 'shrinkage': 0.5}
-  model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini', 'splitter': 'best',
-                                  'min_samples_split': 2, 'min_samples_leaf': 1, 'min_weight_fraction_leaf': 0.0,
-                                  'min_impurity_decrease': 0.0}
-  model_specs['adaboost'] = {'n_estimators': 100, 'algorithm': 'SAMME.R'}  # setting used in neurips2020 submission
-  # model_specs['adaboost'] = {'n_estimators': 100, 'learning_rate': 0.1, 'algorithm': 'SAMME.R'}  best so far
-  #  (not used for consistency with old results. change too small to warrant redoing everything)
-  model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
-  model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50}
-  model_specs['xgboost'] = {'colsample_bytree': 0.1, 'objective': 'multi:softprob', 'n_estimators': 50}
+  model_specs = get_model_specs(use_new_specs)
 
   if custom_keys is not None:
     run_keys = custom_keys.split(',')
@@ -211,35 +223,41 @@ def model_test_run(model, x_tr, y_tr, x_ts, y_ts, norm_data, acc_str, f1_str):
   return acc, f1, conf, acc_str, f1_str
 
 
-def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_path=None,
+def test_gen_data(data_log_name, data_key, data_base_dir='logs/gen/', log_results=False, data_dir=None,
                   data_from_torch=False, shuffle_data=False, subsample=1., sub_balanced_labels=True,
                   custom_keys=None, skip_slow_models=False, only_slow_models=False,
                   skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
-                  print_conf_mat=False, norm_data=False):
+                  print_conf_mat=False, norm_data=False, use_new_specs=False):
 
-  gen_data_dir = os.path.join(data_base_dir, data_log_name)
-  log_save_dir = os.path.join(gen_data_dir, 'synth_eval/')
-  if data_path is None:
-    data_path = os.path.join(gen_data_dir, 'synthetic_mnist.npz')
+  if data_dir is None:
+    data_dir = os.path.join(data_base_dir, data_log_name)
+
+  if data_base_dir == '../dp_mehp/logs/gen/':  # account for naming inconsistency
+    data_dir = os.path.join(data_dir, f'{data_key}/')
+
+  log_save_dir = os.path.join(data_dir, 'synth_eval/')
+
+  data_path = os.path.join(data_dir, 'synthetic_mnist.npz')
   datasets_colletion = prep_data(data_key, data_from_torch, data_path, shuffle_data, subsample, sub_balanced_labels)
-  mean_acc = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
-                                  subsample, custom_keys, skip_slow_models, only_slow_models,
-                                  skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
-                                  print_conf_mat, norm_data)
-  return mean_acc
+  mean_acc, accs = test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results,
+                                        subsample, custom_keys, skip_slow_models, only_slow_models,
+                                        skip_gen_to_real, compute_real_to_real, compute_real_to_gen,
+                                        print_conf_mat, norm_data, use_new_specs)
+  print(accs)
+  return mean_acc, accs
 
 
 def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_results=False,
                          subsample=1., custom_keys=None, skip_slow_models=False, only_slow_models=False,
                          skip_gen_to_real=False, compute_real_to_real=False, compute_real_to_gen=False,
-                         print_conf_mat=False, norm_data=False):
+                         print_conf_mat=False, norm_data=False, use_new_specs=False):
   if data_log_name is not None:
     print(f'processing {data_log_name}')
 
   if log_results:
     os.makedirs(log_save_dir, exist_ok=True)
 
-  models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models)
+  models, model_specs, run_keys = prep_models(custom_keys, skip_slow_models, only_slow_models, use_new_specs)
 
   g_to_r_acc_summary = []
   dc = datasets_colletion
@@ -292,16 +310,18 @@ def test_passed_gen_data(data_log_name, datasets_colletion, log_save_dir, log_re
     print(acc)
   mean_acc = np.mean(g_to_r_acc_summary)
   print(f'mean: {mean_acc}')
-  return mean_acc
+  return mean_acc, g_to_r_acc_summary
 
 
 def main():
   ar = parse()
-  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_path, ar.data_from_torch,
+  if ar.seed is not None:
+    np.random.seed(ar.seed)
+  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_dir, ar.data_from_torch,
                 ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
                 ar.skip_slow_models, ar.only_slow_models,
                 ar.skip_gen_to_real, ar.compute_real_to_real, ar.compute_real_to_gen,
-                ar.print_conf_mat, ar.norm_data)
+                ar.print_conf_mat, ar.norm_data, ar.new_model_specs)
 
 
 if __name__ == '__main__':
