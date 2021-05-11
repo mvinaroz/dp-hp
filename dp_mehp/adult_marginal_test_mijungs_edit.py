@@ -113,10 +113,10 @@ def revert_scaling(data, base_scale):
 
 def main():
   args, device = parse_arguments()
-  seed = 0
+  seed = np.random.randint(0, 1000)
   print('seed: ', seed)
 
-  print('Hermite polynomial order: ', args.order_hermite)
+  # print('Hermite polynomial order: ', args.order_hermite)
 
   random.seed(seed)
   ############################### data loading ##################################
@@ -133,7 +133,7 @@ def main():
 
   if args.kernel == 'linear':
     data, unbin_mapping_info = binarize_data(data)
-    print('bin data shape', data.shape)
+    # print('bin data shape', data.shape)
   else:
     unbin_mapping_info = None
 
@@ -156,7 +156,7 @@ def main():
 
   # model specifics
   batch_size = np.int(np.round(args.batch_rate * n_samples))
-  print("minibatch: ", batch_size)
+  # print("minibatch: ", batch_size)
 
   input_size = 5
   hidden_size_1 = 400 * input_dim
@@ -193,14 +193,14 @@ def main():
   ########## data mean embedding ##########
 
   if args.is_private:
-      print("private")
+      # print("private")
       delta = 1e-5
       k = 1  # because we add noise to the weights and means separately.
       privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=k)
-      print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+      # print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
 
   """ compute the means """
-  print('computing mean embedding of data:')
+  # print('computing mean embedding of data:')
   data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
 
   chunk_size = 250
@@ -217,11 +217,11 @@ def main():
       std = (2 * privacy_param['sigma'] / n_samples)
       noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
-      print('before perturbation, mean and variance of data mean embedding are %f and %f ' % (
-      torch.mean(data_embedding), torch.std(data_embedding)))
+      # print('before perturbation, mean and variance of data mean embedding are %f and %f ' % (
+      # torch.mean(data_embedding), torch.std(data_embedding)))
       data_embedding = data_embedding + noise
-      print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (
-      torch.mean(data_embedding), torch.std(data_embedding)))
+      # print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (
+      # torch.mean(data_embedding), torch.std(data_embedding)))
 
   """ Training """
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -240,7 +240,6 @@ def main():
           outputs = model(input_to_model)
 
           """ (3) compute synthetic data's mean embedding """
-          # weights_syn = torch.zeros(n_classes)  # weights = m_c / n
           syn_data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
           for idx in range(n_classes):
               idx_syn_data = outputs
@@ -253,7 +252,7 @@ def main():
           loss.backward()
           optimizer.step()
           
-      print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+      # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
 
       if (epoch>0) & (epoch % 50 == 0): # every 20th epoch we evaluate the quality of the data
 
@@ -298,7 +297,7 @@ def main():
                   os.makedirs(path_gen_data, exist_ok=True)
                   data_save_path = os.path.join(path_gen_data, save_file)
                   np.save(data_save_path, generated_input_features_final)
-                  print(f"Generated data saved to {path_gen_data}")
+                  # print(f"Generated data saved to {path_gen_data}")
               else:
                   data_save_path = save_file
 
