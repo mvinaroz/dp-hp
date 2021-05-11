@@ -1,4 +1,0 @@
-#!/bin/bash
-python load_model_evaluate.py --data 2d -noise 0. --synth-spec-string norm_k5_n50000_r$
-
-
