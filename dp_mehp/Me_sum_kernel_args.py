@@ -49,7 +49,7 @@ def get_args():
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=True, help='get 1 data mean embedding only')
+  parser.add_argument('--multi-release', action='store_true', default=False, help='make embedding each batch, if true')
   parser.add_argument('--report_intermediate', action='store_true', default=False, help='')
   parser.add_argument('--loss-type', type=str, default='MEHP', help='how to approx mmd')
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
@@ -86,7 +86,44 @@ def preprocess_args(ar):
         ar.seed = np.random.randint(0, 1000)
         assert ar.data in {'digits', 'fashion'}
 
-    
+
+def get_full_data_embedding(data_pkg, order, rho, embed_batch_size, device, data_key, separate_kernel_length):
+  embedding_train_loader, _ = get_mnist_dataloaders(embed_batch_size, embed_batch_size,
+                                                    use_cuda=device, dataset=data_key)
+
+  # summing at the end uses unnecessary memory - leaving previous version in in case of errors with this one
+  data_embedding = torch.zeros(data_pkg.n_features * (order + 1), data_pkg.n_labels, device=device)
+  for batch_idx, (data, labels) in enumerate(embedding_train_loader):
+    data, labels = flatten_features(data.to(device)), labels.to(device)
+    for idx in range(data_pkg.n_labels):
+      idx_data = data[labels == idx]
+      if separate_kernel_length:
+        phi_data = ME_with_HP_tab(idx_data, order, rho, device, data_pkg.n_data)
+      else:
+        phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
+      data_embedding[:, idx] += phi_data
+
+  del embedding_train_loader
+  return data_embedding
+
+
+def perturb_data_embedding(data_embedding, epsilon, delta, n_data, device):
+  k = 1
+  privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
+  print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+  # print('we add noise to the data mean embedding as the private flag is true')
+  # std = (2 * privacy_param['sigma'] * np.sqrt(data_pkg.n_features) / data_pkg.n_data)
+  std = (2 * privacy_param['sigma'] / n_data)
+  noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+
+  print(f'before perturbation, mean and variance of data mean embedding are '
+        f'{torch.mean(data_embedding)} and {torch.std(data_embedding)} ')
+  data_embedding = data_embedding + noise
+  print(f'after perturbation, mean and variance of data mean embedding are '
+        f'{torch.mean(data_embedding)} and {torch.std(data_embedding)} ')
+  return data_embedding
+
+
 def main():
     """Load settings"""
     ar = get_args()
@@ -106,12 +143,13 @@ def main():
                             use_sigmoid=True, batch_norm=True).to(device)
 
     """ set the scale length """
-    #num_iter = np.int(data_pkg.n_data / ar.batch_size)
+    # num_iter = np.int(data_pkg.n_data / ar.batch_size)
 
     if ar.heuristic_sigma:
 
         print('we use the median heuristic for length scale')
-        sigma = heuristic_for_length_scale(data_pkg.train_loader, data_pkg.n_features, ar.batch_size, data_pkg.n_data, device)
+        sigma = heuristic_for_length_scale(data_pkg.train_loader, data_pkg.n_features,
+                                           ar.batch_size, data_pkg.n_data, device)
         if ar.separate_kernel_length:
             print('we use a separate length scale on each coordinate of the data')
             sigma2 = np.mean(sigma**2, axis=0)
@@ -123,7 +161,6 @@ def main():
     else:
         sigma2 = ar.kernel_length
 
-
     print('sigma2 is', sigma2)
     rho = find_rho(sigma2, ar.separate_kernel_length)
     order = ar.order_hermite
@@ -134,56 +171,19 @@ def main():
     # if order>or_thr:
     #     order = or_thr
     #     print('chosen order is', order)
-
-    print('computing mean embedding of data')
-    # old_data_embedding = torch.zeros(data_pkg.n_features*(order+1), data_pkg.n_labels, num_iter, device=device)
-    #
-    # for batch_idx, (data, labels) in enumerate(data_pkg.train_loader):
-    #     # print(batch_idx)
-    #     data, labels = data.to(device), labels.to(device)
-    #     data = flatten_features(data)
-    #     for idx in range(data_pkg.n_labels):
-    #         idx_data = data[labels == idx]
-    #         phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data)
-    #         old_data_embedding[:, idx, batch_idx] = phi_data
-    # old_data_embedding = torch.sum(old_data_embedding, axis=2)
-    embedding_train_loader, _ = get_mnist_dataloaders(ar.embed_batch_size, ar.test_batch_size,
-                                                      use_cuda=device, dataset=ar.data)
-
-    # summing at the end uses unnecessary memory - leaving previous version in in case of errors with this one
-    data_embedding = torch.zeros(data_pkg.n_features * (order + 1), data_pkg.n_labels, device=device)
-    for batch_idx, (data, labels) in enumerate(embedding_train_loader):
-        data, labels = flatten_features(data.to(device)), labels.to(device)
-        for idx in range(data_pkg.n_labels):
-            idx_data = data[labels == idx]
-            if ar.separate_kernel_length:
-                phi_data = ME_with_HP_tab(idx_data, order, rho, device, data_pkg.n_data )
-            else:
-                phi_data = ME_with_HP(idx_data, order, rho, device, data_pkg.n_data )
-            data_embedding[:, idx] += phi_data
-
-    del embedding_train_loader
-    # print('DEBUG embedding diff:', torch.norm(old_data_embedding - data_embedding))  # it's around 2e-6, so almost 0
-    print('done with computing mean embedding of data')
-
-    if ar.is_private:
-        k = 1
-        epsilon = ar.epsilon
-        delta = ar.delta
-        privacy_param = privacy_calibrator.gaussian_mech(epsilon, delta, k=k)
-        print(f'eps,delta = ({epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
-        # print('we add noise to the data mean embedding as the private flag is true')
-        # std = (2 * privacy_param['sigma'] * np.sqrt(data_pkg.n_features) / data_pkg.n_data)
-        std = (2 * privacy_param['sigma'] / data_pkg.n_data)
-        noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
-
-        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
-        data_embedding = data_embedding + noise
-        print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
+    if ar.multi_release:
+      dataset_embedding = None
     else:
-        print('we do not add noise to the mean embedding as is_private is set to False.')
+      print('computing mean embedding of data')
+      dataset_embedding = get_full_data_embedding(data_pkg, order, rho, ar.embed_batch_size, device,
+                                                  ar.data, ar.separate_kernel_length)
+      print('done with computing mean embedding of data')
 
-      
+      if ar.is_private:
+          dataset_embedding = perturb_data_embedding(dataset_embedding, ar.epsilon, ar.delta, data_pkg.n_data, device)
+      else:
+          print('we do not add noise to the mean embedding as is_private is set to False.')
+
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
     scheduler = StepLR(optimizer, step_size=1, gamma=ar.lr_decay)
@@ -199,7 +199,7 @@ def main():
             gen_code, gen_labels = model.get_code(ar.batch_size, device)
             gen_samples = model(gen_code)  # batch_size by 784
 
-            if ar.single_release:
+            if not ar.multi_release:
                 synth_data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(data_pkg.n_labels):
@@ -208,22 +208,26 @@ def main():
                         synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, ar.batch_size)
                     else:
                         synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
-                    
-            else:
+                loss = torch.sum((dataset_embedding - synth_data_embedding) ** 2)
+
+            else:  # multi release
                 synth_data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
-                data_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
+                data_batch_embedding = torch.zeros((data_pkg.n_features * (order+1), data_pkg.n_labels), device=device)
                 _, gen_labels_numerical = torch.max(gen_labels, dim=1)
                 for idx in range(data_pkg.n_labels):
                     idx_data = data[labels == idx]
+                    idx_synth_data = gen_samples[gen_labels_numerical == idx]
                     if ar.separate_kernel_length:
+                        data_batch_embedding[:, idx] = ME_with_HP_tab(idx_data, order, rho, device, ar.batch_size)
                         synth_data_embedding[:, idx] = ME_with_HP_tab(idx_synth_data, order, rho, device, ar.batch_size)
                     else:
+                        data_batch_embedding[:, idx] = ME_with_HP(idx_data, order, rho, device, ar.batch_size)
                         synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
                     
-                    idx_synth_data = gen_samples[gen_labels_numerical == idx]
-                    synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
+                    # idx_synth_data = gen_samples[gen_labels_numerical == idx]
+                    # synth_data_embedding[:, idx] = ME_with_HP(idx_synth_data, order, rho, device, ar.batch_size)
                     
-            loss = torch.sum((data_embedding - synth_data_embedding)**2)
+                loss = torch.sum((data_batch_embedding - synth_data_embedding)**2)
             
             optimizer.zero_grad()
             loss.backward()

@@ -658,12 +658,14 @@ def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
 
 def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
   queried_setups = ['real_data',
-                    'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                    'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5',
+                    # 'apr6_sr_conv_sig_25',
                     'full_mmd',
                     'mehp_nonDP', 'mehp_eps=1']
   setup_names = ['real data',
                  # 'DP-CGAN $\epsilon=9.6$',
-                 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
+                 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
+                 # 'DP-MERF $\epsilon=0.2$',
                  'full MMD $\epsilon=\infty$',
                  'DP-MEHP $\epsilon=\infty$', 'DP-MEHP $\epsilon=1$']
   colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
@@ -677,16 +679,30 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
 
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
+  adaboost_array = ar_dict['may10_merf_adaboost']
+  # print(sr_conv_array.array[:, 1:, :, 7, :, 0].shape, sr_conv_array.array[:, :, :, 0, :, 0].shape)
+  sr_conv_array.array[:, 1:, :, 7, :, 0] = adaboost_array.array[:, :, :, 0, :, 0]
+
+  # assert 1%1==1
   sb_array = ar_dict['sb']
+  real_adaboost_array = ar_dict['may10_real_adaboost']
+  print(sb_array.array.shape, real_adaboost_array.array.shape)
+  print(sb_array.dim_names)
+  for d in sb_array.dim_names:
+    print(d, sb_array.idx_names[d])
+  for d in real_adaboost_array.dim_names:
+    print(d, real_adaboost_array.idx_names[d])
+  sb_array.array[:, 0, :, 7, :, 0] = real_adaboost_array.array[:, 0, :, 0, :, 0]
+
   full_mmd_array = ar_dict['full_mmd_jan7']
   mehp_array = ar_dict['mehp_fmnist_apr23']
-  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
+
   merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
-  print(merged_array.array.shape)
+  # print(merged_array.array.shape)
   merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
-  print(merged_array.array.shape)
+  # print(merged_array.array.shape)
   merged_array = merged_array.merge(mehp_array, merge_dim='setups')
-  print(merged_array.array.shape)
+  # print(merged_array.array.shape)
 
   # digit plot
   for d_id in data_ids:
@@ -711,7 +727,6 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
 
         print(f'mean values for setting {s}, data {d_id}:', sub_mat)
 
-
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
     if d_id == 'd':
@@ -725,8 +740,8 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
       plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.45, 0.8))
     # plt.legend(loc='upper left')
-    plt.legend(loc='upper left')
-    plt.savefig(f'plots/apr23_{"var_" if plot_var else ""}fashion_merf_plus_full_mmd_and_mehp.png')
+    plt.legend(loc='lower right')
+    plt.savefig(f'plots/may10_{"var_" if plot_var else ""}fashion_merf_plus_full_mmd_and_mehp.png')
 
     for m_idx, model in enumerate(models):
       plt.figure()
@@ -745,8 +760,28 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
 
       plt.xlabel('# samples generated')
       plt.ylabel('accuracy')
-      plt.legend(loc='upper left')
-      plt.savefig(f'plots/apr23_{"var_" if plot_var else ""}fashion_plot_{model}.png')
+      plt.legend(loc='lower right')
+      plt.savefig(f'plots/may10_{"var_" if plot_var else ""}fashion_plot_{model}.png')
+
+    plt.figure()
+    plt.xscale('log')
+    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s],
+                                  'models': ['adaboost'], 'eval_metrics': ['accuracies']})
+      print(sub_mat.shape)
+      print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+      if plot_var:
+        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+      else:
+        sub_mat = np.median(sub_mat, axis=1)
+        plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+        print(f'median values for setting {s}, data {d_id}:', sub_mat)
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+    plt.legend(loc='upper left')
+    plt.savefig(f'plots/may10_{"var_" if plot_var else ""}fashion_plot_{model}.png')
 
 
 def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
@@ -762,7 +797,20 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
 
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
+  merf_adaboost_array = ar_dict['may10_merf_adaboost']
+  # print(sr_conv_array.array.shape, adaboost_array.array.shape)
+  # print(sr_conv_array.dim_names)
+  # for d in sr_conv_array.dim_names:
+  #   print(d, sr_conv_array.idx_names[d])
+  # for d in adaboost_array.dim_names:
+  #     print(d, adaboost_array.idx_names[d])
+  # print(sr_conv_array.array[:, 1:, :, 7, :, 0].shape, sr_conv_array.array[:, :, :, 0, :, 0].shape)
+  sr_conv_array.array[:, 1:, :, 7, :, 0] = merf_adaboost_array.array[:, :, :, 0, :, 0]
+
   sb_array = ar_dict['sb']
+  real_adaboost_array = ar_dict['may10_real_adaboost']
+  sb_array.array[:, 0, :, 7, :, 0] = real_adaboost_array.array[:, 0, :, 0, :, 0]
+
   full_mmd_array = ar_dict['full_mmd_jan7']
   mehp_array = ar_dict['mehp_dmnist_apr27']
   print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
@@ -779,11 +827,13 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
   for d_id in data_ids:
     for o_idx, order in enumerate(orders):
       queried_setups = ['real_data',
-                        'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+                        'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5',
+                        # 'apr6_sr_conv_sig_25',
                         'full_mmd',
                         f'mehp non-DP order{order}', f'mehp eps=1 order{order}']
       setup_names = ['real data',
-                     'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
+                     'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
+                     # 'DP-MERF $\epsilon=0.2$',
                      'full MMD $\epsilon=\infty$',
                      f'mehp $\epsilon=\infty$ order{order}', f'mehp $\epsilon=1$ order{order}']
       plt.figure()
@@ -814,8 +864,8 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
       plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.45, 0.9))
-      plt.legend(loc='upper left')
-      plt.savefig(f'plots/apr27_order{order}_{"var_" if plot_var else ""}digit_merf_plus_full_mmd_and_mehp.png')
+      plt.legend(loc='lower right')
+      plt.savefig(f'plots/may10_order{order}_{"var_" if plot_var else ""}digit_merf_plus_full_mmd_and_mehp.png')
 
       for m_idx, model in enumerate(models):
         plt.figure()
@@ -834,8 +884,8 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
 
         plt.xlabel('# samples generated')
         plt.ylabel('accuracy')
-        plt.legend(loc='upper left')
-        plt.savefig(f'plots/apr27_order{order}_{"var_" if plot_var else ""}digit_plot_{model}.png')
+        plt.legend(loc='lower right')
+        plt.savefig(f'plots/may10_order{order}_{"var_" if plot_var else ""}digit_plot_{model}.png')
 
 
 def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
@@ -874,7 +924,6 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
   # digit plot
   for d_id in data_ids:
 
-
       plt.figure()
       plt.xscale('log')
       plt.xticks(sub_ratios[::-1], data_used[::-1])
@@ -899,12 +948,13 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
       plt.xlabel('# samples generated')
       plt.ylabel('accuracy')
 
-      plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85],
+      plt.yticks([0.55, 0.6, 0.65, 0.7, 0.75])
+      plt.hlines([0.6, 0.65, 0.7],
                  xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
-      plt.ylim((0.45, 0.9))
-      plt.legend(loc='upper left')
-      plt.savefig(f'plots/apr27_order_comp_{dp_str}{var_str}digit_plot.png')
+      plt.ylim((0.55, 0.75))
+      plt.legend(loc='lower right')
+      plt.savefig(f'plots/may10_order_comp_{dp_str}{var_str}digit_plot.png')
+      plt.close()
 
       for m_idx, model in enumerate(models):
         plt.figure()
@@ -922,8 +972,9 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
 
         plt.xlabel('# samples generated')
         plt.ylabel('accuracy')
-        plt.legend(loc='upper left')
-        plt.savefig(f'plots/apr27_order_comp_{dp_str}{var_str}digit_plot_{model}.png')
+        plt.legend(loc='lower right')
+        plt.savefig(f'plots/may10_order_comp_{dp_str}{var_str}digit_plot_{model}.png')
+        plt.close()
 
 
 if __name__ == '__main__':
@@ -956,7 +1007,8 @@ if __name__ == '__main__':
   # apr6_plot_better_conv(plot_var=True)
   # jan7_plot_better_conv_plus_full_mmd(plot_var=True)
   # apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=True)
-  # apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False)
+
+  apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=True)
   # apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=True)
-  apr27_dmnist_mehp_order_comp(plot_var=True, private=True)
-  apr27_dmnist_mehp_order_comp(plot_var=True, private=False)
+  # apr27_dmnist_mehp_order_comp(plot_var=True, private=True)
+  # apr27_dmnist_mehp_order_comp(plot_var=True, private=False)

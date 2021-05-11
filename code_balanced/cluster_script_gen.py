@@ -29,7 +29,8 @@ def params_to_strings(base_cmd, flag_val_list, exp_id_flag=None, id_offset=0):
   return [f'{base_cmd} {exp_id_strings[i]}' + ' '.join(p) for i, p in enumerate(setups)]
 
 
-def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_id_flag, id_offset=0, runs_per_job=3):
+def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_id_flag, id_offset=0, runs_per_job=3,
+                        use_gpus=False):
 
   # if params_to_string_fun is None:
   #   params_to_string_fun = params_to_strings
@@ -50,19 +51,16 @@ def gen_cluster_scripts(experiment_name, save_dir, base_cmd, flag_val_list, exp_
 
   run_script.append('fi')
 
-  condor_script = [f'executable = {experiment_name}.sh',
-                   'arguments = $(Process)',
+  base_request = [f'executable = {experiment_name}.sh', 'arguments = $(Process)',
                    f'error = joblogs/{experiment_name}_$(Process).err.txt',
                    f'output = joblogs/{experiment_name}_$(Process).out.txt',
                    f'log = joblogs/{experiment_name}_$(Process).log.txt',
-                   'getenv = True',
-                   'request_cpus = 2',
-                   # 'request_gpus = 2',
-                   'request_memory = 8GB',
-                   '+MaxRunningPrice = 500',
-                   '+RunningPriceExceededAction = "restart"',
-                   # 'requirements = CUDACapability >= 3.7',
-                   f'queue {jobs_count}']
+                   'getenv = True', 'request_cpus = 2']
+  gpu_request = ['request_gpus = 2', 'requirements = CUDACapability >= 3.7'] if use_gpus else []
+  base_request_cont = ['request_memory = 8GB', '+MaxRunningPrice = 500', '+RunningPriceExceededAction = "restart"',
+                       f'queue {jobs_count}']
+
+  condor_script = base_request + gpu_request + base_request_cont
 
   with open(os.path.join(save_dir, f'{experiment_name}.sh'), 'w') as f:
     f.writelines([l + '\n' for l in run_script])
@@ -149,7 +147,72 @@ def redo_old_adaboost():
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=9)
 
 
+def redo_real_adaboost():
+  # make script to re-run all dp-merf, dpcgan and dpgan eval for adaboost using the new setting
+  # gs-wgan must be run separately
+  experiment_name = 'may10_redo_adaboost_subsamples'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 synth_data_benchmark.py'
+
+  dmnist_names = [f'logs/gen/real_data_eval_d{s}' for s in range(5)]
+  fmnist_names = [f'logs/gen/real_data_eval_f{s}' for s in range(5)]
+  params = [('--custom-keys', ['adaboost']),
+            ('--new-model-specs', None),
+            ('--log-results', None),
+            ('--skip-gen-to-real', None),
+            ('--compute-real-to-real', None),
+            ('--data {} --data-dir {} --seed {}',
+             # list(zip([f'apr23_me_training_{k}' for k in range(60)],
+            list(zip(['digits']*5 + ['fashion']*5, dmnist_names + fmnist_names,
+                     [0, 1, 2, 3, 4]*2))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+            # ('-rate', [1.0])  # , 0.5, 1.0
+            ]
+  exp_id_flag = None
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=10)
+
+
+def may11_digits_hp_grid():
+  experiment_name = 'may11_digits_hp_grid'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 Me_sum_kernel_args.py'
+  params = [('--data', ['digits']),
+            ('-bs', [50, 100, 200]),
+            ('-ebs', [2000]),
+            ('-ep', [10]),
+            ('-lr', [0.001, 0.003, 0.01, 0.03]),
+            ('--is-private', ['True']),
+            ('--order-hermite', [100]),
+            # ('', ['--skip-downstream-model']),
+            ('--kernel-length', [0.0001, 0.0003, 0.001, 0.003, 0.005, 0.01, 0.03]),
+            # ('--seed', [0, 1, 2, 3, 4])
+            ]
+  exp_id_flag = '--log-name may11_digits_hp_grid_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
+
+
+def may11_digits_hp_continuous_grid():
+  experiment_name = 'may11_digits_hp_continuous_grid'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 Me_sum_kernel_args.py'
+  params = [('--data', ['digits']),
+            ('-bs', [50, 100, 200, 500]),
+            ('-ebs', [2000]),
+            ('-ep', [10]),
+            ('-lr', [0.001, 0.003, 0.01, 0.03]),
+            ('--is-private', ['True']),
+            ('--order-hermite', [100]),
+            ('--multi-release', None),
+            ('--kernel-length', [0.0001, 0.0003, 0.001, 0.003, 0.005, 0.01, 0.03]),
+            # ('--seed', [0, 1, 2, 3, 4])
+            ]
+  exp_id_flag = '--log-name may11_digits_hp_continuous_grid_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
+
+
 if __name__ == '__main__':
   # running_train_script()
   # running_eval_script()
-  redo_old_adaboost()
+  # redo_old_adaboost()
+  # redo_real_adaboost()
+  may11_digits_hp_grid()
