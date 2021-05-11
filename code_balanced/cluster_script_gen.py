@@ -215,4 +215,4 @@ if __name__ == '__main__':
   # running_eval_script()
   # redo_old_adaboost()
   # redo_real_adaboost()
-  may11_digits_hp_grid()
+  may11_digits_hp_continuous_grid()
