@@ -255,7 +255,9 @@ def main():
       # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
 
       if (epoch>0) & (epoch % 50 == 0): # every 20th epoch we evaluate the quality of the data
-
+          
+          print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+          
           """ draw final data samples """
           if args.dataset_name == 'census':
               chunk_size = 2000
