@@ -499,7 +499,7 @@ def collect_oct12_dpmerf_mnist_scores():
 
 
 def collect_may11_dpmehp_mnist_scores():
-  log_dir = 'logs/gen/may11_digits_hp_scores/'
+  log_dir = '../dp_mehp/logs/gen/may11_digits_hp_scores/'
   if not os.path.exists(log_dir):
     os.makedirs(log_dir)
 
@@ -512,7 +512,7 @@ def collect_may11_dpmehp_mnist_scores():
     scores = np.zeros(n_runs, 4)
     for run in range(n_runs):
 
-      eval_dir = f'logs/gen/may11_digits_hp{run_setting}_grid_{run}/digits/synth_eval/'
+      eval_dir = f'../dp_mehp/logs/gen/may11_digits_hp{run_setting}_grid_{run}/digits/synth_eval/'
 
       for f_idx, f in enumerate(eval_files):
         eval_file = os.path.join(eval_dir, f)
