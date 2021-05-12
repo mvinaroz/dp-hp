@@ -113,10 +113,10 @@ def revert_scaling(data, base_scale):
 
 def main():
   args, device = parse_arguments()
-  seed = 0
+  seed = np.random.randint(0, 1000)
   print('seed: ', seed)
 
-  print('Hermite polynomial order: ', args.order_hermite)
+  # print('Hermite polynomial order: ', args.order_hermite)
 
   random.seed(seed)
   ############################### data loading ##################################
@@ -124,12 +124,16 @@ def main():
 
   if args.dataset_name=='adult':
       data = np.load(f"../data/real/sdgym_{args.dataset}_adult.npy")
-  else:
+  else: # for census data, we take the first
       data = np.load(f"../data/real/sdgym_{args.dataset}_census.npy")
+      # n_subsampled_datapoints = 20000 # to do a quick test, later remove this
+      # data = data[np.random.permutation(data.shape[0])][:n_subsampled_datapoints]
+      # np.save('census_small.npy', data)
+
 
   if args.kernel == 'linear':
     data, unbin_mapping_info = binarize_data(data)
-    print('bin data shape', data.shape)
+    # print('bin data shape', data.shape)
   else:
     unbin_mapping_info = None
 
@@ -152,11 +156,12 @@ def main():
 
   # model specifics
   batch_size = np.int(np.round(args.batch_rate * n_samples))
-  print("minibatch: ", batch_size)
-  input_size = 4 + 1
+  # print("minibatch: ", batch_size)
 
+  input_size = 5
   hidden_size_1 = 400 * input_dim
   hidden_size_2 = 100 * input_dim
+
   # hidden_size_3 = 10 * input_dim
 
   output_size = input_dim
@@ -170,7 +175,17 @@ def main():
   ####################### estimating length scale for each dimensoin ##################
   sigma2 = np.median(X, 0)
   sigma2[sigma2==0] = 0.9
-  # sigma2 = 0.2*np.sqrt(sigma2)
+  if args.dataset_name == 'census':
+      hp = args.hyperparam
+      if hp==0:
+          sigma2 = sigma2
+      else:
+          sigma2 = hp*np.sqrt(sigma2)
+  else:
+      if args.dataset=='simple':
+          sigma2 = 0.2*np.sqrt(sigma2)
+      else:
+          sigma2 = sigma2
 
   rho = find_rho_tab(sigma2)
   order = args.order_hermite
@@ -178,14 +193,14 @@ def main():
   ########## data mean embedding ##########
 
   if args.is_private:
-      print("private")
+      # print("private")
       delta = 1e-5
       k = 1  # because we add noise to the weights and means separately.
       privacy_param = privacy_calibrator.gaussian_mech(args.epsilon, delta, k=k)
-      print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
+      # print(f'eps,delta = ({args.epsilon},{delta}) ==> Noise level sigma=', privacy_param['sigma'])
 
   """ compute the means """
-  print('computing mean embedding of data: (2) compute the mean')
+  # print('computing mean embedding of data:')
   data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
 
   chunk_size = 250
@@ -197,23 +212,16 @@ def main():
 
   data_embedding[:,0] = emb_sum
 
-  # for idx in range(n_classes):
-  #     print(idx, 'th-class')
-  #     # idx_data = X[y == idx, :]
-  #     idx_data = X
-  #     phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n_samples)
-  #     data_embedding[:, idx] = phi_data  # this includes 1/n factor inside
-  # print('done with computing mean embedding of data')
 
   if args.is_private:
       std = (2 * privacy_param['sigma'] / n_samples)
       noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
 
-      print('before perturbation, mean and variance of data mean embedding are %f and %f ' % (
-      torch.mean(data_embedding), torch.std(data_embedding)))
+      # print('before perturbation, mean and variance of data mean embedding are %f and %f ' % (
+      # torch.mean(data_embedding), torch.std(data_embedding)))
       data_embedding = data_embedding + noise
-      print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (
-      torch.mean(data_embedding), torch.std(data_embedding)))
+      # print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (
+      # torch.mean(data_embedding), torch.std(data_embedding)))
 
   """ Training """
   optimizer = optim.Adam(model.parameters(), lr=args.lr)
@@ -232,12 +240,10 @@ def main():
           outputs = model(input_to_model)
 
           """ (3) compute synthetic data's mean embedding """
-          # weights_syn = torch.zeros(n_classes)  # weights = m_c / n
           syn_data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
           for idx in range(n_classes):
               idx_syn_data = outputs
               phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
-
               syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
 
           loss = torch.sum((data_embedding - syn_data_embedding)**2)
@@ -246,80 +252,116 @@ def main():
           loss.backward()
           optimizer.step()
           
-      print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
-      # scheduler.step()
-  # end for over epoch
+      # print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
 
-  """ draw final data samples """
-  if args.dataset_name == 'census':
-      chunk_size = 2000
-      generated_data = np.zeros(((n_samples//chunk_size)*chunk_size, input_dim))
+      if (epoch>0) & (epoch % 50 == 0): # every 20th epoch we evaluate the quality of the data
+          
+          print('Train Epoch: {} \t Loss: {:.6f}'.format(epoch, loss.item()))
+          
+          """ draw final data samples """
+          if args.dataset_name == 'census':
+              chunk_size = 2000
+              generated_data = np.zeros(((n_samples//chunk_size)*chunk_size, input_dim))
 
-      # n_samples = 199523
-      # generated_data.shape = 198000, 41
-      for idx in range(n_samples // chunk_size):
-          print('%d of generating samples out of %d' %(idx, n_samples // chunk_size))
-          feature_input = torch.randn((chunk_size, input_size)).to(device)
-          input_to_model = feature_input
-          outputs = model(input_to_model)
-          samp_input_features = outputs
-          generated_data[idx * chunk_size:(idx + 1) * chunk_size,:] = samp_input_features.cpu().detach().numpy()
+              # n_samples = 199523
+              # generated_data.shape = 198000, 41
+              for idx in range(n_samples // chunk_size):
+                  # print('%d of generating samples out of %d' %(idx, n_samples // chunk_size))
+                  feature_input = torch.randn((chunk_size, input_size)).to(device)
+                  input_to_model = feature_input
+                  outputs = model(input_to_model)
+                  samp_input_features = outputs
+                  generated_data[idx * chunk_size:(idx + 1) * chunk_size,:] = samp_input_features.cpu().detach().numpy()
 
-      generated_input_features_final = generated_data
+              generated_input_features_final = generated_data
 
-  else:
-      feature_input = torch.randn((n_samples, input_size)).to(device)
-      input_to_model = feature_input
-      outputs = model(input_to_model)
+          else:
+              feature_input = torch.randn((n_samples, input_size)).to(device)
+              input_to_model = feature_input
+              outputs = model(input_to_model)
 
-      samp_input_features = outputs
+              samp_input_features = outputs
 
-      generated_input_features_final = samp_input_features.cpu().detach().numpy()
+              generated_input_features_final = samp_input_features.cpu().detach().numpy()
 
-  ##################################################################################################################
+          ##################################################################################################################
 
-  if args.norm_dims == 1:
-    generated_input_features_final = revert_scaling(generated_input_features_final, base_scale)
+          if args.norm_dims == 1:
+            generated_input_features_final = revert_scaling(generated_input_features_final, base_scale)
 
-  save_file = f"adult_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
-              f"batch_rate_{args.batch_rate}_hp_{args.order_hermite}.npy"
-  if args.save_data:
-    # save generated samples
-    path_gen_data = f"../data/generated/rebuttal_exp"
-    os.makedirs(path_gen_data, exist_ok=True)
-    data_save_path = os.path.join(path_gen_data, save_file)
-    np.save(data_save_path, generated_input_features_final)
-    print(f"Generated data saved to {path_gen_data}")
-  else:
-    data_save_path = save_file
+          # run marginals test
+          if args.dataset_name == 'census':
+              save_file = f"census_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
+                          f"batch_rate_{args.batch_rate}_hp_{args.order_hermite}.npy"
+              if args.save_data:
+                  # save generated samples
+                  path_gen_data = f"../data/generated/census"
+                  os.makedirs(path_gen_data, exist_ok=True)
+                  data_save_path = os.path.join(path_gen_data, save_file)
+                  np.save(data_save_path, generated_input_features_final)
+                  # print(f"Generated data saved to {path_gen_data}")
+              else:
+                  data_save_path = save_file
 
-  # run marginals test
-  if args.dataset_name == 'adult':
-      real_data = f'../data/real/sdgym_{args.dataset}_adult.npy'
-  else:
-      real_data = f'../data/real/sdgym_{args.dataset}_census.npy'
+              real_data = f'../data/real/sdgym_{args.dataset}_census.npy'
+              # real_data = f'census_small.npy'
+              alpha = 3
+              # then subsample datapoints, because this dataset is huge
+              gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                           real_data_path=real_data,
+                                           discretize=True,
+                                           alpha=alpha,
+                                           verbose=False,
+                                           unbinarize=args.kernel == 'linear',
+                                           unbin_mapping_info=unbin_mapping_info,
+                                           # n_subsampled_datapoints=10000,
+                                           gen_data_direct=generated_input_features_final)
 
-  alpha = 3
+              alpha = 4
+              gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                                 real_data_path=real_data,
+                                                 discretize=True,
+                                                 alpha=alpha,
+                                                 verbose=False,
+                                                 unbinarize=args.kernel == 'linear',
+                                                 unbin_mapping_info=unbin_mapping_info,
+                                                 # n_subsampled_datapoints=1000,
+                                                 gen_data_direct=generated_input_features_final)
+          else:
+              save_file = f"adult_{args.dataset}_gen_eps_{args.epsilon}_{args.kernel}_kernel_" \
+                          f"batch_rate_{args.batch_rate}_hp_{args.order_hermite}.npy"
+              if args.save_data:
+                  # save generated samples
+                  path_gen_data = f"../data/generated/adult"
+                  os.makedirs(path_gen_data, exist_ok=True)
+                  data_save_path = os.path.join(path_gen_data, save_file)
+                  np.save(data_save_path, generated_input_features_final)
+                  print(f"Generated data saved to {path_gen_data}")
+              else:
+                  data_save_path = save_file
 
-  gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
-                                   real_data_path=real_data,
-                                   discretize=True,
-                                   alpha=alpha,
-                                   verbose=True,
-                                   unbinarize=args.kernel == 'linear',
-                                   unbin_mapping_info=unbin_mapping_info,
-                                   gen_data_direct=generated_input_features_final)
+              real_data = f'../data/real/sdgym_{args.dataset}_adult.npy'
+              alpha = 3
+              # real_data = 'numpy_data/sdgym_bounded_adult.npy'
+              gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                               real_data_path=real_data,
+                                               discretize=True,
+                                               alpha=alpha,
+                                               verbose=True,
+                                               unbinarize=args.kernel == 'linear',
+                                               unbin_mapping_info=unbin_mapping_info,
+                                               gen_data_direct=generated_input_features_final)
 
-  alpha = 4
-
-  gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
-                                   real_data_path=real_data,
-                                   discretize=True,
-                                   alpha=alpha,
-                                   verbose=True,
-                                   unbinarize=args.kernel == 'linear',
-                                   unbin_mapping_info=unbin_mapping_info,
-                                   gen_data_direct=generated_input_features_final)
+              alpha = 4
+              # real_data = 'numpy_data/sdgym_bounded_adult.npy'
+              gen_data_alpha_way_marginal_eval(gen_data_path=data_save_path,
+                                               real_data_path=real_data,
+                                               discretize=True,
+                                               alpha=alpha,
+                                               verbose=True,
+                                               unbinarize=args.kernel == 'linear',
+                                               unbin_mapping_info=unbin_mapping_info,
+                                               gen_data_direct=generated_input_features_final)
 
 ###################################################################################################
 
@@ -330,11 +372,13 @@ def parse_arguments():
   args = argparse.ArgumentParser()
 
   args.add_argument('--order-hermite', type=int, default=100, help='')
-  args.add_argument('--epochs', type=int, default=10)
+  args.add_argument('--epochs', type=int, default=400)
   # args.add_argument("--batch-rate", type=float, default=0.1) # for adult data
 
-  args.add_argument("--batch-rate", type=float, default=0.01)  # for census data
+  args.add_argument("--batch-rate", type=float, default=0.1)  # for census data
   args.add_argument("--lr", type=float, default=0.0001)
+
+  args.add_argument("--hyperparam", type=float, default=1.0)
   
   args.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
   args.add_argument("--epsilon", type=float, default=1.0)
