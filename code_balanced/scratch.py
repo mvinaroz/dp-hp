@@ -509,7 +509,7 @@ def collect_may11_dpmehp_mnist_scores():
                 'sub0.1_logistic_reg_log.npz', 'sub0.1_random_forest_log.npz']
 
   for run_setting, n_runs in [('', 84), ('_continuous', 112)]:
-    scores = np.zeros(n_runs, 4)
+    scores = np.zeros((n_runs, 4))
     for run in range(n_runs):
 
       eval_dir = f'../dp_mehp/logs/gen/may11_digits_hp{run_setting}_grid_{run}/digits/synth_eval/'
