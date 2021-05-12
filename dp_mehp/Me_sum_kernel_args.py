@@ -53,7 +53,7 @@ def get_args():
   parser.add_argument('--report_intermediate', action='store_true', default=False, help='')
   parser.add_argument('--loss-type', type=str, default='MEHP', help='how to approx mmd')
   parser.add_argument('--method', type=str, default='sum_kernel', help='')
-  parser.add_argument('--sampling_rate_synth', type=float, default=0.1,  help='')
+  parser.add_argument('--sampling-rate-synth', type=float, default=0.1,  help='')
   parser.add_argument('--skip-downstream-model', action='store_true', default=False, help='')
   parser.add_argument('--order-hermite', type=int, default=100, help='')
   parser.add_argument('--heuristic-sigma', action='store_true', default=False)
