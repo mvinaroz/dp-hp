@@ -498,6 +498,39 @@ def collect_oct12_dpmerf_mnist_scores():
       f.write(f'{idx}: {score}')
 
 
+def collect_may11_dpmehp_mnist_scores():
+  log_dir = '../dp_mehp/logs/gen/may11_digits_hp_scores/'
+  if not os.path.exists(log_dir):
+    os.makedirs(log_dir)
+
+  # run_range = [str(k) for k in range(216)]
+  # for run in run_range:
+  eval_files = ['sub0.1_bernoulli_nb_log.npz', 'sub0.1_gaussian_nb_log.npz',
+                'sub0.1_logistic_reg_log.npz', 'sub0.1_random_forest_log.npz']
+
+  for run_setting, n_runs in [('', 84), ('_continuous', 112)]:
+    scores = np.zeros((n_runs, 4))
+    for run in range(n_runs):
+
+      eval_dir = f'../dp_mehp/logs/gen/may11_digits_hp{run_setting}_grid_{run}/digits/synth_eval/'
+
+      for f_idx, f in enumerate(eval_files):
+        eval_file = os.path.join(eval_dir, f)
+        if os.path.exists(eval_file):
+          scores[run, f_idx] = np.load(eval_file)['accuracies'][1]
+        else:
+          print(f'hp{run_setting} run {run} file {f}: not found')
+
+    np.save(os.path.join(log_dir, f'scores{run_setting}.npy'), scores)
+    max_vals = np.max(scores, axis=0)
+    max_ids = np.argmax(scores, axis=0)
+    max_avg_val = np.max(np.mean(scores, axis=1))
+    max_avg_id = np.argmax(np.mean(scores, axis=1))
+    print(f'results for hp{run_setting}:')
+    print(f'best scores: {max_vals} at runs {max_ids}')
+    print(f'best average: {max_avg_val} at run {max_avg_id}')
+
+
 if __name__ == '__main__':
   # collect_sep21_nonp_kmeans_grid()
   # collect_oct4_dpcgan_grid()
@@ -509,7 +542,8 @@ if __name__ == '__main__':
   # collect_oct8_dpmerf_log_likelihoods()
   # collect_oct10_dpcgan_grid()
   # collect_oct9_dpmerf_mnist_scores()
-  collect_oct12_dpmerf_mnist_scores()
+  # collect_oct12_dpmerf_mnist_scores()
+  collect_may11_dpmehp_mnist_scores()
   # dpcgan_dummmy_eval()
 
   # 'dpmerf-high-eps-f0'

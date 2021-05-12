@@ -210,9 +210,27 @@ def may11_digits_hp_continuous_grid():
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
 
 
+def may12_fashion_hp_grid():
+  experiment_name = 'may12_fashion_hp_grid'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 Me_sum_kernel_args.py'
+  params = [('--data', ['fashion']),
+            ('-bs', [50, 100, 200]),
+            ('-ebs', [2000]),
+            ('-ep', [10]),
+            ('-lr', [0.001, 0.003, 0.01, 0.03]),
+            ('--is-private', ['True']),
+            ('--order-hermite', [100, 200]),
+            ('--sampling-rate-synth', [1.0]),
+            ('--kernel-length', [0.0001, 0.0003, 0.001, 0.003, 0.005, 0.01, 0.03]),
+            # ('--seed', [0, 1, 2, 3, 4])
+            ]
+  exp_id_flag = '--log-name may12_fashion_hp_grid_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
+
 if __name__ == '__main__':
   # running_train_script()
   # running_eval_script()
   # redo_old_adaboost()
   # redo_real_adaboost()
-  may11_digits_hp_continuous_grid()
+  may12_fashion_hp_grid()
