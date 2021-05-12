@@ -1,13 +1,15 @@
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use('Agg')
 import torch
 import torch.nn as nn
 import torch.optim as optim
 #import util
 import random
 import argparse
-import seaborn as sns
-sns.set()
+#import seaborn as sns
+#sns.set()
 # %matplotlib inline
 from autodp import privacy_calibrator
 from all_aux_files_tab_data import  find_rho_tab, heuristic_for_length_scale, ME_with_HP_tab
@@ -399,5 +401,3 @@ def parse_arguments():
 
 if __name__ == '__main__':
   main()
-    
-    
