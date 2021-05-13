@@ -374,10 +374,10 @@ def parse_arguments():
   args = argparse.ArgumentParser()
 
   args.add_argument('--order-hermite', type=int, default=100, help='')
-  args.add_argument('--epochs', type=int, default=400)
+  args.add_argument('--epochs', type=int, default=200)
   # args.add_argument("--batch-rate", type=float, default=0.1) # for adult data
 
-  args.add_argument("--batch-rate", type=float, default=0.1)  # for census data
+  args.add_argument("--batch-rate", type=float, default=0.05)  # for census data
   args.add_argument("--lr", type=float, default=0.0001)
 
   args.add_argument("--hyperparam", type=float, default=1.0)
