@@ -60,8 +60,7 @@ def get_args():
   parser.add_argument("--separate-kernel-length", action='store_true', default=False) # heuristic-sigma has to be "True", to enable separate-kernel-length
   parser.add_argument('--kernel-length', type=float, default=0.001, help='')
 
-  parser.add_argument('--scramble-by-labels', action='store_true', default=False)
-  parser.add_argument('--flipped-mnist', action='store_true', default=False)
+  parser.add_argument('--debug-data', type=str, default=None, choices=['flip', 'flip_binary', 'scramble_per_label'])
   # DP SPEC
   parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
   parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
@@ -90,10 +89,10 @@ def preprocess_args(ar):
 
 
 def get_full_data_embedding(data_pkg, order, rho, embed_batch_size, device, data_key, separate_kernel_length,
-                            scramble_by_labels, flip):
+                            debug_data):
   embedding_train_loader, _ = get_mnist_dataloaders(embed_batch_size, embed_batch_size,
                                                     use_cuda=device, dataset=data_key,
-                                                    scramble_by_labels=scramble_by_labels, flip=flip)
+                                                    debug_data=debug_data)
 
   # summing at the end uses unnecessary memory - leaving previous version in in case of errors with this one
   data_embedding = torch.zeros(data_pkg.n_features * (order + 1), data_pkg.n_labels, device=device)
@@ -138,7 +137,7 @@ def main():
     """Load data"""
     data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda=device,
                                normalize=False, synth_spec_string=None, test_split=None,
-                               scramble_by_labels=ar.scramble_by_labels, flip_mnist=ar.flipped_mnist)
+                               debug_data=ar.debug_data)
 
     """ Define a generator """
     if ar.model_name == 'FC':
@@ -182,7 +181,7 @@ def main():
       print('computing mean embedding of data')
       dataset_embedding = get_full_data_embedding(data_pkg, order, rho, ar.embed_batch_size, device,
                                                   ar.data, ar.separate_kernel_length,
-                                                  ar.scramble_by_labels, ar.flipped_mnist)
+                                                  ar.debug_data)
       print('done with computing mean embedding of data')
 
       if ar.is_private:
