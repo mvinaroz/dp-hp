@@ -537,8 +537,8 @@ def collect_may12_dpmehp_fmnist_scores():
     os.makedirs(log_dir)
   # run_range = [str(k) for k in range(216)]
   # for run in run_range:
-  eval_files = ['sub0.1_bernoulli_nb_log.npz', 'sub0.1_gaussian_nb_log.npz',
-                'sub0.1_logistic_reg_log.npz', 'sub0.1_random_forest_log.npz']
+  eval_files = ['sub1.0_bernoulli_nb_log.npz', 'sub1.0_gaussian_nb_log.npz',
+                'sub1.0_logistic_reg_log.npz', 'sub1.0_random_forest_log.npz']
   n_runs = 168
 
   scores = np.zeros((n_runs, 4))
