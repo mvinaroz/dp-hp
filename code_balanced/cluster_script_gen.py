@@ -228,9 +228,68 @@ def may12_fashion_hp_grid():
   exp_id_flag = '--log-name may12_fashion_hp_grid_{}'
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
 
+
+def may13_gs_wgan_subsamples():
+  # make script to re-run all dp-merf, dpcgan and dpgan eval for adaboost using the new setting
+  # gs-wgan must be run separately
+  experiment_name = 'may13_gs_wgan_subsamples'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 gs_wgan_eval.py'
+
+  seed_strings = ['', '_s2', '_s3', '_s4', '_s5']
+  dmnist_load_paths = [f'../../GS-WGAN/results/mnist/main/digits_eps10{s}/samples_mat.npy' for s in seed_strings]
+  fmnist_load_paths = [f'../../GS-WGAN/results/fashionmnist/main/fashion_eps10{s}/samples_mat.npy' for s in seed_strings]
+
+  dmnist_save_dirs = [f'eval/digits_s{s}' for s in range(1, 6)]
+  fmnist_save_dirs = [f'eval/fashion_s{s}' for s in range(1, 6)]
+
+  params = [('--custom-keys', ['adaboost --new-model-specs',
+                               'logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb',
+                               # 'linear_svc',
+                               'mlp', 'decision_tree', 'lda', 'gbm', 'bagging', 'xgboost'
+                               ]),
+            ('--load-path {} --save-dir {} --data-key {}',
+             # list(zip([f'apr23_me_training_{k}' for k in range(60)],
+            list(zip(dmnist_load_paths + fmnist_load_paths,
+                     dmnist_save_dirs + fmnist_save_dirs,
+                     ['digits']*5 + ['fashion']*5))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5])  # , 0.5, 1.0
+            ]
+  exp_id_flag = None
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=18, use_gpus=False)
+
+
+def may13_gs_wgan_subsamples_only_lin_svc():
+  # make script to re-run all dp-merf, dpcgan and dpgan eval for adaboost using the new setting
+  # gs-wgan must be run separately
+  experiment_name = 'may13_gs_wgan_subsamples_only_lin_svc'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 gs_wgan_eval.py'
+
+  seed_strings = ['', '_s2', '_s3', '_s4', '_s5']
+  dmnist_load_paths = [f'../../GS-WGAN/results/mnist/main/digits_eps10{s}/samples_mat.npy' for s in seed_strings]
+  fmnist_load_paths = [f'../../GS-WGAN/results/fashionmnist/main/fashion_eps10{s}/samples_mat.npy' for s in seed_strings]
+
+  dmnist_save_dirs = [f'eval/digits_s{s}' for s in range(1, 6)]
+  fmnist_save_dirs = [f'eval/fashion_s{s}' for s in range(1, 6)]
+
+  params = [('--custom-keys', ['linear_svc']),
+            ('--load-path {} --save-dir {} --data-key {}',
+            list(zip(dmnist_load_paths + fmnist_load_paths,
+                     dmnist_save_dirs + fmnist_save_dirs,
+                     ['digits']*5 + ['fashion']*5))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5])  # , 0.5, 1.0
+            ]
+  exp_id_flag = None
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1000, use_gpus=False)
+
+
+
 if __name__ == '__main__':
   # running_train_script()
   # running_eval_script()
   # redo_old_adaboost()
   # redo_real_adaboost()
-  may12_fashion_hp_grid()
+  # may12_fashion_hp_grid()
+  may13_gs_wgan_subsamples()
+  may13_gs_wgan_subsamples_only_lin_svc()

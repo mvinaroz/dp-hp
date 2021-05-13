@@ -1025,17 +1025,47 @@ def flip_mnist_data(dataset):
   dataset.data = pt.where(selections[:, None, None], data, flipped_data)
 
 
+def scramble_mnist_data_by_labels(dataset):
+  data = dataset.data
+  labels = dataset.targets
+  oldshape = data.shape
+  data_flat = pt.reshape(data, (oldshape[0], -1))
+  # print(data.shape, labels.shape)
+  print()
+  new_data_list = []
+  for label in range(10):  # shuffle each label separately
+    # print(f'scrambling label {label}')
+    l_data = data_flat[labels == label]
+    # print(l_data.shape)
+    n_data, n_dims = l_data.shape
+    new_l_data = pt.zeros_like(l_data)
+    for dim in range(l_data.shape[1]):
+      new_l_data[:, dim] = l_data[:, dim][pt.randperm(n_data)]
+
+    new_data_list.append(new_l_data)
+  new_data_flat = pt.cat(new_data_list)
+
+
+
+  dataset.targets = pt.cat([pt.zeros(new_data_list[k].shape[0]) + k for k in range(10)])
+  dataset.data = pt.reshape(new_data_flat, oldshape)
+
+
+
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
                                                        'n_features', 'n_data', 'n_labels', 'eval_func'])
 
 
-def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
+def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split,
+                    scramble_by_labels, flip_mnist):
   if dataset_key in {'digits', 'fashion'}:
     train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
                                                                           dataset=dataset_key, normalize=normalize,
-                                                                          return_datasets=True)
+                                                                          return_datasets=True,
+                                                                          flip=flip_mnist,
+                                                                          scramble_by_labels=scramble_by_labels)
     n_features = 784
     n_data = 60_000
     n_labels = 10
@@ -1047,7 +1077,8 @@ def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normaliz
 
 
 def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False,
-                          dataset='digits', data_dir='data', flip=False, return_datasets=False):
+                          dataset='digits', data_dir='data', flip=False, return_datasets=False,
+                          scramble_by_labels=False):
   if not os.path.exists(data_dir):
     os.makedirs(data_dir)
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
@@ -1066,6 +1097,10 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
       flip_mnist_data(trn_data)
       flip_mnist_data(tst_data)
 
+    if scramble_by_labels:
+      scramble_mnist_data_by_labels(trn_data)
+      scramble_mnist_data_by_labels(tst_data)
+
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   elif dataset == 'fashion':
@@ -1077,6 +1112,10 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
       print(pt.max(trn_data.data))
       flip_mnist_data(trn_data)
       flip_mnist_data(tst_data)
+
+    if scramble_by_labels:
+      scramble_mnist_data_by_labels(trn_data)
+      scramble_mnist_data_by_labels(tst_data)
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   else:
