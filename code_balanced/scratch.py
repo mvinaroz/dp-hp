@@ -542,16 +542,24 @@ def collect_may12_dpmehp_fmnist_scores():
   n_runs = 168
 
   scores = np.zeros((n_runs, 4))
+  complete_runs = []
+  no_resultruns = []
   for run in range(n_runs):
-
+    n_res = 0
     eval_dir = f'../dp_mehp/logs/gen/may12_fashion_hp_grid_{run}/fashion/synth_eval/'
 
     for f_idx, f in enumerate(eval_files):
       eval_file = os.path.join(eval_dir, f)
       if os.path.exists(eval_file):
         scores[run, f_idx] = np.load(eval_file)['accuracies'][1]
+        n_res += 1
       else:
         print(f'hp run {run} file {f}: not found')
+
+    if n_res == 4:
+      complete_runs.append(run)
+    elif n_res == 0:
+      no_resultruns.append(run)
 
   np.save(os.path.join(log_dir, f'scores.npy'), scores)
   max_vals = np.max(scores, axis=0)
@@ -561,6 +569,8 @@ def collect_may12_dpmehp_fmnist_scores():
 
   print(f'best scores: {max_vals} at runs {max_ids}')
   print(f'best average: {max_avg_val} at run {max_avg_id}')
+
+  print(f'complete runs: {len(complete_runs)}, no res runs: {len(no_resultruns)}')
 
 
 if __name__ == '__main__':
