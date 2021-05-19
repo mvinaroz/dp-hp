@@ -4,7 +4,7 @@ import torch as pt
 from collections import namedtuple
 from torchvision import transforms, datasets
 from torch.utils.data import Dataset
-from aux import flip_mnist_data
+from aux import flip_mnist_data, scramble_mnist_data_by_labels
 from synth_data_2d import make_data_from_specstring, string_to_specs
 from synth_data_1d import make_data_1d
 
@@ -13,10 +13,12 @@ train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loa
                                                        'n_features', 'n_data', 'n_labels', 'eval_func'])
 
 
-def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
+def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split,
+                    debug_data=None):
   if dataset_key in {'digits', 'fashion'}:
     train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
                                                                           dataset=dataset_key, normalize=normalize,
+                                                                          debug_data=debug_data,
                                                                           return_datasets=True)
     n_features = 784
     n_data = 60_000
@@ -40,7 +42,8 @@ def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normaliz
 
 
 def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False,
-                          dataset='digits', data_dir='data', flip=False, return_datasets=False):
+                          dataset='digits', data_dir='data', debug_data=None, return_datasets=False):
+  assert debug_data in (None, 'flip', 'flip_binary', 'scramble_per_label')
   if not os.path.exists(data_dir):
     os.makedirs(data_dir)
   kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
@@ -53,11 +56,15 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     prep_transforms = transforms.Compose(transforms_list)
     trn_data = datasets.MNIST(data_dir, train=True, download=True, transform=prep_transforms)
     tst_data = datasets.MNIST(data_dir, train=False, transform=prep_transforms)
-    if flip:
+    if debug_data.startswith('flip'):
       assert not normalize
       print(pt.max(trn_data.data))
-      flip_mnist_data(trn_data)
-      flip_mnist_data(tst_data)
+      flip_mnist_data(trn_data, only_binary=debug_data == 'flip_binary')
+      flip_mnist_data(tst_data, only_binary=debug_data == 'flip_binary')
+
+    if debug_data == 'scramble_per_label':
+      scramble_mnist_data_by_labels(trn_data)
+      scramble_mnist_data_by_labels(tst_data)
 
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
@@ -66,10 +73,15 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     prep_transforms = transforms.Compose(transforms_list)
     trn_data = datasets.FashionMNIST(data_dir, train=True, download=True, transform=prep_transforms)
     tst_data = datasets.FashionMNIST(data_dir, train=False, transform=prep_transforms)
-    if flip:
+    if debug_data.startswith('flip'):
       print(pt.max(trn_data.data))
-      flip_mnist_data(trn_data)
-      flip_mnist_data(tst_data)
+      flip_mnist_data(trn_data, only_binary=debug_data == 'flip_binary')
+      flip_mnist_data(tst_data, only_binary=debug_data == 'flip_binary')
+
+    if debug_data == 'scramble_per_label':
+      scramble_mnist_data_by_labels(trn_data)
+      scramble_mnist_data_by_labels(tst_data)
+
     train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
     test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
   else:
@@ -169,3 +181,23 @@ def get_1d_synth_dataloaders(batch_size, use_cuda, test_split=None):
 
   train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
   return train_loader, trn_data, tst_data, lambda x, y: 0
+
+
+def get_svhn_dataloaders(batch_size, test_batch_size, use_cuda, data_dir='data/SVHN/'):
+  if not os.path.exists(data_dir):
+    os.makedirs(data_dir)
+  kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+  transforms_list = [transforms.ToTensor()]
+  prep_transforms = transforms.Compose(transforms_list)
+  trn_data = datasets.SVHN(data_dir, split='train', download=False, transform=prep_transforms)
+  tst_data = datasets.SVHN(data_dir, split='test', download=False, transform=prep_transforms)
+  train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
+  test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
+  # print(trn_data.labels.shape)
+  n_features = 3 * 32 ** 2
+  n_data = trn_data.data.shape[0]
+  n_labels = 10
+  eval_func = None
+  data_pkg = train_data_tuple_def(train_loader, test_loader, trn_data, tst_data,
+                                  n_features, n_data, n_labels, eval_func)
+  return data_pkg

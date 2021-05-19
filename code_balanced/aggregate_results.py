@@ -261,21 +261,20 @@ def collect_results():
 
   runs = [0, 1, 2, 3, 4]
   dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']  # order matters!
-  base_idx_names = {'data_ids': data_ids, 'models': models, 'runs': runs, 'eval_metrics': eval_metrics}
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  base_idx_names = {'data_ids': data_ids, 'models': models, 'runs': runs, 'eval_metrics': eval_metrics,
+                    'sub_ratios': sub_ratios}
 
-  sb_setups = ['real_data', 'dpcgan',
-               # 'dpmerf-ae',
-               'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps', 'dpmerf-nonprivate_sb']
-  sb_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  sb_setups = ['real_data', 'dpcgan', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps', 'dpmerf-nonprivate_sb']
+
   sb_mat = np.load('results/results_full_mar25_subsampled.npy')
-  sb_idx_names = {'setups': sb_setups, 'sub_ratios': sb_ratios}
+  sb_idx_names = {'setups': sb_setups}
   sb_idx_names.update(base_idx_names)
   sb_array = NamedArray(sb_mat, dim_names, sb_idx_names)
 
   np_setups = ['(np)', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
-  np_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   np_mat = np.load('results/results_full_mar19_nonp.npy')
-  np_idx_names = {'setups': np_setups, 'sub_ratios': np_ratios}
+  np_idx_names = {'setups': np_setups}
   np_idx_names.update(base_idx_names)
   np_array = NamedArray(np_mat, dim_names, np_idx_names)
 
@@ -284,28 +283,29 @@ def collect_results():
                'mar19_sr_rff1k_sig5', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff100k_sig5',
                'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
                'mar19_sr_rff1k_sig0', 'mar19_sr_rff10k_sig0', 'mar19_sr_rff100k_sig0']
-  sr_ratios = [0.1, 0.01]
   sr_mat = np.load('results/results_full_mar20_sr.npy')
-  sr_idx_names = {'setups': sr_setups, 'sub_ratios': sr_ratios}
+  sr_idx_names = {'setups': sr_setups}
   sr_idx_names.update(base_idx_names)
+  sr_idx_names['sub_ratios'] = [0.1, 0.01]
   sr_array = NamedArray(sr_mat, dim_names, sr_idx_names)
 
   sr_d_data_ids = ['d']
   sr_d_setups = ['(srd)', 'mar19_sr_rff10k_sig50', 'mar19_sr_rff1k_sig5', 'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff1k_sig0']
-  sr_d_ratios = [1.0, 0.1, 0.01]
+
   sr_d_mat = np.load('results/results_full_mar25_sr_digit.npy')
-  sr_d_idx_names = {'setups': sr_d_setups, 'sub_ratios': sr_d_ratios}
+  sr_d_idx_names = {'setups': sr_d_setups}
   sr_d_idx_names.update(base_idx_names)
   sr_d_idx_names['data_ids'] = sr_d_data_ids
+  sr_d_idx_names['sub_ratios'] = [1.0, 0.1, 0.01]
   sr_d_array = NamedArray(sr_d_mat, dim_names, sr_d_idx_names)
 
   sr_f_data_ids = ['f']
   sr_f_setups = ['(srf)', 'mar19_sr_rff100k_sig50', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff10k_sig0']
-  sr_f_ratios = [1.0, 0.1, 0.01]
   sr_f_mat = np.load('results/results_full_mar25_sr_fashion.npy')
-  sr_f_idx_names = {'setups': sr_f_setups, 'sub_ratios': sr_f_ratios}
+  sr_f_idx_names = {'setups': sr_f_setups}
   sr_f_idx_names.update(base_idx_names)
   sr_f_idx_names['data_ids'] = sr_f_data_ids
+  sr_f_idx_names['sub_ratios'] = [1.0, 0.1, 0.01]
   sr_f_array = NamedArray(sr_f_mat, dim_names, sr_f_idx_names)
 
   sr_conv_apr4_data_ids = ['d', 'f']
@@ -315,19 +315,17 @@ def collect_results():
                          'apr4_sr_conv_sig_0', 'apr4_sr_conv_sig_2.5', 'apr4_sr_conv_sig_5',
                          'apr4_sr_conv_sig_10', 'apr4_sr_conv_sig_25', 'apr4_sr_conv_sig_50'
                          ]
-  sr_conv_apr4_ratios = [1.0, 0.1, 0.01, 0.001]
   sr_conv_apr4_mat = np.load('results/results_full_apr4_sr_conv.npy')
-  sr_conv_apr4_idx_names = {'setups': sr_conv_apr4_setups, 'sub_ratios': sr_conv_apr4_ratios}
+  sr_conv_apr4_idx_names = {'setups': sr_conv_apr4_setups}
   sr_conv_apr4_idx_names.update(base_idx_names)
   sr_conv_apr4_idx_names['data_ids'] = sr_conv_apr4_data_ids
+  sr_conv_apr4_idx_names['sub_ratios'] = [1.0, 0.1, 0.01, 0.001]
   sr_conv_apr4_array = NamedArray(sr_conv_apr4_mat, dim_names, sr_conv_apr4_idx_names)
 
   sr_conv_apr6_data_ids = ['d', 'f']
-  sr_conv_apr6_setups = ['(apr6)',
-                         'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
-  sr_conv_apr6_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  sr_conv_apr6_setups = ['(apr6)', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
   sr_conv_apr6_mat = np.load('results/results_full_apr6_sr_conv_partial.npy')
-  sr_conv_apr6_idx_names = {'setups': sr_conv_apr6_setups, 'sub_ratios': sr_conv_apr6_ratios}
+  sr_conv_apr6_idx_names = {'setups': sr_conv_apr6_setups}
   sr_conv_apr6_idx_names.update(base_idx_names)
   sr_conv_apr6_idx_names['data_ids'] = sr_conv_apr6_data_ids
   sr_conv_apr6_array = NamedArray(sr_conv_apr6_mat, dim_names, sr_conv_apr6_idx_names)
@@ -335,18 +333,13 @@ def collect_results():
   sb_np_array = sb_array.merge(np_array, merge_dim='setups')
   all_array = sb_np_array.merge(sr_array, merge_dim='setups')
 
-  full_mmd_jan7_setups = ['full_mmd']
-  full_mmd_jan7_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  full_mmd_jan7_idx_names = {'setups': full_mmd_jan7_setups, 'sub_ratios': full_mmd_jan7_sub_ratios}
+  full_mmd_jan7_idx_names = {'setups': ['full_mmd']}
   full_mmd_jan7_idx_names.update(base_idx_names)
   full_mmd_jan7_mat = np.load('results/results_full_sep18_real_mmd.npy')
   # full_mmd_jan7_mat = np.expand_dims(full_mmd_jan7_mat, 1)
   full_mmd_jan7_array = NamedArray(full_mmd_jan7_mat, dim_names, full_mmd_jan7_idx_names)
 
-  mehp_fmnist_apr23_setups = ['mehp_nonDP', 'mehp_eps=1']
-  mehp_fmnist_apr23_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  mehp_fmnist_apr23_idx_names = {'setups': mehp_fmnist_apr23_setups,
-                                 'sub_ratios': mehp_fmnist_apr23_sub_ratios}
+  mehp_fmnist_apr23_idx_names = {'setups': ['mehp_nonDP', 'mehp_eps=1']}
   mehp_fmnist_apr23_idx_names.update(base_idx_names)
   mehp_fmnist_apr23_idx_names['data_ids'] = ['f']
   mehp_fmnist_apr23_idx_names['eval_metrics'] = ['accuracies']
@@ -357,9 +350,7 @@ def collect_results():
                               'mehp non-DP order200', 'mehp non-DP order500',
                               'mehp eps=1 order20', 'mehp eps=1 order50', 'mehp eps=1 order100',
                               'mehp eps=1 order200', 'mehp eps=1 order500']
-  mehp_dmnist_apr27_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  mehp_dmnist_apr27_idx_names = {'setups': mehp_dmnist_apr27_setups,
-                                 'sub_ratios': mehp_dmnist_apr27_sub_ratios}
+  mehp_dmnist_apr27_idx_names = {'setups': mehp_dmnist_apr27_setups}
   mehp_dmnist_apr27_idx_names.update(base_idx_names)
   mehp_dmnist_apr27_idx_names['data_ids'] = ['d']
   mehp_dmnist_apr27_idx_names['eval_metrics'] = ['accuracies']
@@ -368,24 +359,25 @@ def collect_results():
 
 
   merf_adaboost_may10_setups = ['adaboost merf non-DP', 'adaboost merf_eps=1', 'adaboost merf_eps=0.2']
-  merf_adaboost_may10_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  merf_adaboost_may10_idx_names = {'setups': merf_adaboost_may10_setups,
-                                   'sub_ratios': merf_adaboost_may10_sub_ratios}
+  merf_adaboost_may10_idx_names = {'setups': merf_adaboost_may10_setups}
   merf_adaboost_may10_idx_names.update(base_idx_names)
   merf_adaboost_may10_idx_names['eval_metrics'] = ['accuracies']
   merf_adaboost_may10_idx_names['models'] = ['adaboost']
   merf_adaboost_may10_mat = np.load('results/results_full_may10_merf_adaboost.npy')
   merf_adaboost_may10_array = NamedArray(merf_adaboost_may10_mat, dim_names, merf_adaboost_may10_idx_names)
 
-  real_adaboost_may10_setups = ['real data adaboost']
-  real_adaboost_may10_sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  real_adaboost_may10_idx_names = {'setups': real_adaboost_may10_setups,
-                                   'sub_ratios': real_adaboost_may10_sub_ratios}
+  real_adaboost_may10_idx_names = {'setups': ['real data adaboost']}
   real_adaboost_may10_idx_names.update(base_idx_names)
   real_adaboost_may10_idx_names['eval_metrics'] = ['accuracies']
   real_adaboost_may10_idx_names['models'] = ['adaboost']
   real_adaboost_may10_mat = np.load('results/results_full_may10_real_adaboost.npy')
   real_adaboost_may10_array = NamedArray(real_adaboost_may10_mat, dim_names, real_adaboost_may10_idx_names)
+
+  gswgan_may14_idx_names = {'setups': ['gswgan']}
+  gswgan_may14_idx_names.update(base_idx_names)
+  gswgan_may14_idx_names['eval_metrics'] = ['accuracies']
+  gswgan_may14_mat = np.load('results/results_full_may14_gswgan.npy')
+  gswgan_may14_array = NamedArray(gswgan_may14_mat, dim_names, gswgan_may14_idx_names)
 
   array_dict = {'sb': sb_array,
                 'np': np_array,
@@ -400,7 +392,8 @@ def collect_results():
                 'mehp_fmnist_apr23': mehp_fmnist_apr23_array,
                 'mehp_dmnist_apr27': mehp_dmnist_apr27_array,
                 'may10_merf_adaboost': merf_adaboost_may10_array,
-                'may10_real_adaboost': real_adaboost_may10_array}
+                'may10_real_adaboost': real_adaboost_may10_array,
+                'may14_gswgan': gswgan_may14_array}
 
   return array_dict
 
@@ -797,6 +790,41 @@ def aggregate_may10_real_adaboost():
   np.save(f'results/results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
 
 
+def aggregate_may14_gswgan():
+  data_suffix = {'digits': 'd', 'fashion': 'f'}
+
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  sub_ratios = ['1.0', '0.5', '0.2', '0.1', '0.05', '0.02', '0.01', '0.005', '0.002', '0.001']
+  runs = [1, 2, 3, 4, 5]
+  eval_metrics = ['accuracies']
+  save_str = 'may14_gswgan'
+
+  all_the_results = np.zeros((len(data_suffix.keys()), 1, len(sub_ratios),
+                              len(models), len(runs), len(eval_metrics)))
+  for d_idx, data in enumerate(data_suffix):
+    print(f'data: {data}')
+    for r_idx, r in enumerate(sub_ratios):
+      for m_idx, m in enumerate(models):
+        for run_idx, run in enumerate(runs):
+          load_file = f'../gs-wgan/eval/{data}_s{run}/sub{r}_{m}_log.npz'
+
+          if os.path.isfile(load_file):
+            mat = np.load(load_file)
+          else:
+            print('failed to load', load_file)
+            continue
+          for e_idx, e in enumerate(eval_metrics):
+            score = mat[e][1]  # loading real-to-real result
+            all_the_results[d_idx, 0, r_idx, m_idx, run_idx, e_idx] = score
+
+        accs = all_the_results[d_idx, 0, r_idx, m_idx, :, 0]
+        print(f'model: {m}, ratio: {r} --- acc avg: {np.mean(accs):.3f}   ---   accs: {accs}')
+
+  np.save(f'results/results_full_{save_str}', all_the_results)
+  np.save(f'results/results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
+
+
 if __name__ == '__main__':
   # aggregate_sep18_realmmd()
   # aggregate_apr23_fmnist_mehp()
@@ -807,4 +835,5 @@ if __name__ == '__main__':
   # aggregate_oct14_gs_wgan_eval(False)
   # covered: dpmerf, gs-wgan, dp-cgan. not covered: dpgan
   # aggregate_may10_merf_adaboost()
-  aggregate_may10_real_adaboost()
+  # aggregate_may10_real_adaboost()
+  aggregate_may14_gswgan()

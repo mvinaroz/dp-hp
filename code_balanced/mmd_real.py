@@ -17,7 +17,7 @@ def get_real_mmd_loss(rff_sigma, n_labels, batch_size):
       # print('sample selection shapes:', idx_data_enc.shape, idx_gen_enc.shape)
       # then for that label compute mmd:
       dxx, dxy, dyy = get_squared_dist(idx_data_enc, idx_gen_enc)
-      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(rff_sigma))
+      mmd_sum += mmd_g(dxx, dxy, dyy, batch_size, sigma=pt.sqrt(pt.tensor(rff_sigma, dtype=pt.float32)))
     return mmd_sum
 
   return real_loss

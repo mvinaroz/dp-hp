@@ -17,24 +17,24 @@ from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
 import sys
 
-train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
-                                                       'train_data', 'test_data',
-                                                       'n_features', 'n_data', 'n_labels', 'eval_func'])
+# train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
+#                                                        'train_data', 'test_data',
+#                                                        'n_features', 'n_data', 'n_labels', 'eval_func'])
 
 
-def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
-  if dataset_key in {'digits', 'fashion'}:
-    train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
-                                                                          dataset=dataset_key, normalize=normalize,
-                                                                          return_datasets=True)
-    n_features = 784
-    n_data = 60_000
-    n_labels = 10
-    eval_func = None
-  else:
-    raise ValueError
-
-  return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
+# def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
+#   if dataset_key in {'digits', 'fashion'}:
+#     train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
+#                                                                           dataset=dataset_key, normalize=normalize,
+#                                                                           return_datasets=True)
+#     n_features = 784
+#     n_data = 60_000
+#     n_labels = 10
+#     eval_func = None
+#   else:
+#     raise ValueError
+#
+#   return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
 
 
 def find_rho(sigma2, kernel_separate):
@@ -124,10 +124,11 @@ def ME_with_HP(x, order, rho, device, n_training_data):
   phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
   phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order + 1)
   phi_x = phi_x.type(torch.float)
+
   sum_val = torch.sum(phi_x, axis=0)
   phi_x = sum_val / n_training_data
 
-  phi_x = phi_x / np.sqrt(input_dim) # because we approximate k(x,x') = \sum_d k_d(x_d, x_d') / input_dim
+  phi_x = phi_x / np.sqrt(input_dim)  # because we approximate k(x,x') = \sum_d k_d(x_d, x_d') / input_dim
 
   phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
 
@@ -156,6 +157,7 @@ def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data
       gen_samples = gen(gen_code)
       data_list.append(gen_samples)
   return pt.cat(data_list, dim=0).cpu().numpy(), pt.cat(labels_list, dim=0).cpu().numpy()
+
 
 def plot_data(data, labels, save_str, class_centers=None, subsample=None, center_frame=False, title=''):
   n_classes = int(np.max(labels)) + 1
@@ -1014,7 +1016,6 @@ def flatten_features(data):
     return pt.reshape(data, (data.shape[0], -1))
 
 
-
 def flip_mnist_data(dataset, only_binary=True):
   data = dataset.data
   selections = np.zeros(data.shape[0], dtype=np.int)
@@ -1025,7 +1026,7 @@ def flip_mnist_data(dataset, only_binary=True):
     dataset.data = pt.where(selections[:, None, None], pt.zeros_like(data) + 255, pt.zeros_like(data))
   else:
     flipped_data = 255 - data
-    print(selections.shape, data.shape, flipped_data.shape)
+    print(selections.shape, data.shape, flipped_data.shape, pt.max(data), pt.max(flipped_data))
     dataset.data = pt.where(selections[:, None, None], data, flipped_data)
 
 
@@ -1049,13 +1050,8 @@ def scramble_mnist_data_by_labels(dataset):
     new_data_list.append(new_l_data)
   new_data_flat = pt.cat(new_data_list)
 
-
-
   dataset.targets = pt.cat([pt.zeros(new_data_list[k].shape[0]) + k for k in range(10)])
   dataset.data = pt.reshape(new_data_flat, oldshape)
-
-
-
 
 train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
                                                        'train_data', 'test_data',
@@ -1096,7 +1092,7 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     prep_transforms = transforms.Compose(transforms_list)
     trn_data = datasets.MNIST(data_dir, train=True, download=True, transform=prep_transforms)
     tst_data = datasets.MNIST(data_dir, train=False, transform=prep_transforms)
-    if debug_data.startswith('flip'):
+    if debug_data is not None and debug_data.startswith('flip'):
       assert not normalize
       print(pt.max(trn_data.data))
       flip_mnist_data(trn_data, only_binary=debug_data == 'flip_binary')
@@ -1113,7 +1109,7 @@ def get_mnist_dataloaders(batch_size, test_batch_size, use_cuda, normalize=False
     prep_transforms = transforms.Compose(transforms_list)
     trn_data = datasets.FashionMNIST(data_dir, train=True, download=True, transform=prep_transforms)
     tst_data = datasets.FashionMNIST(data_dir, train=False, transform=prep_transforms)
-    if debug_data.startswith('flip'):
+    if debug_data is not None and debug_data.startswith('flip'):
       print(pt.max(trn_data.data))
       flip_mnist_data(trn_data, only_binary=debug_data == 'flip_binary')
       flip_mnist_data(tst_data, only_binary=debug_data == 'flip_binary')

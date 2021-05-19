@@ -1,12 +1,18 @@
 import os
 import matplotlib
-
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
 import numpy as np
 from aux import plot_mnist_batch
 from aggregate_results import collect_results
 
+
+DEFAULT_MODELS = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+                  'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+DEFAULT_COLORS = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 
+                  'tab:pink', 'limegreen', 'yellow']
+DEFAULT_RATIOS = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+DEFAULT_RATIO_KEYS = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
 
 def dpcgan_plot():
   # loads = np.load('dp_cgan_synth_mnist_eps9.6.npz')
@@ -54,10 +60,6 @@ def plot_subsampling_performance():
   data_ids = ['d', 'f']
   setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps',
             'dpmerf-nonprivate']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
   mean_mat = np.load('results_mean_subsampled.npy')
   print(mean_mat.shape)
@@ -67,18 +69,18 @@ def plot_subsampling_performance():
       plt.figure()
       plt.title(f'data: {d}, metric: {e}')
       plt.xscale('log')
-      # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
-      plt.xticks(sub_ratios[1:][::-1], [str(k * 100) for k in sub_ratios[::-1]])
+      # plt.xticks(DEFAULT_RATIOS[::-1], [str(k*100) for k in DEFAULT_RATIOS[::-1]])
+      plt.xticks(DEFAULT_RATIOS[1:][::-1], [str(k * 100) for k in DEFAULT_RATIOS[::-1]])
 
       for s_idx, s in enumerate(setups):
         if s == 'real_data':
           continue
-        # plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
-        plt.plot(sub_ratios[1:], mean_mat[d_idx, s_idx, 1:, e_idx], label=s)  # don_t show 1.0
+        # plt.plot(DEFAULT_RATIOS, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
+        plt.plot(DEFAULT_RATIOS[1:], mean_mat[d_idx, s_idx, 1:, e_idx], label=s)  # don_t show 1.0
 
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
-      plt.hlines([0.4, 0.5, 0.6, 0.7, 0.8], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.4, 0.5, 0.6, 0.7, 0.8], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.legend()
       plt.savefig(f'plot_subsampling_{d}_{e}.png')
 
@@ -86,10 +88,7 @@ def plot_subsampling_performance():
 def mar19_plot_nonprivate_subsampling_performance():
   data_ids = ['d', 'f']
   setups = ['()', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'merf-AE-nonprivate', 'merf-DE-nonprivate']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
+  
   eval_metrics = ['accuracies', 'f1_scores']
   mean_mat = np.load('results_mean_mar19_nonp.npy')
 
@@ -98,16 +97,16 @@ def mar19_plot_nonprivate_subsampling_performance():
       plt.figure()
       plt.title(f'data: {d}, metric: {e}')
       plt.xscale('log')
-      plt.xticks(sub_ratios[::-1], [str(k * 100) for k in sub_ratios[::-1]])
+      plt.xticks(DEFAULT_RATIOS[::-1], [str(k * 100) for k in DEFAULT_RATIOS[::-1]])
 
       for s_idx, s in enumerate(setups):
         if s == '()':
           continue
-        plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
+        plt.plot(DEFAULT_RATIOS, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
 
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
-      plt.hlines([0.4, 0.5, 0.6, 0.7, 0.8], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.4, 0.5, 0.6, 0.7, 0.8], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.legend()
       plt.savefig(f'mar19_nonp_{d}_{e}.png')
 
@@ -117,9 +116,6 @@ def plot_subsampling_logreg_performance():
   setups = ['real_data', 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps', 'dpmerf-high-eps']
   sub_ratios = [0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
   model_idx = 1
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
   all_mat = np.load('results_full_subsampled.npy')
   mean_mat = np.mean(all_mat, axis=4)[:, :, :, model_idx, :]  # mean over runs, select logreg model
@@ -137,7 +133,7 @@ def plot_subsampling_logreg_performance():
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
       plt.legend()
-      plt.savefig(f'plot_{models[model_idx]}_{d}_{e}.png')
+      plt.savefig(f'plot_{DEFAULT_MODELS[model_idx]}_{d}_{e}.png')
 
 
 def plot_renorm_performance():
@@ -170,12 +166,8 @@ def mar20_plot_sr_performance():
             'mar19_sr_rff1k_sig5', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff100k_sig5',
             'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
             'mar19_sr_rff1k_sig0', 'mar19_sr_rff10k_sig0', 'mar19_sr_rff100k_sig0']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-
+  
   sub_ratios = [0.1, 0.01]
-  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracies', 'f1_scores']
   mean_mat = np.load('results_mean_mar20_sr.npy')
 
@@ -189,7 +181,7 @@ def mar20_plot_sr_performance():
       for s_idx, s in enumerate(setups):
         if s == '()':
           continue
-        plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s, color=colors[s_idx])  # plot over ratios
+        plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s, color=DEFAULT_COLORS[s_idx])  # plot over ratios
 
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
@@ -201,10 +193,7 @@ def apr4_plot_subsampling_performance():
   data_ids = ['d', 'f']
   setups = ['real_data', 'DP-CGAN eps=9.6', 'DP-MERF eps=1.3', 'DP-MERF eps=2.9', 'DP-MERF eps=9.6',
             'DP-MERF non-DP']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
+  
   eval_metrics = ['accuracies', 'f1_scores']
   mean_mat = np.load('results/results_mean_subsampled.npy')
   print(mean_mat.shape)
@@ -214,20 +203,20 @@ def apr4_plot_subsampling_performance():
       plt.figure()
       plt.title(f'data: {d}, metric: {e}')
       plt.xscale('log')
-      # plt.xticks(sub_ratios[1:][::-1], [str(k * 100) for k in sub_ratios[::-1]])
-      plt.xticks(sub_ratios[::-1], [str(k * 100) for k in sub_ratios[::-1]])
+      # plt.xticks(DEFAULT_RATIOS[1:][::-1], [str(k * 100) for k in DEFAULT_RATIOS[::-1]])
+      plt.xticks(DEFAULT_RATIOS[::-1], [str(k * 100) for k in DEFAULT_RATIOS[::-1]])
 
       for s_idx, s in enumerate(setups):
         if s == 'real_data':
           continue
         print(d_idx, e_idx, s_idx)
-        # plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
-        # plt.plot(sub_ratios[1:], mean_mat[d_idx, s_idx, 1:, e_idx], label=s)  # don_t show 1.0
-        plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # do show 1.0
+        # plt.plot(DEFAULT_RATIOS, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # plot over ratios
+        # plt.plot(DEFAULT_RATIOS[1:], mean_mat[d_idx, s_idx, 1:, e_idx], label=s)  # don_t show 1.0
+        plt.plot(DEFAULT_RATIOS, mean_mat[d_idx, s_idx, :, e_idx], label=s)  # do show 1.0
 
       plt.xlabel('% of data')
       plt.ylabel('accuracy')
-      plt.hlines([0.45, 0.5, 0.55], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.45, 0.5, 0.55], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.4, 0.6))
       plt.legend()
       plt.savefig(f'apr4_plot_subsampling_{d}_{e}.png')
@@ -255,15 +244,6 @@ def plot_with_variance(x, y, color, label, alpha=0.1):
   sdevs_y = np.std(y, axis=1)
   plt.plot(x, means_y, 'o-', label=label, color=color)
   plt.fill_between(x, means_y-sdevs_y, means_y+sdevs_y, alpha=alpha, color=color)
-  # plt.errorbar(x, means_y, yerr=sdevs_y,
-  #              fmt='.',
-  #              # ls='dotted',
-  #              color=color,
-  #              ecolor=color,
-  #              uplims=True,
-  #              lolims=True,
-  #              elinewidth=3, capsize=0,
-  #              alpha=0.3)
 
 
 def mar24_plot_selected_sr():
@@ -272,13 +252,9 @@ def mar24_plot_selected_sr():
             'mar19_sr_rff1k_sig5', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff100k_sig5',
             'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff100k_sig2.5',
             'mar19_sr_rff1k_sig0', 'mar19_sr_rff10k_sig0', 'mar19_sr_rff100k_sig0']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  
   metric = 'accuracies'
   sub_ratios = [0.1, 0.01]
-
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
 
   _, _, sr_array, _, _, sr_d_array, sr_f_array = collect_results()
 
@@ -291,11 +267,11 @@ def mar24_plot_selected_sr():
 
     for s_idx, s in enumerate(setups):
       # print(d, s, models)
-      sub_mat = sr_array.get({'data_ids': [d], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = sr_array.get({'data_ids': [d], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
       print(sub_mat.shape)
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
-      plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
-      # plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s, color=colors[s_idx])  # plot over ratios
+      plot_with_variance(sub_ratios, sub_mat, color=DEFAULT_COLORS[s_idx], label=s)
+      # plt.plot(sub_ratios, mean_mat[d_idx, s_idx, :, e_idx], label=s, color=DEFAULT_COLORS[s_idx])  # plot over ratios
 
     plt.xlabel('% of data')
     plt.ylabel('accuracy')
@@ -307,28 +283,22 @@ def mar25_plot_selected_sr():
   sr_d_setups = ['mar19_sr_rff10k_sig50', 'mar19_sr_rff1k_sig5', 'mar19_sr_rff1k_sig2.5', 'mar19_sr_rff1k_sig0']
   sr_f_setups = ['mar19_sr_rff100k_sig50', 'mar19_sr_rff10k_sig5', 'mar19_sr_rff10k_sig2.5', 'mar19_sr_rff10k_sig0']
 
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
   metric = 'accuracies'
   # metric = 'f1_scores'
   sub_ratios = [1.0, 0.1, 0.01]
-
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   _, _, _, _, _, sr_d_array, sr_f_array = collect_results()
 
   # digit plot
   plt.figure(), plt.title(f'data: d, metric: {metric}'), plt.xscale('log')
   plt.xticks(sub_ratios[::-1], [str(k * 100) for k in sub_ratios[::-1]])
   for s_idx, s in enumerate(sr_d_setups):
-    sub_mat = sr_d_array.get({'data_ids': ['d'], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+    sub_mat = sr_d_array.get({'data_ids': ['d'], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
     print('sr_d:', s)
     by_model = np.mean(sub_mat, axis=2)[0, :]  # average over runs, select 1.0 subsampling
     for v in by_model:
       print(v)
     sub_mat = np.mean(sub_mat, axis=1)  # average over models
-    plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+    plot_with_variance(sub_ratios, sub_mat, color=DEFAULT_COLORS[s_idx], label=s)
   plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
   plt.savefig(f'plots/mar25_sr_var_d_{metric}.png')
 
@@ -336,48 +306,37 @@ def mar25_plot_selected_sr():
   plt.figure(), plt.title(f'data: f, metric: {metric}'), plt.xscale('log')
   plt.xticks(sub_ratios[::-1], [str(k * 100) for k in sub_ratios[::-1]])
   for s_idx, s in enumerate(sr_f_setups):
-    sub_mat = sr_f_array.get({'data_ids': ['f'], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+    sub_mat = sr_f_array.get({'data_ids': ['f'], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
     print('sr_f:', s)
     by_model = np.mean(sub_mat, axis=2)[0, :]  # average over runs, select 1.0 subsampling
     for v in by_model:
       print(v)
     sub_mat = np.mean(sub_mat, axis=1)  # average over models
-    plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+    plot_with_variance(sub_ratios, sub_mat, color=DEFAULT_COLORS[s_idx], label=s)
 
   plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
   plt.savefig(f'plots/mar25_sr_var_f_{metric}.png')
 
 
 def mar25_plot_nonprivate():
-  queried_setups = ['real_data',
-                    # 'dpcgan', 'dpmerf-ae', 'dpmerf-low-eps', 'dpmerf-med-eps',
-                    # 'dpmerf-high-eps', 'dpmerf-nonprivate_sb'
-                    # '(np)',
-                    'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
-
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  queried_setups = ['real_data', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae', 'mar19_nonp_de']
   metric = 'accuracies'
   # metric = 'f1_scores'
   data_ids = ['d', 'f']
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   _, _, _, sb_np_array, _, _, _ = collect_results()
 
   # digit plot
   for d_id in data_ids:
     plt.figure(), plt.title(f'data: {d_id}, metric: {metric}'), plt.xscale('log')
-    plt.xticks(sub_ratios[::-1], [str(k * 100) for k in sub_ratios[::-1]])
+    plt.xticks(DEFAULT_RATIOS[::-1], [str(k * 100) for k in DEFAULT_RATIOS[::-1]])
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
       print(f'sr_{d_id}:', s)
       by_model = np.mean(sub_mat, axis=2)[6, :]  # average over runs, select 1.0 subsampling
       for v in by_model:
         print(v)
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
-      plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+      plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=s)
     plt.xlabel('% of data'), plt.ylabel(metric), plt.legend()
     plt.savefig(f'plots/mar25_nonp_var_{d_id}_{metric}.png')
 
@@ -386,12 +345,6 @@ def apr4_plot_subsampling_performance_variance(plot_var=True):
   data_ids = ['MNIST', 'FashionMNIST']
   setups = ['real_data', 'DP-CGAN eps=9.6', 'DP-MERF eps=1.3', 'DP-MERF eps=2.9', 'DP-MERF eps=9.6',
             'DP-MERF non-DP']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  # models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-  #           'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  # runs = [0, 1, 2, 3, 4]
   eval_metrics = ['accuracy', 'f1_score']
   mean_mat = np.load('results/results_full_mar25_subsampled.npy')
   print(mean_mat.shape)
@@ -402,7 +355,7 @@ def apr4_plot_subsampling_performance_variance(plot_var=True):
       plt.figure()
       plt.title(f'data: {d}')
       plt.xscale('log')
-      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
 
       for s_idx, s in enumerate(setups):
         if s == 'real_data':
@@ -410,19 +363,19 @@ def apr4_plot_subsampling_performance_variance(plot_var=True):
         if plot_var:
           print('yes')
           sub_mat = mean_mat[d_idx, s_idx, :, :, e_idx]
-          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=s)
+          plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=s)
         else:
           sub_mat = np.mean(mean_mat[d_idx, s_idx, :, :, e_idx], axis=1)
-          plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+          plt.plot(DEFAULT_RATIOS, sub_mat, label=s, color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
       plt.xlabel('# samples generated')
       plt.ylabel(e)
       if d == 'MNIST':
         plt.yticks([0.4, 0.45, 0.5, 0.55, 0.6])
-        plt.hlines([0.45, 0.5, 0.55], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+        plt.hlines([0.45, 0.5, 0.55], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
         plt.ylim((0.4, 0.6))
       else:
-        plt.hlines([0.3, 0.4, 0.5], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+        plt.hlines([0.3, 0.4, 0.5], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
         plt.ylim((0.25, 0.6))
       plt.legend(loc='lower right')
 
@@ -432,43 +385,35 @@ def apr4_plot_subsampling_performance_variance(plot_var=True):
 def apr6_replot_nonprivate(plot_var=False):
   queried_setups = ['real_data', 'dpmerf-nonprivate', 'dpcgan-nonprivate', 'mar19_nonp_ae']
   setup_names = ['real data', 'DP-MERF non-DP', 'DP-CGAN non-DP', 'DP-MERF-AE non-DP']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  
   metric = 'accuracies'
   # metric = 'f1_scores'
   data_ids = ['d', 'f']
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   sb_np_array = collect_results()['sb_np']
 
   # digit plot
   for d_id in data_ids:
     plt.figure(), plt.title(f'data: {"MNIST" if d_id == "d" else "FashionMNIST"}'), plt.xscale('log')
-    # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
-    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    # plt.xticks(DEFAULT_RATIOS[::-1], [str(k*100) for k in DEFAULT_RATIOS[::-1]])
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
 
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.mean(sub_mat, axis=1)  # average over runs
-        plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=s, color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
     if d_id == 'd':
       plt.yticks([0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-      # plt.hlines([0.5, 0.6, 0.7, 0.8], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.4, 0.9))
     else:
       plt.yticks([0.4, 0.5, 0.6, 0.7, 0.8])
-      # plt.hlines([0.5, 0.6, 0.7], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
       plt.ylim((0.4, 0.8))
     plt.legend(loc='upper left')
     plt.savefig(f'plots/apr4_nonp_{"var_" if plot_var else ""}{d_id}_{metric}.png')
@@ -478,15 +423,12 @@ def apr6_plot_overfit_conv(plot_var=False):
   queried_setups = ['apr4_sr_conv_sig_0', 'apr4_sr_conv_sig_2.5', 'apr4_sr_conv_sig_5',
                     'apr4_sr_conv_sig_10', 'apr4_sr_conv_sig_25', 'apr4_sr_conv_sig_50']
   setup_names = ['non-DP', 'eps=2', 'eps=1', 'eps=0.5', 'eps=0.2', 'eps=0.1']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  
+  
   sub_ratios = [1.0, 0.1, 0.01, 0.001]
   data_used = ['60k', '6k', '600', '60']
   metric = 'accuracies'
   data_ids = ['d', 'f']
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   sb_np_array = collect_results()['sr_conv_apr4']
 
   # digit plot
@@ -497,47 +439,30 @@ def apr6_plot_overfit_conv(plot_var=False):
     # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
     plt.xticks(sub_ratios[::-1], data_used[::-1])
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = sb_np_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(sub_ratios, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
-        plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+        plt.plot(sub_ratios, sub_mat, label=s, color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
-    if d_id == 'd':
-      pass
-      # plt.yticks([0.4, 0.5, 0.6, 0.7, 0.8, 0.9])
-      # plt.hlines([0.5, 0.6, 0.7, 0.8], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
-      # plt.ylim((0.4, 0.9))
-    else:
-      pass
-      # plt.yticks([0.4, 0.5, 0.6, 0.7, 0.8])
-      # plt.hlines([0.5, 0.6, 0.7], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
-      # plt.ylim((0.4, 0.8))
     plt.legend(loc='upper left')
     plt.savefig(f'plots/apr4_sr_conv_{"var_" if plot_var else ""}{d_id}_{metric}.png')
 
 
 def apr6_plot_better_conv(plot_var=False):
-  queried_setups = [  'real_data',
-                    'dpcgan', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
-  setup_names = [  'real data',
+  queried_setups = ['real_data', 'dpcgan', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25']
+  setup_names = ['real data',
                  'DP-CGAN $\epsilon=9.6$', 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
                  'DP-MERF $\epsilon=0.2$']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  
   # metric = 'accuracies'
   metric = 'accuracies'
   data_ids = ['d', 'f']
-  dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
   sb_array = ar_dict['sb']
@@ -548,11 +473,11 @@ def apr6_plot_better_conv(plot_var=False):
     plt.figure()
     # plt.title(f'DP-MERF single release + convolutional generator: {"MNIST" if d_id == "d" else "FashionMNIST"}')
     plt.xscale('log')
-    # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
-    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    # plt.xticks(DEFAULT_RATIOS[::-1], [str(k*100) for k in DEFAULT_RATIOS[::-1]])
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
     print('data', d_id)
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
       print(f'setup: {s}')
       print(sub_mat.shape)
@@ -561,25 +486,24 @@ def apr6_plot_better_conv(plot_var=False):
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
       print(np.mean(sub_mat, axis=1)[0])  # avg over runs
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
-        plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=s, color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
         print(f'mean values for setting {s}, data {d_id}:', sub_mat)
-
 
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
     if d_id == 'd':
       pass
       plt.yticks([0.4, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7])
-      plt.hlines([0.45, 0.5, 0.55, 0.6, 0.65], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.45, 0.5, 0.55, 0.6, 0.65], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.40, 0.7))
     else:
       pass
       plt.yticks([0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65])
-      plt.hlines([0.4, 0.45, 0.5, 0.55, 0.6], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.4, 0.45, 0.5, 0.55, 0.6], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.35, 0.65))
     # plt.legend(loc='upper left')
     plt.legend(loc='lower center')
@@ -587,23 +511,12 @@ def apr6_plot_better_conv(plot_var=False):
 
 
 def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
-  queried_setups = ['real_data',
-                    # 'dpcgan',
-                    'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
+  queried_setups = ['real_data', 'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5', 'apr6_sr_conv_sig_25',
                     'full_mmd']
-  setup_names = ['real data',
-                 # 'DP-CGAN $\epsilon=9.6$',
-                 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
+  setup_names = ['real data', 'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$', 'DP-MERF $\epsilon=0.2$',
                  'full MMD $\epsilon=\infty$']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
   metric = 'accuracies'
   data_ids = ['d', 'f']
-  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
   sb_array = ar_dict['sb']
@@ -618,11 +531,11 @@ def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
     plt.figure()
     # plt.title(f'DP-MERF single release + convolutional generator: {"MNIST" if d_id == "d" else "FashionMNIST"}')
     plt.xscale('log')
-    # plt.xticks(sub_ratios[::-1], [str(k*100) for k in sub_ratios[::-1]])
-    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    # plt.xticks(DEFAULT_RATIOS[::-1], [str(k*100) for k in DEFAULT_RATIOS[::-1]])
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
     print('data', d_id)
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
       print(f'setup: {s}')
       print(sub_mat.shape)
@@ -631,25 +544,24 @@ def jan7_plot_better_conv_plus_full_mmd(plot_var=False):
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
       print(np.mean(sub_mat, axis=1)[0])  # avg over runs
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
-        plt.plot(sub_ratios, sub_mat, label=s, color=colors[s_idx])  # do show 1.0
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=s, color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
         print(f'mean values for setting {s}, data {d_id}:', sub_mat)
-
 
     plt.xlabel('# samples generated')
     plt.ylabel('accuracy')
     if d_id == 'd':
       pass
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.45, 0.9))
     else:
       pass
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.45, 0.8))
     # plt.legend(loc='upper left')
     plt.legend(loc='upper left')
@@ -668,14 +580,9 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
                  # 'DP-MERF $\epsilon=0.2$',
                  'full MMD $\epsilon=\infty$',
                  'DP-MEHP $\epsilon=\infty$', 'DP-MEHP $\epsilon=1$']
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+
   metric = 'accuracies'
   data_ids = ['f']
-  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
 
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
@@ -698,20 +605,17 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
   mehp_array = ar_dict['mehp_fmnist_apr23']
 
   merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
-  # print(merged_array.array.shape)
   merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
-  # print(merged_array.array.shape)
   merged_array = merged_array.merge(mehp_array, merge_dim='setups')
-  # print(merged_array.array.shape)
-
+  
   # digit plot
   for d_id in data_ids:
     plt.figure()
     plt.xscale('log')
-    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
     print('data', d_id)
     for s_idx, s in enumerate(queried_setups):
-      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+      sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
       print(f'setup: {s}')
       print(sub_mat.shape)
@@ -720,10 +624,10 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
       sub_mat = np.mean(sub_mat, axis=1)  # average over models
       print(np.mean(sub_mat, axis=1)[0])  # avg over runs
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
-        plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
         print(f'mean values for setting {s}, data {d_id}:', sub_mat)
 
@@ -732,30 +636,30 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
     if d_id == 'd':
       pass
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.45, 0.9))
     else:
       pass
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.45, 0.8))
     # plt.legend(loc='upper left')
     plt.legend(loc='lower right')
     plt.savefig(f'plots/may10_{"var_" if plot_var else ""}fashion_merf_plus_full_mmd_and_mehp.png')
 
-    for m_idx, model in enumerate(models):
+    for m_idx, model in enumerate(DEFAULT_MODELS):
       plt.figure()
       plt.xscale('log')
-      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
       for s_idx, s in enumerate(queried_setups):
         sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
         print(sub_mat.shape)
         print(np.mean(sub_mat, axis=1)[0])  # avg over runs
         if plot_var:
-          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+          plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
         else:
           sub_mat = np.median(sub_mat, axis=1)
-          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+          plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
           print(f'median values for setting {s}, data {d_id}:', sub_mat)
 
       plt.xlabel('# samples generated')
@@ -765,17 +669,17 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
 
     plt.figure()
     plt.xscale('log')
-    plt.xticks(sub_ratios[::-1], data_used[::-1])
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
     for s_idx, s in enumerate(queried_setups):
       sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s],
                                   'models': ['adaboost'], 'eval_metrics': ['accuracies']})
       print(sub_mat.shape)
       print(np.mean(sub_mat, axis=1)[0])  # avg over runs
       if plot_var:
-        plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
       else:
         sub_mat = np.median(sub_mat, axis=1)
-        plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
         print(f'median values for setting {s}, data {d_id}:', sub_mat)
 
     plt.xlabel('# samples generated')
@@ -785,26 +689,11 @@ def apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=False):
 
 
 def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
-
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
   metric = 'accuracies'
   data_ids = ['d']
-  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
   merf_adaboost_array = ar_dict['may10_merf_adaboost']
-  # print(sr_conv_array.array.shape, adaboost_array.array.shape)
-  # print(sr_conv_array.dim_names)
-  # for d in sr_conv_array.dim_names:
-  #   print(d, sr_conv_array.idx_names[d])
-  # for d in adaboost_array.dim_names:
-  #     print(d, adaboost_array.idx_names[d])
-  # print(sr_conv_array.array[:, 1:, :, 7, :, 0].shape, sr_conv_array.array[:, :, :, 0, :, 0].shape)
   sr_conv_array.array[:, 1:, :, 7, :, 0] = merf_adaboost_array.array[:, :, :, 0, :, 0]
 
   sb_array = ar_dict['sb']
@@ -813,14 +702,9 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
 
   full_mmd_array = ar_dict['full_mmd_jan7']
   mehp_array = ar_dict['mehp_dmnist_apr27']
-  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
   merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
-  print(merged_array.array.shape)
   merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
-  print(merged_array.array.shape)
   merged_array = merged_array.merge(mehp_array, merge_dim='setups')
-  print(merged_array.array.shape)
-
 
   orders = [20, 50, 100, 200, 500]
   # digit plot
@@ -838,10 +722,10 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
                      f'mehp $\epsilon=\infty$ order{order}', f'mehp $\epsilon=1$ order{order}']
       plt.figure()
       plt.xscale('log')
-      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
       print('data', d_id)
       for s_idx, s in enumerate(queried_setups):
-        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
         print(f'setup: {s}')
         print(sub_mat.shape)
@@ -850,36 +734,36 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
         sub_mat = np.mean(sub_mat, axis=1)  # average over models
         print(np.mean(sub_mat, axis=1)[0])  # avg over runs
         if plot_var:
-          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+          plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
         else:
           sub_mat = np.median(sub_mat, axis=1)
-          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+          plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
           print(f'mean values for setting {s}, data {d_id}:', sub_mat)
-
 
       plt.xlabel('# samples generated')
       plt.ylabel('accuracy')
 
       plt.yticks([0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85, 0.9])
-      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+      plt.hlines([0.5, 0.55, 0.6, 0.65, 0.7, 0.75, 0.8, 0.85], xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0],
+                 linestyles='dotted')
       plt.ylim((0.45, 0.9))
       plt.legend(loc='lower right')
       plt.savefig(f'plots/may10_order{order}_{"var_" if plot_var else ""}digit_merf_plus_full_mmd_and_mehp.png')
 
-      for m_idx, model in enumerate(models):
+      for m_idx, model in enumerate(DEFAULT_MODELS):
         plt.figure()
         plt.xscale('log')
-        plt.xticks(sub_ratios[::-1], data_used[::-1])
+        plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
         for s_idx, s in enumerate(queried_setups):
           sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
           print(sub_mat.shape)
           print(np.mean(sub_mat, axis=1)[0])  # avg over runs
           if plot_var:
-            plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+            plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
           else:
             sub_mat = np.median(sub_mat, axis=1)
-            plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+            plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
             print(f'median values for setting {s}, data {d_id}:', sub_mat)
 
         plt.xlabel('# samples generated')
@@ -889,27 +773,15 @@ def apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=False):
 
 
 def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
-  colors = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'tab:brown', 'tab:orange', 'tab:gray', 'tab:pink', 'limegreen', 'yellow']
-  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
-            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
-  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
-  data_used = ['60k', '30k', '12k', '6k', '3k', '1.2k', '600', '300', '120', '60']
+  
   metric = 'accuracies'
   data_ids = ['d']
-  # dim_names = ['data_ids', 'setups', 'sub_ratios', 'models', 'runs', 'eval_metrics']
-
   ar_dict = collect_results()
   sr_conv_array = ar_dict['sr_conv_apr6']
   sb_array = ar_dict['sb']
   full_mmd_array = ar_dict['full_mmd_jan7']
   mehp_array = ar_dict['mehp_dmnist_apr27']
-  print(sr_conv_array.array.shape, sb_array.array.shape, full_mmd_array.array.shape, mehp_array.array.shape)
-  merged_array = sr_conv_array.merge(sb_array, merge_dim='setups')
-  print(merged_array.array.shape)
-  merged_array = merged_array.merge(full_mmd_array, merge_dim='setups')
-  print(merged_array.array.shape)
-  merged_array = merged_array.merge(mehp_array, merge_dim='setups')
-  print(merged_array.array.shape)
+  merged_array = sr_conv_array.merge([sb_array, full_mmd_array, mehp_array], merge_dim='setups')
 
   var_str = "var_" if plot_var else ""
   dp_str = 'eps=1_' if private else 'nonDP_'
@@ -926,10 +798,10 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
 
       plt.figure()
       plt.xscale('log')
-      plt.xticks(sub_ratios[::-1], data_used[::-1])
+      plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
       print('data', d_id)
       for s_idx, s in enumerate(queried_setups):
-        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': models, 'eval_metrics': [metric]})
+        sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
 
         print(f'setup: {s}')
         print(sub_mat.shape)
@@ -938,10 +810,10 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
         sub_mat = np.mean(sub_mat, axis=1)  # average over models
         print(np.mean(sub_mat, axis=1)[0])  # avg over runs
         if plot_var:
-          plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+          plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
         else:
           sub_mat = np.median(sub_mat, axis=1)
-          plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+          plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
 
           print(f'mean values for setting {s}, data {d_id}:', sub_mat)
 
@@ -950,24 +822,24 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
 
       plt.yticks([0.55, 0.6, 0.65, 0.7, 0.75])
       plt.hlines([0.6, 0.65, 0.7],
-                 xmin=sub_ratios[-1], xmax=sub_ratios[0], linestyles='dotted')
+                 xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
       plt.ylim((0.55, 0.75))
       plt.legend(loc='lower right')
       plt.savefig(f'plots/may10_order_comp_{dp_str}{var_str}digit_plot.png')
       plt.close()
 
-      for m_idx, model in enumerate(models):
+      for m_idx, model in enumerate(DEFAULT_MODELS):
         plt.figure()
         plt.xscale('log')
-        plt.xticks(sub_ratios[::-1], data_used[::-1])
+        plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
         for s_idx, s in enumerate(queried_setups):
           sub_mat = merged_array.get({'data_ids': [d_id], 'setups': [s], 'models': [model], 'eval_metrics': [metric]})
 
           if plot_var:
-            plot_with_variance(sub_ratios, sub_mat, color=colors[s_idx], label=setup_names[s_idx])
+            plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
           else:
             sub_mat = np.median(sub_mat, axis=1)
-            plt.plot(sub_ratios, sub_mat, label=setup_names[s_idx], color=colors[s_idx])  # do show 1.0
+            plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
             print(f'median values for setting {s}, data {d_id}:', sub_mat)
 
         plt.xlabel('# samples generated')
@@ -977,38 +849,235 @@ def apr27_dmnist_mehp_order_comp(plot_var=False, private=False):
         plt.close()
 
 
+def may17_mehp_subsampled(plot_var=False):
+  metric = 'accuracies'
+  data_ids = ['d', 'f']
+
+  for data_id in data_ids:
+    if data_id == 'd':
+      save_str = 'digit'
+      data_str = 'mehp_dmnist_apr27'
+      setups = ['mehp non-DP order100', 'mehp eps=1 order100']
+      y_lims = (0.4, 0.9)
+      y_step = 0.05
+
+    else:
+      save_str = 'fashion'
+      data_str = 'mehp_fmnist_apr23'
+      setups = ['mehp_nonDP', 'mehp_eps=1']
+      y_lims = (0.35, 0.8)
+      y_step = 0.05
+
+    ar_dict = collect_results()
+    sr_conv_array = ar_dict['sr_conv_apr6']
+    merf_adaboost_array = ar_dict['may10_merf_adaboost']
+    sr_conv_array.array[:, 1:, :, 7, :, 0] = merf_adaboost_array.array[:, :, :, 0, :, 0]
+
+    sb_array = ar_dict['sb']
+    real_adaboost_array = ar_dict['may10_real_adaboost']
+    sb_array.array[:, 0, :, 7, :, 0] = real_adaboost_array.array[:, 0, :, 0, :, 0]
+
+    merged_array = sr_conv_array.merge([sb_array, ar_dict['full_mmd_jan7'],
+                                        ar_dict[data_str],
+                                        ar_dict['may14_gswgan']],
+                                       merge_dim='setups')
+
+    queried_setups = ['real_data', 'full_mmd',
+                      setups[0], setups[1],
+                      'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5',
+                      'gswgan', 'dpcgan']
+    setup_names = ['real data', 'full MMD $\epsilon=\infty$',
+                   'HP (ours) $\epsilon=\infty$', 'HP (ours) $\epsilon=1$',
+                   'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
+                   'GS-WGAN $\epsilon=10$', 'DP-CGAN $\epsilon=9.6$']
+    plt.figure()
+    ax = plt.subplot(111)
+    plt.xscale('log')
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
+    print('data', data_id)
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get({'data_ids': [data_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
+
+      print(f'setup: {s}')
+      # print(sub_mat.shape)
+      # print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      # print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+      mean_y_100 = np.mean(sub_mat, axis=1)[0]
+      mean_y_opt = np.max(np.mean(sub_mat, axis=1))
+      sdev_y_100 = np.std(sub_mat, axis=1)[0]
+      print(f'acc mean: {mean_y_100}, sdev: {sdev_y_100}, opt: {mean_y_opt}')
+      if plot_var:
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
+      else:
+        sub_mat = np.median(sub_mat, axis=1)
+        ax.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
+
+        print(f'mean values for setting {s}, data {data_id}:', sub_mat)
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+
+    y_ticks = np.arange(y_lims[0], y_lims[1] + y_step, y_step)
+    h_lines = np.arange(y_lims[0] + y_step, y_lims[1], y_step)
+    plt.yticks(y_ticks)
+    plt.hlines(h_lines, xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
+    plt.ylim(y_lims)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0, box.width * 0.75, box.height])
+
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.title(f'{save_str.capitalize()} MNIST downstream accuracy under subsampling', loc='center', pad=10.)
+    plt.savefig(f'plots/may17_order100_{"var_" if plot_var else ""}{save_str}_mehp.png')
+
+
+def may17_dmnist_mehp_order_comp(plot_var=False, private=False):
+  metric = 'accuracies'
+  data_ids = ['d']
+  ad = collect_results()
+  merged_array = ad['sr_conv_apr6'].merge([ad['sb'], ad['full_mmd_jan7'], ad['mehp_dmnist_apr27']], merge_dim='setups')
+
+  var_str = "var_" if plot_var else ""
+  dp_str = 'eps=1_' if private else 'nonDP_'
+
+  orders = [20, 50, 100, 200, 500]
+  if private:
+    queried_setups = [f'mehp eps=1 order{o}' for o in orders]
+    setup_names = [f'order = {o}' for o in orders]
+  else:
+    queried_setups = [f'mehp non-DP order{o}' for o in orders]
+    setup_names = [f'order = {o}' for o in orders]
+  # digit plot
+  for d_id in data_ids:
+
+    plt.figure()
+    plt.xscale('log')
+    plt.xticks(DEFAULT_RATIOS[::-1], DEFAULT_RATIO_KEYS[::-1])
+    print('data', d_id)
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get(
+        {'data_ids': [d_id], 'setups': [s], 'models': DEFAULT_MODELS, 'eval_metrics': [metric]})
+
+      print(f'setup: {s}')
+      print(sub_mat.shape)
+      print(np.mean(sub_mat, axis=2)[0])  # avg over runs
+
+      sub_mat = np.mean(sub_mat, axis=1)  # average over models
+      print(np.mean(sub_mat, axis=1)[0])  # avg over runs
+      if plot_var:
+        plot_with_variance(DEFAULT_RATIOS, sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
+      else:
+        sub_mat = np.median(sub_mat, axis=1)
+        plt.plot(DEFAULT_RATIOS, sub_mat, label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])  # do show 1.0
+
+        print(f'mean values for setting {s}, data {d_id}:', sub_mat)
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+
+    y_lims = (0.6, 0.75)
+    y_step = 0.05
+    y_ticks = np.arange(y_lims[0], y_lims[1] + y_step, y_step)
+    h_lines = np.arange(y_lims[0] + y_step, y_lims[1], y_step)
+    plt.yticks(y_ticks)
+    plt.hlines(h_lines, xmin=DEFAULT_RATIOS[-1], xmax=DEFAULT_RATIOS[0], linestyles='dotted')
+    plt.ylim(y_lims)
+    eps_str = "1" if private else "$\infty$"
+    plt.legend(loc='lower right')
+    plt.title(f'downstream accuracy by hermite polynomial order ($\epsilon=$' + eps_str + ')',
+              loc='center', pad=10.)
+    plt.savefig(f'plots/may17_order_comp_{dp_str}{var_str}digit_plot.png')
+    plt.close()
+
+
+def may17_mehp_by_model():
+  data_ids = ['d', 'f']
+
+  for data_id in data_ids:
+    if data_id == 'd':
+      save_str = 'digit'
+      data_str = 'mehp_dmnist_apr27'
+      setups = ['mehp non-DP order100', 'mehp eps=1 order100']
+      y_lims = (0.2, 1.0)
+      y_step = 0.1
+
+    else:
+      save_str = 'fashion'
+      data_str = 'mehp_fmnist_apr23'
+      setups = ['mehp_nonDP', 'mehp_eps=1']
+      y_lims = (0.2, 0.9)
+      y_step = 0.1
+
+    ar_dict = collect_results()
+    sr_conv_array = ar_dict['sr_conv_apr6']
+    merf_adaboost_array = ar_dict['may10_merf_adaboost']
+    sr_conv_array.array[:, 1:, :, 7, :, 0] = merf_adaboost_array.array[:, :, :, 0, :, 0]
+
+    sb_array = ar_dict['sb']
+    real_adaboost_array = ar_dict['may10_real_adaboost']
+    sb_array.array[:, 0, :, 7, :, 0] = real_adaboost_array.array[:, 0, :, 0, :, 0]
+
+    merged_array = sr_conv_array.merge([sb_array, ar_dict['full_mmd_jan7'],
+                                        ar_dict[data_str],
+                                        ar_dict['may14_gswgan']],
+                                       merge_dim='setups')
+
+    queried_setups = ['real_data', 'full_mmd',
+                      setups[0], setups[1],
+                      'apr6_sr_conv_sig_0', 'apr6_sr_conv_sig_5',
+                      'gswgan', 'dpcgan']
+    setup_names = ['real data', 'full MMD $\epsilon=\infty$',
+                   'HP (ours) $\epsilon=\infty$', 'HP (ours) $\epsilon=1$',
+                   'DP-MERF $\epsilon=\infty$', 'DP-MERF $\epsilon=1$',
+                   'GS-WGAN $\epsilon=10$', 'DP-CGAN $\epsilon=9.6$']
+    plt.figure()
+    ax = plt.subplot(111)
+    plt.xticks(list(range(12)) + [13], DEFAULT_MODELS + ['MEAN'])
+    plt.xticks(rotation=45, ha='right')
+    print('data', data_id)
+    for s_idx, s in enumerate(queried_setups):
+      sub_mat = merged_array.get({'data_ids': [data_id], 'setups': [s],
+                                  'models': DEFAULT_MODELS, 'eval_metrics': ['accuracies']})
+      print(f'setup: {s}')
+      print(sub_mat.shape)
+
+      sub_mat = sub_mat[0, :, :]  # select full data exp
+      print(sub_mat.shape)
+
+      # plot_with_variance(range(12), sub_mat, color=DEFAULT_COLORS[s_idx], label=setup_names[s_idx])
+      means_y = np.mean(sub_mat, axis=1)
+      means_y_plus_mean = np.concatenate([means_y, np.mean(means_y, keepdims=True)])
+      # sdevs_y = np.std(sub_mat, axis=1)
+      # plt.fill_between(range(12), means_y - sdevs_y, means_y + sdevs_y, alpha=0.1, color=DEFAULT_COLORS[s_idx])
+      # plt.errorbar(range(12), means_y, sdevs_y,
+      #              color=DEFAULT_COLORS[s_idx], ecolor=DEFAULT_COLORS[s_idx], fmt='o', capthick=5)
+      plt.plot(list(range(12)) + [13], means_y_plus_mean, 'o', label=setup_names[s_idx], color=DEFAULT_COLORS[s_idx])
+
+    plt.xlabel('# samples generated')
+    plt.ylabel('accuracy')
+
+    y_ticks = np.arange(y_lims[0], y_lims[1] + y_step, y_step)
+    h_lines = np.arange(y_lims[0] + y_step, y_lims[1], y_step)
+    plt.yticks(y_ticks)
+    plt.hlines(h_lines, xmin=0, xmax=13, linestyles='dotted')
+    plt.vlines(12, ymin=0.2, ymax=1.)
+    plt.ylim(y_lims)
+    box = ax.get_position()
+    ax.set_position([box.x0, box.y0 + box.height * 0.1, box.width * 0.75, box.height * 0.95])
+
+    ax.legend(loc='center left', bbox_to_anchor=(1, 0.5))
+    plt.title(f'{save_str.capitalize()} MNIST downstream accuracy by model', loc='center', pad=10.)
+    plt.savefig(f'plots/may17_{save_str}_mehp_by_model.png')
+
+
 if __name__ == '__main__':
-  # collect_synth_benchmark_results()
-  # aggregate_subsample_tests_paper_setups()
-  # aggregate_subsample_tests_renorm_test()
-  # aggregate_subsample_tests_paper_setups_redo()
-  # plot_subsampling_performance()
-  # plot_subsampling_logreg_performance()
-  # plot_renorm_performance()
-  # extract_numpy_data_mats()
-  # aggregate_mar12_setups()
-  # aggregate_mar19_nonp()
-  # spot_synth_mnist_mar19()
-  # mar19_plot_nonprivate_subsampling_performance()
-  # aggregate_mar20_sr()
-  # mar20_plot_sr_performance()
-  # mar24_plot_selected_sr()
-  # aggregate_mar25_sr()
-  # mar25_plot_selected_sr()
-  # mar25_plot_nonprivate()
-  # aggregate_apr4_sr_conv()
-  # apr4_plot_subsampling_performance_variance()
-
-  # apr6_replot_nonprivate(plot_var=True)
-  # apr6_replot_nonprivate(plot_var=False)
-
-  # apr6_plot_overfit_conv(plot_var=False)
-  # apr6_plot_overfit_conv(plot_var=True)
-  # apr6_plot_better_conv(plot_var=True)
-  # jan7_plot_better_conv_plus_full_mmd(plot_var=True)
   # apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=True)
-
-  apr23_fashion_merf_plus_full_mmd_and_mehp(plot_var=True)
   # apr27_digits_merf_plus_full_mmd_and_mehp(plot_var=True)
   # apr27_dmnist_mehp_order_comp(plot_var=True, private=True)
   # apr27_dmnist_mehp_order_comp(plot_var=True, private=False)
+  # may17_mehp_subsampled(plot_var=True)
+  # may17_dmnist_mehp_order_comp(plot_var=True, private=True)
+  # may17_dmnist_mehp_order_comp(plot_var=True, private=False)
+  # may17_mehp_by_model()
+  may17_mehp_subsampled(plot_var=True)

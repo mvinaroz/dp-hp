@@ -42,7 +42,7 @@ def compute_rff_loss(gen, data, labels, rff_mmd_loss, device):
 def train_multi_release(gen, device, train_loader, optimizer, epoch, rff_mmd_loss, log_interval):
 
   for batch_idx, (data, labels) in enumerate(train_loader):
-    print(len(data))
+    # print(len(data))
     data, labels = data.to(device), labels.to(device)
     data = flatten_features(data)
 
@@ -65,6 +65,15 @@ def log_gen_data(gen, device, epoch, n_labels, log_dir):
   plot_mnist_batch(plot_samples, 10, n_labels, log_dir + f'samples_ep{epoch}', denorm=False)
 
 
+def log_debug_data(log_dir, train_data):
+  plot_mat = np.zeros((100, 28, 28))
+  for idx in range(10):
+    plot_mat[10 * idx:10 * (idx + 1), :] = train_data.data[train_data.targets == idx][:10, :].numpy()
+
+  plot_mat /= np.max(plot_mat)
+  plot_mnist_batch(plot_mat, 10, 10, log_dir + f'data_example', denorm=False)
+
+
 def get_losses(ar, train_loader, device, n_feat, n_labels, data_num=0):
   if ar.loss_type == 'real_mmd':
     minibatch_loss = get_real_mmd_loss(ar.rff_sigma, n_labels, ar.batch_size)
@@ -82,19 +91,18 @@ def get_losses(ar, train_loader, device, n_feat, n_labels, data_num=0):
                                               ar.n_eigen_degrees, ar.kernel_length, ar.px_sigma)
     minibatch_loss = None
     
-  elif ar.loss_type     ==  'hermite':
+  elif ar.loss_type == 'hermite':
       # minibatch_loss    =   None
       alpha = 1 / (2.0 * ar.px_sigma)
       xi = -1/2/alpha+np.sqrt(1/alpha**2+4)/2
-# <<<<<<< HEAD
-      # print('Real Sampling Rate is ', ar.sampling_rate)
-      #print('Real Sampling Rate is ', ar.sampling_rate)
-# =======
-#       print('Real Sampling Rate is ', ar.sampling_rate)
 
-# >>>>>>> fb6b1f328211ba72c7242b8f8106b26695871f35
-      single_release_loss, minibatch_loss   =   get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi, ar.batch_size, data_num, ar.sampling_multirelease, ar.mmd_computation
-                                                              , ar.sampling_rate, ar.sr_me_division, ar.single_release, ar.sample_dims, ar.heuristic_sigma)
+      print('Real Sampling Rate is ', ar.sampling_rate)
+
+      single_release_loss, minibatch_loss = get_hp_losses(train_loader, device, n_labels, ar.order_hermite, xi,
+                                                          ar.batch_size, data_num, ar.sampling_multirelease,
+                                                          ar.mmd_computation, ar.sampling_rate, ar.sr_me_division,
+                                                          not ar.multi_release,
+                                                          ar.sample_dims, ar.heuristic_sigma)
   else:
     raise ValueError
 
@@ -123,7 +131,7 @@ def get_args():
 
   # MODEL DEFINITION
   # parser.add_argument('--batch-norm', action='store_true', default=True, help='use batch norm in model')
-  parser.add_argument('--conv-gen', action='store_true', default=True, help='use convolutional generator')
+  parser.add_argument('--model', type=str, default='CNN', choices=['CNN', 'FC'], help='specifies generator')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--gen-spec', type=str, default='500,500', help='specifies hidden layers of generator')
   parser.add_argument('--kernel-sizes', '-ks', type=str, default='5,5', help='specifies conv gen kernel sizes')
@@ -135,9 +143,9 @@ def get_args():
   parser.add_argument('--noise-factor', '-noise', type=float, default=5.0, help='privacy noise parameter')
 
   # ALTERNATE MODES
-  parser.add_argument('--single-release', action='store_true', default=False, help='get 1 data mean embedding only') #Here usually we have action and default be True
+  parser.add_argument('--multi-release', action='store_true', default=False, help='get embedding of each batch')
 
-  parser.add_argument('--loss-type', type=str, default='hermite', help='how to approx mmd',
+  parser.add_argument('--loss-type', type=str, default='rff', help='how to approx mmd',
                       choices=['rff', 'kmeans', 'real_mmd', 'eigen', 'hermite'])
   # parser.add_argument('--real-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
   # parser.add_argument('--kmeans-mmd', action='store_true', default=False, help='for debug: dont approximate mmd')
@@ -149,6 +157,7 @@ def get_args():
   parser.add_argument('--mmd-type', type=str, default='sphere', help='how to approx mmd', choices=['sphere', 'r+r'])
 
   parser.add_argument('--center-data', action='store_true', default=False, help='k-means requires centering')
+  parser.add_argument('--debug-data', type=str, default=None, choices=['flip', 'flip_binary', 'scramble_per_label'])
 
   # synth_d2 data
   # parser.add_argument('--synth-spec-string', type=str, default='norm_k5_n10000_row5_col5_noise0.2', help='')
@@ -193,9 +202,7 @@ def preprocess_args(ar):
     assert ar.center_data, 'dp kmeans requires centering of data'
 
   if ar.data in {'2d', '1d'}:
-    ar.conv_gen = False
-  else:
-    ar.conv_gen = True
+    ar.model = 'FC'
 
 
 def synthesize_data_with_uniform_labels(gen, device, gen_batch_size=1000, n_data=60000, n_labels=10):
@@ -255,12 +262,16 @@ def main():
 
   # load data
   data_pkg = get_dataloaders(ar.data, ar.batch_size, ar.test_batch_size, use_cuda, ar.center_data,
-                             ar.synth_spec_string, ar.test_split)
+                             ar.synth_spec_string, ar.test_split, debug_data=ar.debug_data)
+
+  if ar.debug_data is not None:
+    log_debug_data(ar.log_dir, data_pkg.train_data)
 
   # init model
-  if ar.conv_gen:
+  if ar.model == 'CNN':
     gen = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes, use_sigmoid=True).to(device)
   else:
+    assert ar.model == 'FC'
     use_sigmoid = ar.data in {'digits', 'fashion'}
     gen = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=use_sigmoid,
                     batch_norm=True).to(device)
@@ -273,7 +284,7 @@ def main():
 
   # training loop
   for epoch in range(1, ar.epochs + 1):
-    if ar.single_release:
+    if not ar.multi_release:
       train_single_release(gen, device, optimizer, epoch, single_release_loss, ar.log_interval, ar.batch_size,
                            data_pkg.n_data, ar.sampling_multirelease)
     else:

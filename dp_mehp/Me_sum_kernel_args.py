@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import StepLR
 from all_aux_files import FCCondGen, ConvCondGen, find_rho, ME_with_HP, get_mnist_dataloaders
 from all_aux_files import get_dataloaders, log_args, test_results_subsampling_rate
 from all_aux_files import synthesize_data_with_uniform_labels, flatten_features, log_gen_data
-from all_aux_files import heuristic_for_length_scale
+from all_aux_files import heuristic_for_length_scale, plot_mnist_batch
 from all_aux_files_tab_data import ME_with_HP_tab
 from collections import namedtuple
 import faulthandler
@@ -71,6 +71,8 @@ def get_args():
   preprocess_args(ar)
   log_args(ar.log_dir, ar)
   return ar
+
+
 
 
 def preprocess_args(ar):
@@ -139,9 +141,18 @@ def main():
                                normalize=False, synth_spec_string=None, test_split=None,
                                debug_data=ar.debug_data)
 
+    if ar.debug_data is not None:
+      plot_mat = np.zeros((100, 28, 28))
+      for idx in range(10):
+        plot_mat[10*idx:10*(idx+1), :] = data_pkg.train_data.data[data_pkg.train_data.targets == idx][:10, :].numpy()
+
+      plot_mat /= np.max(plot_mat)
+      plot_mnist_batch(plot_mat, 10, 10, ar.log_dir + f'data_example', denorm=False)
+
     """ Define a generator """
     if ar.model_name == 'FC':
-        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels, use_sigmoid=True, batch_norm=True, use_clamp=False).to(device)
+        model = FCCondGen(ar.d_code, ar.gen_spec, data_pkg.n_features, data_pkg.n_labels,
+                          use_sigmoid=True, batch_norm=True, use_clamp=False).to(device)
     elif ar.model_name == 'CNN':
         model = ConvCondGen(ar.d_code, ar.gen_spec, data_pkg.n_labels, ar.n_channels, ar.kernel_sizes,
                             use_sigmoid=True, batch_norm=True).to(device)
@@ -243,6 +254,8 @@ def main():
         print('Train Epoch: {} [{}/{}]\tLoss: {:.6f}'.format(epoch, batch_idx * len(data), data_pkg.n_data, loss.item()))
 
         log_gen_data(model, device, epoch, data_pkg.n_labels, ar.log_dir)
+
+
         scheduler.step()
 
     #     end if

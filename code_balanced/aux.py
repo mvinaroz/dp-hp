@@ -1,4 +1,5 @@
 import os
+from collections import Iterable
 import numpy as np
 import torch as pt
 from torchvision import datasets, transforms
@@ -24,14 +25,51 @@ def expand_vector(v, tgt_vec):
     return ValueError
 
 
-def flip_mnist_data(dataset):
+# def flip_mnist_data(dataset):
+#   data = dataset.data
+#   flipped_data = 255 - data
+#   selections = np.zeros(data.shape[0], dtype=np.int)
+#   selections[:data.shape[0]//2] = 1
+#   selections = pt.tensor(np.random.permutation(selections), dtype=pt.uint8)
+#   print(selections.shape, data.shape, flipped_data.shape)
+#   dataset.data = pt.where(selections[:, None, None], data, flipped_data)
+
+def flip_mnist_data(dataset, only_binary=True):
   data = dataset.data
-  flipped_data = 255 - data
   selections = np.zeros(data.shape[0], dtype=np.int)
-  selections[:data.shape[0]//2] = 1
+  selections[:data.shape[0] // 2] = 1
   selections = pt.tensor(np.random.permutation(selections), dtype=pt.uint8)
-  print(selections.shape, data.shape, flipped_data.shape)
-  dataset.data = pt.where(selections[:, None, None], data, flipped_data)
+  if only_binary:
+    # print(selections.shape, data.shape, flipped_data.shape)
+    dataset.data = pt.where(selections[:, None, None], pt.zeros_like(data) + 255, pt.zeros_like(data))
+  else:
+    flipped_data = 255 - data
+    print(selections.shape, data.shape, flipped_data.shape, pt.max(data), pt.max(flipped_data))
+    dataset.data = pt.where(selections[:, None, None], data, flipped_data)
+
+
+def scramble_mnist_data_by_labels(dataset):
+  data = dataset.data
+  labels = dataset.targets
+  oldshape = data.shape
+  data_flat = pt.reshape(data, (oldshape[0], -1))
+  # print(data.shape, labels.shape)
+  print()
+  new_data_list = []
+  for label in range(10):  # shuffle each label separately
+    # print(f'scrambling label {label}')
+    l_data = data_flat[labels == label]
+    # print(l_data.shape)
+    n_data, n_dims = l_data.shape
+    new_l_data = pt.zeros_like(l_data)
+    for dim in range(l_data.shape[1]):
+      new_l_data[:, dim] = l_data[:, dim][pt.randperm(n_data)]
+
+    new_data_list.append(new_l_data)
+  new_data_flat = pt.cat(new_data_list)
+
+  dataset.targets = pt.cat([pt.zeros(new_data_list[k].shape[0]) + k for k in range(10)])
+  dataset.data = pt.reshape(new_data_flat, oldshape)
 
 
 def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw=True):
@@ -48,19 +86,6 @@ def plot_mnist_batch(mnist_mat, n_rows, n_cols, save_path, denorm=True, save_raw
   save_img(save_path + '.png', mnist_mat_flat)
   if save_raw:
     np.save(save_path + '_raw.npy', mnist_mat_flat)
-
-
-def get_svhn_dataloaders(batch_size, test_batch_size, use_cuda, data_dir='data/SVHN/'):
-  if not os.path.exists(data_dir):
-    os.makedirs(data_dir)
-  kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-  transforms_list = [transforms.ToTensor()]
-  prep_transforms = transforms.Compose(transforms_list)
-  trn_data = datasets.SVHN(data_dir, split='train', download=False, transform=prep_transforms)
-  tst_data = datasets.SVHN(data_dir, split='test', download=False, transform=prep_transforms)
-  train_loader = pt.utils.data.DataLoader(trn_data, batch_size=batch_size, shuffle=True, **kwargs)
-  test_loader = pt.utils.data.DataLoader(tst_data, batch_size=test_batch_size, shuffle=True, **kwargs)
-  return train_loader, test_loader
 
 
 def plot_svhn_batch(svhn_mat, n_rows, n_cols, save_path, save_raw=True):
@@ -240,6 +265,12 @@ class NamedArray:
     in merge dimension: create union of index names (must be disjunct)
     in all other dimenions: create intersection of index names (must not be empty)
     """
+    if isinstance(other, Iterable):
+      m_arr = self
+      for arr in other:
+        m_arr = m_arr.merge(arr, merge_dim)
+      return m_arr
+
     assert isinstance(other, NamedArray)
     assert merge_dim in self.dim_names
     assert all([n1 == n2 for n1, n2 in zip(self.dim_names, other.dim_names)])  # assert same dim names
