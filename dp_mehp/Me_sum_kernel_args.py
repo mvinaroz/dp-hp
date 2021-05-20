@@ -42,7 +42,7 @@ def get_args():
   parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
   
   # MODEL DEFINITION
-  parser.add_argument('--model_name', type=str, default='CNN', help='you can use CNN of FC')
+  parser.add_argument('--model-name', type=str, default='CNN', help='you can use CNN of FC')
   parser.add_argument('--d-code', '-dcode', type=int, default=5, help='random code dimensionality')
   parser.add_argument('--n-channels', '-nc', type=str, default='16,8', help='specifies conv gen kernel sizes')
   parser.add_argument('--gen-spec', type=str, default='500,500', help='specifies hidden layers of generator')

@@ -284,6 +284,25 @@ def may13_gs_wgan_subsamples_only_lin_svc():
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1000, use_gpus=False)
 
 
+def may20_dmnist_train():
+  experiment_name = 'may20_mehp_train_dmnist_fc'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 Me_sum_kernel_args.py'
+  params = [('--data', ['digits']),
+            ('-bs', [200]),
+            ('-ebs', [2000]),
+            ('-ep', [10]),
+            ('-lr', [0.01]),
+            ('--is-private', ['True', 'False']),
+            ('--order-hermite', [20, 50, 100, 200, 500, 1000]),
+            ('', ['--skip-downstream-model']),
+            ('--model-name', ['FC']),
+            ('--kernel-length', [0.005]),
+            ('--seed', [0, 1, 2, 3, 4])
+            ]
+  exp_id_flag = '--log-name may20_mehp_dmnist_fc_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=2, use_gpus=True)
+
 
 if __name__ == '__main__':
   # running_train_script()
@@ -291,5 +310,6 @@ if __name__ == '__main__':
   # redo_old_adaboost()
   # redo_real_adaboost()
   # may12_fashion_hp_grid()
-  may13_gs_wgan_subsamples()
-  may13_gs_wgan_subsamples_only_lin_svc()
+  # may13_gs_wgan_subsamples()
+  # may13_gs_wgan_subsamples_only_lin_svc()
+  may20_dmnist_train()
