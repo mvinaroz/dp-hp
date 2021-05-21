@@ -825,6 +825,46 @@ def aggregate_may14_gswgan():
   np.save(f'results/results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
 
 
+def aggregate_may20_dmnist_fc():
+  sub_ratios = [1.0, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01, 0.005, 0.002, 0.001]
+  models = ['logistic_reg', 'random_forest', 'gaussian_nb', 'bernoulli_nb', 'linear_svc', 'decision_tree', 'lda',
+            'adaboost', 'mlp', 'bagging', 'gbm', 'xgboost']
+  runs = list(range(25)) + list(range(30, 55))
+  # eval_metrics = ['accuracies']
+  save_str = 'may20_mehp_dmnist_fc'
+  setups = ['fc mehp non-DP order20', 'fc mehp non-DP order50', 'fc mehp non-DP order100',
+            'fc mehp non-DP order200', 'fc mehp non-DP order500',
+            'fc mehp eps=1 order20', 'fc mehp eps=1 order50', 'fc mehp eps=1 order100',
+            'fc mehp eps=1 order200', 'fc mehp eps=1 order500']
+
+  all_the_results = np.zeros((1, len(setups), len(sub_ratios), len(models), 5, 1))
+
+  for idx in runs:
+    # print(f'run {idx}')
+    for r_idx, r in enumerate(sub_ratios):
+      # print(f'sub_ratio {r}')
+      scores = []
+      for m_idx, m in enumerate(models):
+        load_file = f'../dp_mehp/logs/gen/apr27_mehp_dmnist_{idx}/digits/synth_eval/sub{r}_{m}_log.npz'
+        if os.path.isfile(load_file):
+          mat = np.load(load_file)
+        else:
+          # if not 'linear_svc' in load_file:
+          print('failed to load', load_file)
+          continue
+
+        scores.append(mat['accuracies'][1])
+        seed_idx = idx % 5  # idx 0-4 is non-DP, idx 5-9 is eps=1
+        setup_idx = (idx // 5) if idx < 30 else (idx // 5 - 1)  # since 26-30 din't exist
+        all_the_results[0, setup_idx, r_idx, m_idx, seed_idx, 0] = mat['accuracies'][1]
+
+      # print(f'accs: {accs}')
+      # print(f'mean: {np.mean(accs)}')
+  np.save(f'results_full_{save_str}', all_the_results)
+  np.save(f'results_mean_{save_str}', np.mean(all_the_results, axis=(3, 4)))
+  print(np.mean(all_the_results, axis=(3, 4)))
+
+
 if __name__ == '__main__':
   # aggregate_sep18_realmmd()
   # aggregate_apr23_fmnist_mehp()

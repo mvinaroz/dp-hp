@@ -304,6 +304,101 @@ def may20_dmnist_train():
   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=2, use_gpus=True)
 
 
+def may20_fashion_hp_grid():
+  experiment_name = 'may20_fashion_hp_grid_fc'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 Me_sum_kernel_args.py'
+  params = [('--data', ['fashion']),
+            ('-bs', [50, 100, 200]),
+            ('-ebs', [2000]),
+            ('-ep', [10]),
+            ('-lr', [0.001, 0.003, 0.01, 0.03]),
+            ('--is-private', ['True']),
+            ('--order-hermite', [100]),
+            ('--model-name', ['FC']),
+            ('--sampling-rate-synth', [1.0]),
+            ('--kernel-length', [0.0001, 0.0003, 0.001, 0.003, 0.005, 0.01, 0.03]),
+            # ('--seed', [0, 1, 2, 3, 4])
+            ]
+  exp_id_flag = '--log-name may20_fashion_hp_grid_fc_{}'
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=3, use_gpus=True)
+
+
+def may20_dmnist_eval():
+  experiment_name = 'may20_mehp_eval_dmnist_fc'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3.6 synth_data_benchmark.py'
+  params = [('--data', ['digits']),
+            ('--log-results', None),
+            ('--custom-keys', ['logistic_reg,random_forest,gaussian_nb,bernoulli_nb',
+                               'adaboost --new-model-specs,mlp,decision_tree,lda',
+                               'gbm,bagging,xgboost']),
+            ('--data-dir {} --seed {}',
+            list(zip([f'../dp_mehp/logs/gen/may20_mehp_dmnist_fc_{k}/digits' for k in range(60)],
+                     [0, 1, 2, 3, 4]*12))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+            ]
+  exp_id_flag = None
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=10, use_gpus=False)
+
+
+def may20_dmnist_eval_lin_svc():
+  experiment_name = 'may20_mehp_eval_dmnist_fc_lin_svc'
+  save_dir = 'cluster_scripts'
+  base_string = 'python3 synth_data_benchmark.py'
+  params = [('--data', ['digits']),
+            ('--log-results', None),
+            ('--custom-keys', ['linear_svc']),
+            ('--data-dir {} --seed {}',
+            list(zip([f'../dp_mehp/logs/gen/may20_mehp_dmnist_fc_{k}/digits' for k in range(60)],
+                     [0, 1, 2, 3, 4]*12))),
+            ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+            # ('-rate', [0.5, 1.0])  # , 0.5, 1.0
+            ]
+  exp_id_flag = None
+  gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1000, use_gpus=False)
+
+
+# def may21_dmnist_eval_1k():
+#   experiment_name = 'may21_mehp_eval_dmnist_fc_1k'
+#   save_dir = 'cluster_scripts'
+#   base_string = 'python3.6 synth_data_benchmark.py'
+#   one_k_features_ids = [25 + k for k in range(5)] + [55 + k for k in range(5)]
+#   params = [('--data', ['digits']),
+#             ('--log-results', None),
+#             ('--custom-keys', ['logistic_reg,random_forest',
+#                                'gaussian_nb,bernoulli_nb',
+#                                'adaboost --new-model-specs,mlp',
+#                                'decision_tree,lda',
+#                                'gbm,bagging',
+#                                'xgboost']),
+#             ('--data-dir {} --seed {}',
+#             list(zip([f'../dp_mehp/logs/gen/may20_mehp_dmnist_fc_{k}/digits' for k in one_k_features_ids],
+#                      [0, 1, 2, 3, 4]*2))),
+#             ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+#             ]
+#   exp_id_flag = None
+#   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=10, use_gpus=False)
+#
+#
+# def may21_dmnist_eval_lin_svc_1k():
+#   experiment_name = 'may21_mehp_eval_dmnist_fc_lin_svc_1k'
+#   save_dir = 'cluster_scripts'
+#   base_string = 'python3 synth_data_benchmark.py'
+#   one_k_features_ids = [25 + k for k in range(5)] + [55 + k for k in range(5)]
+#   params = [('--data', ['digits']),
+#             ('--log-results', None),
+#             ('--custom-keys', ['linear_svc']),
+#             ('--data-dir {} --seed {}',
+#             list(zip([f'../dp_mehp/logs/gen/may20_mehp_dmnist_fc_{k}/digits' for k in one_k_features_ids],
+#                      [0, 1, 2, 3, 4]*2))),
+#             ('--subsample', [0.001, 0.002, 0.005, 0.01, 0.02, 0.05, 0.1, 0.2, 0.5, 1.0])  # , 0.5, 1.0
+#             # ('-rate', [0.5, 1.0])  # , 0.5, 1.0
+#             ]
+#   exp_id_flag = None
+#   gen_cluster_scripts(experiment_name, save_dir, base_string, params, exp_id_flag, runs_per_job=1000, use_gpus=False)
+
+
 if __name__ == '__main__':
   # running_train_script()
   # running_eval_script()
@@ -312,4 +407,7 @@ if __name__ == '__main__':
   # may12_fashion_hp_grid()
   # may13_gs_wgan_subsamples()
   # may13_gs_wgan_subsamples_only_lin_svc()
-  may20_dmnist_train()
+  # may20_dmnist_train()
+  # may20_fashion_hp_grid()
+  may20_dmnist_eval()
+  may20_dmnist_eval_lin_svc()

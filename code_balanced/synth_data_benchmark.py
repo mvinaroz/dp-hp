@@ -120,7 +120,7 @@ def parse():
   parser.add_argument('--data', type=str, default='digits', help='options are digits and fashion')
   parser.add_argument('--shuffle-data', action='store_true', default=False, help='shuffle data before testing')
 
-  parser.add_argument('--log-results', action='store_true', default=False, help='if true, save results')
+  parser.add_argument('--log-results', action='store_true', default=False, help='DEPRECATED: always log results!')
   parser.add_argument('--print-conf-mat', action='store_true', default=False, help='print confusion matrix')
   parser.add_argument('--seed', type=int, default=None, help='set random seed')
   parser.add_argument('--skip-slow-models', action='store_true', default=False, help='skip models that take longer')
@@ -317,7 +317,7 @@ def main():
   ar = parse()
   if ar.seed is not None:
     np.random.seed(ar.seed)
-  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, ar.log_results, ar.data_dir, ar.data_from_torch,
+  test_gen_data(ar.data_log_name, ar.data, ar.data_base_dir, True, ar.data_dir, ar.data_from_torch,
                 ar.shuffle_data, ar.subsample, ar.sub_balanced_labels, ar.custom_keys,
                 ar.skip_slow_models, ar.only_slow_models,
                 ar.skip_gen_to_real, ar.compute_real_to_real, ar.compute_real_to_gen,
