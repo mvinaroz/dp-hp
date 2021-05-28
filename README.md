@@ -1,4 +1,4 @@
-# dp-merf
+# dp-hp
 
 
 ### Dependencies
@@ -24,15 +24,8 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 ### Tabular data
 
-`code/single_generator_priv_all.py` contains the code for the tabular experiments
+`dp_mehp/run_sum_kernel_image_data.py` contains the code for the tabular experiments
 
 
-### High-dimensional data
-`code/mnist` contains code for mnist data experiments. See `code_/README.md` for instructions on how to run the experiments.
-- `code/mnist/train_dp_generator_directly.py` trains a DP-MERF generator and can create a synthetic dataset afterwards.
-- `code/mnist/train_dp_autoencoder.py` trains the autoencoder for a DP-MERF+AE model.
-- `code/mnist/train_dp_generator.py` trains the generator for a DP-MERF+AE model and can create a synthetic dataset afterwards.
-- `code/mnist/synth_data_benchmark.py` evaluates synthetic datasets on classification tasks
-- `code/mnist/dp_analysis.py` computes privacy loss for training DP-MERF models
-- `code/mnist/dp_cgan_reference.py` trains CGAN generator and generates synthetic dataset.
-- remaining files contain helper functions
+### Image data 
+`dp_mehp/Me_sum_kernel_args.py` contains code for mnist and fashionmnist data experiments. See `add_info/README.md` for instructions on how to run the experiments.
