@@ -10,7 +10,7 @@ matplotlib.use('Agg')
 import argparse
 from all_aux_files import ME_with_HP
 from all_aux_files_tab_data import data_loading, Generative_Model_homogeneous_data, Generative_Model_heterogeneous_data, heuristic_for_length_scale
-from all_aux_files_tab_data import test_models, ME_with_HP_tab, find_rho_tab
+from all_aux_files_tab_data import test_models, ME_with_HP_tab, find_rho_tab, mean_embedding_proxy
 from sklearn.model_selection import ParameterGrid
 from sklearn.preprocessing import OneHotEncoder
 from sklearn import preprocessing
@@ -21,7 +21,7 @@ def get_args():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--seed', type=int, default=0, help='sets random seed')
-    parser.add_argument('--data-name', type=str, default='epileptic', \
+    parser.add_argument('--data-name', type=str, default='adult', \
                         help='choose among cervical, adult, census, intrusion, covtype, epileptic, credit, isolet')
 
     # OPTIMIZATION
@@ -48,6 +48,9 @@ def get_args():
     parser.add_argument('--classifiers', nargs='+', type=int, help='list of integers',
                       default=[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11])
 
+    parser.add_argument('--sr-mean-embedding', type=int, default=10, help='The sections on data to find the mean embedding in the case of Generalized Hermite.')
+    parser.add_argument('--general_herm', action='store_true', default=False)
+    
     ar = parser.parse_args()
 
     return ar
@@ -63,7 +66,7 @@ def preprocess_args(ar):
                + 'heuristic_sigma=' + str(ar.heuristic_sigma) + '_' + 'kernel_length=' + str(ar.kernel_length) + '_' \
                 + 'br=' + str(ar.batch_rate) + '_' + 'lr=' + str(ar.lr) + '_' \
                + 'n_epoch=' + str(ar.epochs) + '_' + 'undersam_rate=' + str(ar.undersampled_rate) \
-               + '_' + 'normalize_data' + str(ar.normalize_data) + '_' + 'separate_kernel_length' + str(ar.separate_kernel_length)
+               + '_' + 'normalize_data' + str(ar.normalize_data) + '_' + 'separate_kernel_length' + str(ar.separate_kernel_length) +'_'+'sr_mean_embedding'+str(ar.sr_mean_embedding)+'_'+'general_herm'+str(ar.general_herm)
 
 
     ar.log_name = log_name
@@ -72,7 +75,7 @@ def preprocess_args(ar):
         os.makedirs(ar.log_dir)
 
 # def main():
-def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length, subsampled_rate):
+def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length, subsampled_rate, sr_mean_embedding=10,general_herm=False ):
 # def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, subsampled_rate):
 
     # load settings
@@ -84,7 +87,9 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
     ar.epochs = n_epochs
     ar.kernel_length = kernel_length
     ar.undersampled_rate = subsampled_rate
-
+    ar.sr_mean_embedding = sr_mean_embedding
+    ar.general_herm     =   general_herm
+    
     preprocess_args(ar)
     log_args(ar.log_dir, ar)
 
@@ -94,7 +99,8 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
         epsilon = ar.epsilon
         delta = ar.delta
 
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    # device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    device = 'cpu'
 
     # specify heterogeneous dataset or not
     heterogeneous_datasets = ['cervical', 'adult', 'census', 'intrusion', 'covtype']
@@ -184,29 +190,55 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
     """ compute the means """
     print('computing mean embedding of data: (2) compute the mean')
-    data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
+    if (general_herm==False):
+        data_embedding = torch.zeros(input_dim*(order+1), n_classes, device=device)
+    else:
+        mean_size   =   torch.hstack([torch.tensor([n_classes]), (order+1)*torch.ones(size=[input_dim,], dtype=int)])
+    # print('Mean Size is ', mean_size)
+    # print(mean_size)
+        data_embedding  =   torch.zeros(tuple((mean_size.numpy()).tolist()), device=device)
+        print(data_embedding.T.shape)
     for idx in range(n_classes):
         print(idx,'th-class')
+        # print(X_train.device)
         idx_data = X_train[y_train.squeeze()==idx,:]
         if ar.separate_kernel_length:
-            phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n)
+            if (general_herm==False):
+                phi_data = ME_with_HP_tab(torch.Tensor(idx_data).to(device), order, rho, device, n)
+            else:
+                phi_data = mean_embedding_proxy(torch.Tensor(idx_data).to(device), order, torch.Tensor(rho).to(device), device, idx_data.shape[0], sr_mean_embedding)
         else:
             phi_data = ME_with_HP(torch.Tensor(idx_data).to(device), order, rho, device, n)
-        data_embedding[:,idx] = phi_data # this includes 1/n factor inside
+        if (general_herm==False):
+            data_embedding[:,idx] = phi_data # this includes 1/n factor inside
+        else:
+            data_embedding[idx, :] = phi_data 
+        del phi_data
     print('done with computing mean embedding of data')
 
     if ar.is_private:
         # print('we add noise to the data mean embedding as the private flag is true')
         # std = (2 * privacy_param['sigma'] * np.sqrt(input_dim) / n)
         std = (2 * privacy_param['sigma'] / n)
-        noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+        if (general_herm==False):
+            noise = torch.randn(data_embedding.shape[0], data_embedding.shape[1], device=device) * std
+        else:
+            noise = torch.randn_like(data_embedding, device=device) * std  
 
-        print('before perturbation, mean and variance of data mean embedding are %f and %f ' %(torch.mean(data_embedding), torch.std(data_embedding)))
-        data_embedding = data_embedding + noise
+
+        print('before perturbation, mean, variance, and Frobenius norm of data mean embedding are %f, %f, and %f ' %(torch.mean(data_embedding), torch.std(data_embedding), torch.norm(data_embedding, p='fro')))
+        if (general_herm==False):
+            data_embedding = data_embedding + noise
         print('after perturbation, mean and variance of data mean embedding are %f and %f ' % (torch.mean(data_embedding), torch.std(data_embedding)))
 
     # the final mean embedding of data is,
-    data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
+    if (general_herm==False):
+        data_embedding = data_embedding / torch.Tensor(weights).to(device) # this means, 1/n * n/m_c, so 1/m_c
+    #     print('Data Embedding norm is', torch.sum((data_embedding)**2))
+    print('Data Embedding norm is', torch.sum((data_embedding)**2))
+    # print('Data Embedding norm is', torch.sum(torch.pow(torch.abs(data_embedding),2)))
+    # else:
+        # data_embedding = (data_embedding.T / torch.Tensor(weights).to(device)).T
 
     """ Training """
     optimizer = torch.optim.Adam(list(model.parameters()), lr=ar.lr)
@@ -255,19 +287,34 @@ def main(data_name, seed_num, order_hermite, batch_rate, n_epochs, kernel_length
 
             """ (3) compute synthetic data's mean embedding """
             weights_syn = torch.zeros(n_classes) # weights = m_c / n
-            syn_data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
+            if (general_herm==False):
+                syn_data_embedding = torch.zeros(input_dim * (order + 1), n_classes, device=device)
+            else:
+                syn_mean_size   =   torch.hstack([torch.tensor([n_classes]), (order+1)*torch.ones(size=[input_dim,], dtype=int)])
+                syn_data_embedding  =   torch.zeros(tuple((syn_mean_size.numpy()).tolist()), device=device)
             for idx in range(n_classes):
                 weights_syn[idx] = torch.sum(label_input == idx)
                 idx_syn_data = outputs[label_input == idx]
                 if ar.separate_kernel_length:
-                    phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
+                    if (general_herm==False):
+                        phi_syn_data = ME_with_HP_tab(idx_syn_data, order, rho, device, batch_size)
+                    else:
+                        # print(idx_syn_data.shape)
+                        phi_syn_data = mean_embedding_proxy(idx_syn_data, order, torch.Tensor(rho).to(device), device, idx_syn_data.shape[0], 1)
                 else:
                     phi_syn_data = ME_with_HP(idx_syn_data, order, rho, device, batch_size)
-                syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
+                if (general_herm==False):
+                    syn_data_embedding[:, idx] = phi_syn_data  # this includes 1/n factor inside
+                else:
+                    syn_data_embedding[idx, :] = phi_syn_data 
 
             weights_syn = weights_syn / torch.sum(weights_syn)
-            syn_data_embedding = syn_data_embedding / torch.Tensor(weights_syn).to(device)
-
+            
+            if (general_herm==False):
+                syn_data_embedding = syn_data_embedding / torch.Tensor(weights_syn).to(device)
+            # else:
+                # syn_data_embedding = (syn_data_embedding.T / torch.Tensor(weights_syn).to(device)).T
+            # print('Data Embedding norm is', torch.sum((data_embedding)**2), ' and Syn_Data Embedding is ', torch.sum((syn_data_embedding)**2))
             loss = torch.sum((data_embedding - syn_data_embedding)**2)
 
             optimizer.zero_grad()
@@ -367,7 +414,7 @@ if __name__ == '__main__':
 
     # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
-    for dataset in ['intrusion']:
+    for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
@@ -412,7 +459,7 @@ if __name__ == '__main__':
             # [400, 600, 800, 1000]
             mini_batch_arg = [0.1]
             # mini_batch_arg = [0.1, 0.2, 0.4, 0.8]
-            n_features_arg = [10, 20, 50, 100]
+            n_features_arg = [3]
             length_scale = [0.005]  # dummy
             subsampled_rate = [0.3, 0.4, 0.5]#[.8, .6, .4] #dummy
         elif dataset=='census':
