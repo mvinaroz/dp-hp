@@ -1,15 +1,12 @@
-code_balanced/__pycache__/*.pyc
-code_balanced/data/
-code_balanced/logs/
 
 dp_mehp/logs/
 dp_mehp/data/
 dp_mehp/__pycache__/*.pyc
-
-using_pretrained_net/__pycache__/*.pyc
-using_pretrained_net/*.t7
-using_pretrained_net/Trained_ResNet 
+dp_mehp/.DS_store
 
 
 .idea/
 
+.DS_store
+
+data/.DS_store
