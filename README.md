@@ -28,4 +28,4 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 
 ### Image data 
-`dp_mehp/Me_sum_kernel_args.py` contains code for mnist and fashionmnist data experiments. See `add_info/README.md` for instructions on how to run the experiments.
+`dp_mehp/Me_sum_kernel_args.py` contains code for mnist and fashionmnist data experiments. See `dp_mehp/README.md` for instructions on how to run the experiments.
