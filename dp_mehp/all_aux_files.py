@@ -11,7 +11,7 @@ import matplotlib
 matplotlib.use('Agg')  # to plot without Xserver
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from collections import defaultdict, namedtuple
+from collections import defaultdict, namedtuple, Iterable
 from sklearn import linear_model, ensemble, naive_bayes, svm, tree, discriminant_analysis, neural_network
 from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
@@ -35,6 +35,89 @@ import sys
 #     raise ValueError
 #
 #   return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
+class NamedArray:
+  def __init__(self, array, dim_names, idx_names):
+    assert isinstance(array, np.ndarray) and isinstance(idx_names, dict)
+    assert len(dim_names) == len(idx_names.keys()) and len(dim_names) == len(array.shape)
+    for idx, name in enumerate(dim_names):
+      assert len(idx_names[name]) == array.shape[idx], f'len({idx_names[name]}) != {array.shape[idx]} at idx={idx}'
+      assert name in idx_names, f'{name} not in {idx_names}'
+    self.array = array
+    self.dim_names = dim_names  # list of dimension names in order
+    self.idx_names = idx_names  # dict for the form dimension_name: [list of index names]
+
+  def get(self, name_index_dict, keep_singleton_dims=False):
+    """
+    basically indexing by name for each dimension present in name_index_dict, it selects the given indices
+    """
+    for name in name_index_dict:
+      assert name in self.dim_names
+    ar = self.array
+    for d_idx, dim in enumerate(self.dim_names):
+      if dim in name_index_dict:
+        names_to_get = name_index_dict[dim]
+        # ids_to_get = [k for (k, name) in enumerate(self.idx_names[dim]) if name in names_to_get]
+        ids_to_get = [self.idx_names[dim].index(name) for name in names_to_get]
+        ar = np.take(ar, ids_to_get, axis=d_idx)
+
+    if not keep_singleton_dims:
+      ar = np.squeeze(ar)
+    return ar
+
+  def single_val_sub_array(self, dim_name, idx_name):
+    assert dim_name in self.dim_names
+    assert idx_name in self.idx_names[dim_name]
+
+    sub_array = self.get({dim_name, [idx_name]})
+    new_idx_names = self.idx_names.copy()
+    new_idx_names[dim_name] = [idx_name]
+    return NamedArray(sub_array, self.dim_names.copy(), new_idx_names)
+
+  def merge(self, other, merge_dim):
+    """
+    merges another named array with this one:
+    dimension names must be the same and in the same order
+    in merge dimension: create union of index names (must be disjunct)
+    in all other dimenions: create intersection of index names (must not be empty)
+    """
+    if isinstance(other, Iterable):
+      m_arr = self
+      for arr in other:
+        m_arr = m_arr.merge(arr, merge_dim)
+      return m_arr
+
+    assert isinstance(other, NamedArray)
+    assert merge_dim in self.dim_names
+    assert all([n1 == n2 for n1, n2 in zip(self.dim_names, other.dim_names)])  # assert same dim names
+    assert not [k for k in self.idx_names[merge_dim] if k in other.idx_names[merge_dim]]  # assert merge ids disjunct
+    for dim in self.dim_names:
+      if dim != merge_dim:
+        assert any([k for k in self.idx_names[dim] if k in other.idx_names[dim]])  # assert intersection not empty
+
+    self_dict = {}
+    other_dict = {}
+    merged_idx_names = {}
+    # go through dims and construct index_dict for both self and other
+    for d_idx, dim in enumerate(self.dim_names):
+      if dim == merge_dim:
+        self_dict[dim] = self.idx_names[dim]
+        other_dict[dim] = other.idx_names[dim]
+        merged_idx_names[dim] = self.idx_names[dim] + other.idx_names[dim]
+      else:
+        intersection = [k for k in self.idx_names[dim] if k in other.idx_names[dim]]
+        self_dict[dim] = intersection
+        other_dict[dim] = intersection
+        merged_idx_names[dim] = intersection
+
+    # then .get both sub-arrays and concatenate them
+    self_sub_array = self.get(self_dict, keep_singleton_dims=True)
+    other_sub_array = other.get(other_dict, keep_singleton_dims=True)
+    print(self_sub_array.shape, other_sub_array.shape)
+    merged_array = np.concatenate([self_sub_array, other_sub_array], axis=self.dim_names.index(merge_dim))
+
+    # create new NamedArray instance and return it
+    return NamedArray(merged_array, self.dim_names, merged_idx_names)
+
 
 
 def find_rho(sigma2, kernel_separate):
