@@ -32,7 +32,7 @@ def get_args():
     parser.add_argument('--lr-decay', type=float, default=0.9, help='per epoch learning rate decay factor')
 
     # DP SPEC
-    parser.add_argument('--is-private', default=True, help='produces a DP mean embedding of data')
+    parser.add_argument('--is-private', default=False, help='produces a DP mean embedding of data')
     parser.add_argument('--epsilon', type=float, default=1.0, help='epsilon in (epsilon, delta)-DP')
     parser.add_argument('--delta', type=float, default=1e-5, help='delta in (epsilon, delta)-DP')
 
@@ -412,9 +412,9 @@ if __name__ == '__main__':
 
     # ar = get_args()
 
-    # for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
+     for dataset in ["census", "cervical", "adult", "covtype", "intrusion"]:
     # for dataset in ['adult', 'census', 'cervical', 'credit']:
-    for dataset in ['adult']:
+    #for dataset in ['adult']:
     # for dataset in ["epileptic", "isolet", "credit"]:
     # for dataset in ["epileptic", "isolet"]:
     # for dataset in ["epileptic", "isolet", "credit"]:
