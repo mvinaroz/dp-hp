@@ -24,7 +24,7 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 ### Tabular data
 
-`dp_mehp/run_sum_kernel_image_data.py` contains the code for the tabular experiments
+`dp_mehp/run_sum_kernel_tabular_data.py` contains the code for the tabular experiments
 
 
 ### Image data 
