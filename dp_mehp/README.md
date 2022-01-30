@@ -10,17 +10,17 @@ To run DP-HP experiments, use the following commands:
 
 1. Creating the generated samples and predictive models evaluation
 
-###MNIST
+### MNIST
 
-- ` python3 Me_sum_kernel_args.py --log-name *experiment name* --data digits -bs 200  --seed 0 --model-name FC -ep 10 --order-hermite 100  -kernel-length 0.005` for the non-private case
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data digits -bs 200  --seed 0 --model-name FC -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.005 --kernel-length-prod 0.005 --gamma 5 --prod-dimension 2` for the non-private case
 
-- ` python3 Me_sum_kernel_args.py --log-name *experiment name* --data digits -bs 200  --seed 0 --model-name FC -ep 10 --order-hermite 100  -kernel-length 0.005  --is-private True  --epsilon 1.0  --delta 1e-5` for $(1, 10^{-5})$-DP case
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data digits -bs 200  --seed 0  --ep 10 --lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --model-name FC --kernel-length-sum 0.005 --kernel-length-prod 0.005 --gamma 20 --prod-dimension 2 --split --split-sum-ratio 0.8 --is-private` for $(1, 10^{-5})$-DP case
 
-###FashionMNIST
+### FashionMNIST
 
-- ` python3 Me_sum_kernel_args.py --log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10 --order-hermite 100  -kernel-length 0.15` for the non-private case
+- ` python3 prod_and_sum_kernel_image.py--log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.15 --kernel-length-prod 0.15 --gamma 20 --prod-dimension 2` for the non-private case
 
-- ` python3 Me_sum_kernel_args.py --log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10 --order-hermite 100  -kernel-length 0.15  --is-private True  --epsilon 1.0  --delta 1e-5` for $(1, 10^{-5})$-DP case
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.15 --kernel-length-prod 0.15 --gamma 10 --prod-dimension 2  --split --split-sum-ratio 0.8 --is-private` for $(1, 10^{-5})$-DP case
 
 
 2. Repoducing Fig. 4 and Fig. 5
