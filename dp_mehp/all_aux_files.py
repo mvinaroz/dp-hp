@@ -237,13 +237,11 @@ def ME_with_HP_prod(x, order, rho, device, n_training_data, dim_0_prod_kernel):
       phi_dim=phi_x[:, dim, :]
       B=torch.einsum('i...j, ik -> i...jk', B, phi_dim)
   
-  #mean_outer= torch.mean(B, axis=0)
-  sum_outer=torch.sum(B, axis=0)
-  mean_outer=sum_outer/n_training_data
+  mean_outer= torch.mean(B, axis=0)
   out = mean_outer.view(-1)
 
   return out
-  
+
   ### Margarita's previous code ###
   # #print("this is input dimension of the data for prod kernel: ", input_dim)
   #
@@ -500,6 +498,8 @@ def prep_models(custom_keys, skip_slow_models, only_slow_models):
   return models, model_specs, run_keys
 
 
+
+
 def normalize_data(x_train, x_test):
   mean = np.mean(x_train)
   sdev = np.std(x_train)
@@ -543,249 +543,259 @@ def test_passed_gen_data(data_key, data_log_name, datasets_colletion, log_save_d
 
     if not skip_gen_to_real:
         if data_key == 'digits':
-            if key == 'gaussian_nb':
-                n_classes=10
-                prior_class = 1/n_classes*np.ones(n_classes)
+        #    if key == 'gaussian_nb':
+        #        n_classes=10
+        #        prior_class = 1/n_classes*np.ones(n_classes)
                 
-                list_acc=[]
-                model_specs['gaussian_nb'] = {'var_smoothing': 1e-1}
-                model1 = models[key](**model_specs[key])
-                #print('model:', model1)
-                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
-                #print('accuracy of the 1st Gaussin_nb setting:', g_to_r_acc1) 
-                list_acc.append(g_to_r_acc1)
+        #        list_acc=[]
+        #        model_specs['gaussian_nb'] = {'var_smoothing': 1e-1}
+        #        model1 = models[key](**model_specs[key])
+        #        #print('model:', model1)
+        #        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        #print('accuracy of the 1st Gaussin_nb setting:', g_to_r_acc1) 
+        #        list_acc.append(g_to_r_acc1)
                 
-                model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
-                model2 = models[key](**model_specs[key])
-                #print('model:', model2)
-                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        model_specs['gaussian_nb'] = {'var_smoothing': 1e-3}
+        #        model2 = models[key](**model_specs[key])
+        #        #print('model:', model2)
+        #        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 2nd Gaussin_nb setting:', g_to_r_acc2) 
-                list_acc.append(g_to_r_acc2)
+        #        list_acc.append(g_to_r_acc2)
                 
-                model_specs['gaussian_nb'] = {'var_smoothing': 1e-9}
-                model3 = models[key](**model_specs[key])
-                #print('model:', model3)
-                g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model3, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        model_specs['gaussian_nb'] = {'var_smoothing': 1e-9}
+        #        model3 = models[key](**model_specs[key])
+        #        #print('model:', model3)
+        #        g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model3, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 3rd Gaussin_nb setting:', g_to_r_acc3) 
-                list_acc.append(g_to_r_acc3)
+        #        list_acc.append(g_to_r_acc3)
                 
-                model_specs['gaussian_nb']={'var_smoothing': 0.2, 'priors' : prior_class}
-                model4 = models[key](**model_specs[key])
-                #print('model:', model4)
-                g_to_r_acc4, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model4, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        model_specs['gaussian_nb']={'var_smoothing': 0.2, 'priors' : prior_class}
+        #        model4 = models[key](**model_specs[key])
+        #        #print('model:', model4)
+        #        g_to_r_acc4, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model4, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 4th Gaussin_nb setting:', g_to_r_acc4) 
-                list_acc.append(g_to_r_acc4)
+        #        list_acc.append(g_to_r_acc4)
                 
-                model_specs['gaussian_nb']={'var_smoothing': 0.34, 'priors' : prior_class}
-                model5 = models[key](**model_specs[key])
+        #        model_specs['gaussian_nb']={'var_smoothing': 0.34, 'priors' : prior_class}
+        #        model5 = models[key](**model_specs[key])
                 #print('model:', model5)
-                g_to_r_acc5, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model5, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc5, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model5, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 5th Gaussin_nb setting:', g_to_r_acc5) 
-                list_acc.append(g_to_r_acc5)
+        #        list_acc.append(g_to_r_acc5)
                 
-                model_specs['gaussian_nb']={'var_smoothing': 0.12, 'priors' : prior_class}
-                model6 = models[key](**model_specs[key])
+        #        model_specs['gaussian_nb']={'var_smoothing': 0.12, 'priors' : prior_class}
+        #        model6 = models[key](**model_specs[key])
                 #print('model:', model6)
-                g_to_r_acc6, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model6, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc6, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model6, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 6th Gaussin_nb setting:', g_to_r_acc6) 
-                list_acc.append(g_to_r_acc6)
+        #        list_acc.append(g_to_r_acc6)
                 
-                model_specs['gaussian_nb']={'var_smoothing': 1e-2, 'priors' : prior_class}
-                model7 = models[key](**model_specs[key])
+        #        model_specs['gaussian_nb']={'var_smoothing': 1e-2, 'priors' : prior_class}
+        #        model7 = models[key](**model_specs[key])
                 #print('model:', model7)
-                g_to_r_acc7, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model7, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc7, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model7, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 7th Gaussin_nb setting:', g_to_r_acc7) 
-                list_acc.append(g_to_r_acc7)
+        #        list_acc.append(g_to_r_acc7)
                 
-                model_specs['gaussian_nb']={'var_smoothing': 1e-1, 'priors' : prior_class}
-                model8 = models[key](**model_specs[key])
+        #        model_specs['gaussian_nb']={'var_smoothing': 1e-1, 'priors' : prior_class}
+        #        model8 = models[key](**model_specs[key])
                 #print('model:', model8)
-                g_to_r_acc8, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model8, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc8, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model8, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 8th Gaussin_nb setting:', g_to_r_acc8) 
-                list_acc.append(g_to_r_acc8)
+        #        list_acc.append(g_to_r_acc8)
                 
                 
-                g_to_r_acc=max(list_acc)
-                print('This is the best accuacy for Gaussian_nb: ', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc)
+        #        g_to_r_acc=max(list_acc)
+        #        print('This is the best accuacy for Gaussian_nb: ', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc)
                 
-            elif key =='decision_tree':
-                list_acc=[]
-                list_criterion=['gini', 'entropy']
-                list_min_samp_split=[2, 3, 4, 5, 8, 10, 12, 15, 20]
-                for i in list_criterion:
-                    for j in list_min_samp_split:
-                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i, 'min_samples_split': j}
-                        model1 = models[key](**model_specs[key])
+        #    elif key =='decision_tree':
+        #        list_acc=[]
+        #        list_criterion=['gini', 'entropy']
+        #        list_min_samp_split=[2, 3, 4, 5, 8, 10, 12, 15, 20]
+        #        for i in list_criterion:
+        #            for j in list_min_samp_split:
+        #                model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i, 'min_samples_split': j}
+        #                model1 = models[key](**model_specs[key])
                         #print('model:', model1)
-                        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                         #print('accuracy of the 1st Decision_tree setting:', g_to_r_acc1) 
-                        list_acc.append(g_to_r_acc1)
+        #                list_acc.append(g_to_r_acc1)
                 
-                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'log2', 'min_samples_split': j}
-                        model2 = models[key](**model_specs[key])
+        #                model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'log2', 'min_samples_split': j}
+        #                model2 = models[key](**model_specs[key])
                         #print('model:', model2)
-                        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
-                        #print('accuracy of the 2nd Decision_tree setting:', g_to_r_acc2) 
-                        list_acc.append(g_to_r_acc2)
+        #                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
+        #                #print('accuracy of the 2nd Decision_tree setting:', g_to_r_acc2) 
+        #                list_acc.append(g_to_r_acc2)
                 
-                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'auto', 'min_samples_split': j}
-                        model3 = models[key](**model_specs[key])
+        #                model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i ,'max_features':'auto', 'min_samples_split': j}
+        #                model3 = models[key](**model_specs[key])
                         #print('model:', model3)
-                        g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model3, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
-                        #print('accuracy of the 3rd Decision_tree setting:', g_to_r_acc3) 
-                        list_acc.append(g_to_r_acc3)
+        #                g_to_r_acc3, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model3, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
+        #                #print('accuracy of the 3rd Decision_tree setting:', g_to_r_acc3) 
+        #                list_acc.append(g_to_r_acc3)
                 
-                        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i,'max_features':'sqrt', 'min_samples_split': j}
-                        model4 = models[key](**model_specs[key])
+        #                model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': i,'max_features':'sqrt', 'min_samples_split': j}
+        #                model4 = models[key](**model_specs[key])
                         #print('model:', model4)
-                        g_to_r_acc4, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model4, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #                g_to_r_acc4, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model4, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                        # print('accuracy of the 4th Decision_tree setting:', g_to_r_acc4) 
-                        list_acc.append(g_to_r_acc4)
+        #                list_acc.append(g_to_r_acc4)
                         
-                model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini','max_depth':100, 'max_leaf_nodes': 100}
-                model5 = models[key](**model_specs[key])
+        #        model_specs['decision_tree'] = {'class_weight': 'balanced', 'criterion': 'gini','max_depth':100, 'max_leaf_nodes': 100}
+        #        model5 = models[key](**model_specs[key])
                 #print('model:', model5)
-                g_to_r_acc5, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model5, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc5, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model5, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the final Decision_tree setting:', g_to_r_acc5) 
-                list_acc.append(g_to_r_acc5)
+        #        list_acc.append(g_to_r_acc5)
                 
-                g_to_r_acc=max(list_acc)
-                print('This is the best accuacy for Decision_tree: ', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc)
+        #        g_to_r_acc=max(list_acc)
+        #        print('This is the best accuacy for Decision_tree: ', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc)
                 
-            elif key =='linear_svc':
-                list_acc=[]
+        #    elif key =='linear_svc':
+        #        list_acc=[]
                 
-                model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
-                model1 = models[key](**model_specs[key])
+        #        model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-8, 'loss': 'hinge'}
+        #        model1 = models[key](**model_specs[key])
                 #print('model:', model1)
-                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 1st linear SVC setting:', g_to_r_acc1) 
-                list_acc.append(g_to_r_acc1)
+         #       list_acc.append(g_to_r_acc1)
                 
-                model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-16, 'loss': 'hinge' ,  'multi_class' : 'crammer_singer', 'C' : 0.001}
-                model2 = models[key](**model_specs[key])
+        #        model_specs['linear_svc'] = {'max_iter': 10000, 'tol': 1e-16, 'loss': 'hinge' ,  'multi_class' : 'crammer_singer', 'C' : 0.001}
+        #        model2 = models[key](**model_specs[key])
                 #print('model:', model2)
-                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 1st linear SVC setting:', g_to_r_acc2) 
-                list_acc.append(g_to_r_acc2)
+        #        list_acc.append(g_to_r_acc2)
                 
-                g_to_r_acc=max(list_acc)
-                print('This is the best accuacy for linear_SVC: ', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc)
+        #        g_to_r_acc=max(list_acc)
+        #        print('This is the best accuacy for linear_SVC: ', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc)
                 
-            elif key =='bagging': 
-                list_acc=[]
-                model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
-                model1 = models[key](**model_specs[key])
-                #print('model:', model1)
-                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
-                #print('accuracy of the 1st Bagging setting:', g_to_r_acc1) 
-                list_acc.append(g_to_r_acc1)
+        #    elif key =='bagging': 
+        #        list_acc=[]
+        #        model_specs['bagging'] = {'max_samples': 0.1, 'n_estimators': 20}
+        #        model1 = models[key](**model_specs[key])
+        #        #print('model:', model1)
+        #        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        #print('accuracy of the 1st Bagging setting:', g_to_r_acc1) 
+        #        list_acc.append(g_to_r_acc1)
                 
-                model_specs['bagging'] = {'max_features': 40, 'n_estimators': 200, 'warm_start' : True} 
-                model2 = models[key](**model_specs[key])
-                #print('model:', model1)
-                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        model_specs['bagging'] = {'max_features': 40, 'n_estimators': 200, 'warm_start' : True} 
+        #        model2 = models[key](**model_specs[key])
+        #        #print('model:', model1)
+        #        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 2nd Bagging setting:', g_to_r_acc1) 
-                list_acc.append(g_to_r_acc2)
+        #        list_acc.append(g_to_r_acc2)
                 
-                g_to_r_acc=max(list_acc)
-                print('This is the best accuacy for Bagging: ', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc)
+        #        g_to_r_acc=max(list_acc)
+        #        print('This is the best accuacy for Bagging: ', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc)
                 
-            elif key== 'adaboost':
-               list_acc=[]
-               model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}  
-               model1 = models[key](**model_specs[key])
+        #    elif key== 'adaboost':
+        #       list_acc=[]
+        #       model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 0.7, 'algorithm': 'SAMME.R'}  
+        #       model1 = models[key](**model_specs[key])
                #print('model:', model1)
-               g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #       g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                #print('accuracy of the 1st Adaboost setting:', g_to_r_acc1) 
-               list_acc.append(g_to_r_acc1)
+        #       list_acc.append(g_to_r_acc1)
                
-               model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 5.0, 'random_state': 0}  
-               model2 = models[key](**model_specs[key])
+        #       model_specs['adaboost'] = {'n_estimators': 1000, 'learning_rate': 5.0, 'random_state': 0}  
+        #       model2 = models[key](**model_specs[key])
                #print('model:', model1)
-               g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #       g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                #print('accuracy of the 2nd Adaboost setting:', g_to_r_acc2) 
-               list_acc.append(g_to_r_acc2)
+        #       list_acc.append(g_to_r_acc2)
                
-               g_to_r_acc=max(list_acc)
-               print('This is the best accuacy for Adaboost: ', g_to_r_acc)
-               g_to_r_acc_summary.append(g_to_r_acc)
+        #       g_to_r_acc=max(list_acc)
+        #       print('This is the best accuacy for Adaboost: ', g_to_r_acc)
+        #       g_to_r_acc_summary.append(g_to_r_acc)
             
-            elif key== 'gbm':
-                list_acc=[] 
-                model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50} 
-                model1 = models[key](**model_specs[key])
+        #    elif key== 'gbm':
+        #        list_acc=[] 
+        #        model_specs['gbm'] = {'subsample': 0.1, 'n_estimators': 50} 
+        #        model1 = models[key](**model_specs[key])
                 #print('model:', model1)
-                g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc1, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model1, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 1st gbm setting:', g_to_r_acc1) 
-                list_acc.append(g_to_r_acc1)
+        #        list_acc.append(g_to_r_acc1)
                 
-                model_specs['gbm'] = {'subsample': 0.5, 'n_estimators': 100, 'learning_rate':0.05} 
-                model2 = models[key](**model_specs[key])
+        #        model_specs['gbm'] = {'subsample': 0.5, 'n_estimators': 100, 'learning_rate':0.05} 
+        #        model2 = models[key](**model_specs[key])
                 #print('model:', model1)
-                g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
-                                                                        dc.x_real_test, dc.y_real_test,
-                                                                        norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        g_to_r_acc2, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model2, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
                 #print('accuracy of the 2nd gbm setting:', g_to_r_acc2) 
-                list_acc.append(g_to_r_acc2)
+        #        list_acc.append(g_to_r_acc2)
                   
-                g_to_r_acc=max(list_acc)
-                print('This is the best accuacy for gbm: ', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc) 
+        #        g_to_r_acc=max(list_acc)
+        #        print('This is the best accuacy for gbm: ', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc) 
                 
-            else:    
-                model = models[key](**model_specs[key])
-                print('model:', model)
+        #    else:    
+        #        model = models[key](**model_specs[key])
+        #        print('model:', model)
                 
-                g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+        #        g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
+        #                                                                dc.x_real_test, dc.y_real_test,
+        #                                                                norm_data, a_str + 'g2r', f_str + 'g2r')
+        #        print('accuracy:', g_to_r_acc)
+        #        g_to_r_acc_summary.append(g_to_r_acc)
+        #
+        # ORIGINAL SETTING
+            model = models[key](**model_specs[key])
+            print('model:', model)
+                
+            g_to_r_acc, g_to_r_f1, g_to_r_conf, a_str, f_str = model_test_run(model, dc.x_gen, dc.y_gen,
                                                                         dc.x_real_test, dc.y_real_test,
                                                                         norm_data, a_str + 'g2r', f_str + 'g2r')
-                print('accuracy:', g_to_r_acc)
-                g_to_r_acc_summary.append(g_to_r_acc)
+            print('accuracy:', g_to_r_acc)
+            g_to_r_acc_summary.append(g_to_r_acc)    
                 
         else:   
             #For fashion we apply the hyperparam set by default in prep_models
