@@ -22,10 +22,4 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 ## Repository Structure
 
-### Tabular data
-
-`dp_mehp/run_sum_kernel_tabular_data.py` contains the code for the tabular experiments
-
-
-### Image data 
-`dp_mehp/prod_and_sum_kernel_image.py` contains code for mnist and fashionmnist data experiments. See `dp_mehp/README.md` for instructions on how to run the experiments.
+See `dp_mehp/README.md` for instructions on how to run the experiments.
