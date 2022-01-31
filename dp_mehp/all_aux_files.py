@@ -17,24 +17,6 @@ from sklearn.metrics import f1_score, accuracy_score, confusion_matrix
 import xgboost
 import sys
 
-# train_data_tuple_def = namedtuple('train_data_tuple', ['train_loader', 'test_loader',
-#                                                        'train_data', 'test_data',
-#                                                        'n_features', 'n_data', 'n_labels', 'eval_func'])
-
-
-# def get_dataloaders(dataset_key, batch_size, test_batch_size, use_cuda, normalize, synth_spec_string, test_split):
-#   if dataset_key in {'digits', 'fashion'}:
-#     train_loader, test_loader, trn_data, tst_data = get_mnist_dataloaders(batch_size, test_batch_size, use_cuda,
-#                                                                           dataset=dataset_key, normalize=normalize,
-#                                                                           return_datasets=True)
-#     n_features = 784
-#     n_data = 60_000
-#     n_labels = 10
-#     eval_func = None
-#   else:
-#     raise ValueError
-#
-#   return train_data_tuple_def(train_loader, test_loader, trn_data, tst_data, n_features, n_data, n_labels, eval_func)
 class NamedArray:
   def __init__(self, array, dim_names, idx_names):
     assert isinstance(array, np.ndarray) and isinstance(idx_names, dict)
@@ -117,7 +99,6 @@ class NamedArray:
 
     # create new NamedArray instance and return it
     return NamedArray(merged_array, self.dim_names, merged_idx_names)
-
 
 
 def find_rho(sigma2, kernel_separate):
@@ -212,10 +193,96 @@ def ME_with_HP(x, order, rho, device, n_training_data):
   phi_x = sum_val / n_training_data
 
   phi_x = phi_x / np.sqrt(input_dim)  # because we approximate k(x,x') = \sum_d k_d(x_d, x_d') / input_dim
+  #print("This is the phi_x shape before reshaping it to (C+1)*D: ", phi_x) #this has shape: [imput_dim, (order+1)]
 
   phi_x = phi_x.view(-1)  # size: input_dim*(order+1)
+  #print("This is the phi_x shape after reshaping it to (C+1)*D: ", phi_x)
 
   return phi_x
+
+def ME_with_HP_prod(x, order, rho, device, n_training_data, dim_0_prod_kernel):
+  n_data, input_dim = x.shape
+
+  ### this is for debugging ###
+  # with this code for 2-d data, the NLL is 3.7 x 10^5 after 50 epochs (Hermite order set to 10)
+  #                              the NLL is 3.5 x 10^5 after 100 epochs (Hermite order set to 20)
+
+  # per dimension, I will compute the features first
+  #phi_x0, ev0 = feature_map_HP(order, x[:, 0], rho, device)
+  #phi_x1, ev1 = feature_map_HP(order, x[:, 1], rho, device)
+  #print("This is phi_x0: ", phi_x0)
+  #print("This is phi_x1: ", phi_x1)
+
+  # I will now compute the outer product between dimensions per datapoint , then take the average , then flatten the feature map
+  #A = torch.einsum('ij, ik -> ijk', phi_x0, phi_x1)
+  #A = torch.mean(A, axis=0)
+  #out = A.view(-1)
+ 
+
+  #test my code
+  x_flattened = x.view(-1)
+  x_flattened = x_flattened[:, None]
+  phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
+  phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order + 1)
+  #print("This is phi_x: ", phi_x)
+
+  for dim in range(input_dim):
+    if dim == 0:
+      phi_0=phi_x[:, dim, :]
+      #print("This is phi_0 dim: ", phi_0.shape)
+    elif dim == 1:
+      phi_1=phi_x[:, dim, :]
+      B=torch.einsum('i...j, ik -> i...jk', phi_0, phi_1)
+    else:
+      phi_dim=phi_x[:, dim, :]
+      B=torch.einsum('i...j, ik -> i...jk', B, phi_dim)
+  
+  #mean_outer= torch.mean(B, axis=0)
+  sum_outer=torch.sum(B, axis=0)
+  mean_outer=sum_outer/n_training_data
+  out = mean_outer.view(-1)
+
+  return out
+  
+  ### Margarita's previous code ###
+  # #print("this is input dimension of the data for prod kernel: ", input_dim)
+  #
+  # # reshape x, such that x is a long vector
+  # x_flattened = x.view(-1)
+  # x_flattened = x_flattened[:, None]
+  # phi_x_axis_flattened, eigen_vals_axis_flattened = feature_map_HP(order, x_flattened, rho, device)
+  # phi_x = phi_x_axis_flattened.reshape(n_data, input_dim, order + 1)
+  # phi_x_prod_dims= phi_x.type(torch.float)
+  # #phi_x_prod_dims=phi_x[:, dim_subsample, :]
+  # #print("This is phi_x shape for ME_with_HP_prod: ", phi_x_prod_dims.shape)
+  # outer_prod_per_datapoint=torch.zeros((dim_0_prod_kernel, n_data), device=device)
+  #
+  # for data in range(n_data):
+  #   datapoint_phi_x=phi_x_prod_dims[data, :, :] #Select each datapoint in minibatch
+  #   for dim in range(input_dim):
+  #     if dim == 0:
+  #       phi_0=datapoint_phi_x[dim, :]
+  #     elif dim == 1:
+  #       phi_1=datapoint_phi_x[dim, :]
+  #       outer_prod=torch.outer(phi_0, phi_1)
+  #     else:
+  #       phi_i=datapoint_phi_x[dim, :]
+  #       outer_prod=torch.einsum('i...j, k -> i...jk', outer_prod, phi_i)
+  #
+  #   outer_prod_per_datapoint[:, data]=outer_prod.view(-1)
+  #
+  # #print("After running the whole minibatch the outer_prod_phi_per_datapoint is: ", outer_prod_per_datapoint)
+  # #print("The outer_prod_per_datapoint shape is: ", outer_prod_per_datapoint.shape )
+  #
+  # #Sum outer product over all datapoints in x and divide by number of datapoints in batch_size.
+  # sum_outer_prod=torch.sum(outer_prod_per_datapoint, axis=1)
+  # sum_outer_prod=sum_outer_prod / n_training_data
+  # #print("This is the outer prod after summing over datapoints: ", sum_outer_prod.shape)
+  #
+  # #Multiply by gamma factor the prod kernel mean embedding
+  # # sum_outer_prod=np.sqrt(gamma) * sum_outer_prod
+  #
+  # return sum_outer_prod
 
 
 datasets_colletion_def = namedtuple('datasets_collection', ['x_gen', 'y_gen',
