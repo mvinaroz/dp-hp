@@ -1,10 +1,14 @@
 # dp-hp
 
-##Comparison between HP features ans RF features
+## Comparison between HP features ans RF features
 
-Execute `error_comparison.py` to get the error comparison between HP features ans RF features (Figure 1)  and HP and random features comparison at a different length scale values (Figure 2).
+Execute `error_comparison.py` to get the error comparison between HP features ans RF features (Figure 1)  and HP and random features comparison at a different length scale values (Figure 1).
 
-##Experiments on image data
+## 2D data (Fig 2)
+
+Run `dp_mehp_synth_data_2d.py`
+
+## Experiments on image data
 
 To run DP-HP experiments, use the following commands:
 
@@ -23,11 +27,11 @@ To run DP-HP experiments, use the following commands:
 - ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.15 --kernel-length-prod 0.15 --gamma 10 --prod-dimension 2  --split --split-sum-ratio 0.8 --is-private` for $(1, 10^{-5})$-DP case
 
 
-2. Repoducing Fig. 4 and Fig. 5
+2. Repoducing Fig. 3 and Fig. 6
 
--Run `plots_hp.py` that loads the results from different models from `mnist_results/` folder.
+-Run `code_balanced/plot_results.py` that loads the results from different models from `code_balanced/plots/` folder.
 
-##Experiments on tabular data
+## Experiments on tabular data
 
 1. Creating the generated samples and predictive models evaluation
 
