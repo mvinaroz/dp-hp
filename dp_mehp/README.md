@@ -33,8 +33,6 @@ To run DP-HP experiments, use the following commands:
 
 ## Experiments on tabular data
 
-1. Creating the generated samples and predictive models evaluation
+1. Results in table 1. are obtained with `discretized_datasets.py`
 
-- `python3 run_sum_kernel_tabular_data.py ` for non-private case
-
-- `python3 run_sum_kernel_tabular_data.py  --is-private` for $(1, 10^{-5})$-DP case
+2. Results in table 2. are obatained with `run_sum_prod_kernel_tabular_data.py`
