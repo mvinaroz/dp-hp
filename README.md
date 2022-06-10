@@ -20,6 +20,43 @@ Versions numbers are based on our system and may not need to be exact matches.
     tensorflow-gpu 1.14.0 (DP-CGAN)
 
 
-## Repository Structure
+# Repository Structure
 
-See `dp_mehp/README.md` for instructions on how to run the experiments.
+
+## Comparison between HP features ans RF features (Fig 1)
+
+Execute `dp_mehp/error_comparison.py`.
+
+## 2D data (Fig 2)
+
+Run `dp_mehp/dp_mehp_synth_data_2d.py`
+
+## Experiments on image data
+
+To run DP-HP experiments, use the following commands:
+
+1. Creating the generated samples and predictive models evaluation
+
+### MNIST
+
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data digits -bs 200  --seed 0 --model-name FC -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.005 --kernel-length-prod 0.005 --gamma 5 --prod-dimension 2` for the non-private case
+
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data digits -bs 200  --seed 0  --ep 10 --lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --model-name FC --kernel-length-sum 0.005 --kernel-length-prod 0.005 --gamma 20 --prod-dimension 2 --split --split-sum-ratio 0.8 --is-private` for $(1, 10^{-5})$-DP case
+
+### FashionMNIST
+
+- ` python3 prod_and_sum_kernel_image.py--log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.15 --kernel-length-prod 0.15 --gamma 20 --prod-dimension 2` for the non-private case
+
+- ` python3 prod_and_sum_kernel_image.py --log-name *experiment name* --data fashion -bs 200  --seed 0 --model-name CNN -ep 10  -lr 0.01 --order-hermite-sum 100 --order-hermite-prod 20 --kernel-length-sum 0.15 --kernel-length-prod 0.15 --gamma 10 --prod-dimension 2  --split --split-sum-ratio 0.8 --is-private` for $(1, 10^{-5})$-DP case
+
+
+2. Repoducing Fig. 3 and Fig. 6
+
+-Run `code_balanced/plot_results.py` that loads the results from different models from `code_balanced/plots/` folder.
+
+## Experiments on tabular data
+
+1. Results in table 1. are obtained with `dp_mehp/discretized_datasets.py`
+
+2. Results in table 2. are obatained with `dp_mehp/run_sum_prod_kernel_tabular_data.py`
+
