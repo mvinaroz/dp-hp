@@ -25,7 +25,7 @@ Versions numbers are based on our system and may not need to be exact matches.
 
 ## Comparison between HP features ans RF features (Fig 1)
 
-Execute `dp_mehp/error_comparison.py`.
+Execute `dp_mehp/error_comaprison_multiple_runs.py`.
 
 ## 2D data (Fig 2)
 
